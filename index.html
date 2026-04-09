@@ -284,7 +284,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
         </button>
       </div>
-      <div class="chat-hint-txt" id="chat-hint-txt">🌀 Gemini 2.0 Flash — Google AI 엔진</div>
+      <div class="chat-hint-txt" id="chat-hint-txt">🌀 Gemini 2.5 Flash-Lite — Google AI 엔진</div>
     </div>
   </div>
   <div class="bnav">
@@ -383,13 +383,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <div style="font-size:13px;font-weight:700;margin-bottom:12px;">⚙️ 모델 선택</div>
           <div style="display:flex;flex-direction:column;gap:8px;">
             <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:8px;cursor:pointer;border:1px solid var(--accent);">
-              <input type="radio" name="groq-model" value="gemini-2.0-flash" checked style="accent-color:var(--accent);">
-              <div><div style="font-size:13px;font-weight:700;">Gemini 2.0 Flash</div><div style="font-size:11px;color:var(--text3);">추천 · 빠름 · 한국어 우수 · 무료</div></div>
+              <input type="radio" name="groq-model" value="gemini-2.5-flash-lite" checked style="accent-color:var(--accent);">
+              <div><div style="font-size:13px;font-weight:700;">Gemini 2.5 Flash-Lite</div><div style="font-size:11px;color:var(--text3);">추천 · 무료 · 하루 1,000건 · 한국어 우수</div></div>
               <span class="badge badge-green" style="margin-left:auto;">추천</span>
             </label>
             <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:8px;cursor:pointer;border:1px solid var(--border);">
-              <input type="radio" name="groq-model" value="gemini-1.5-flash" style="accent-color:var(--accent);">
-              <div><div style="font-size:13px;font-weight:700;">Gemini 1.5 Flash</div><div style="font-size:11px;color:var(--text3);">안정적 · 대용량 문서 처리 강점</div></div>
+              <input type="radio" name="groq-model" value="gemini-2.5-flash" style="accent-color:var(--accent);">
+              <div><div style="font-size:13px;font-weight:700;">Gemini 2.5 Flash</div><div style="font-size:11px;color:var(--text3);">고품질 · 하루 250건 무료</div></div>
               <span class="badge badge-blue" style="margin-left:auto;">안정</span>
             </label>
           </div>
@@ -578,7 +578,7 @@ E-301: 온도 초과 → 냉각수 순환 상태 확인
 <script>
 /* ════════ CONFIG ════════ */
 let GEMINI_API_KEY = '';
-let GEMINI_MODEL  = 'gemini-2.0-flash';
+let GEMINI_MODEL  = 'gemini-2.5-flash-lite';
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
 const HISTORY_TTL  = 7 * 24 * 60 * 60 * 1000;
 
@@ -702,7 +702,7 @@ function resetChatState(){
   const inp=document.getElementById('chat-inp');
   inp.disabled=true;inp.placeholder='제품군과 모델을 먼저 선택하세요';
   document.getElementById('send-btn').disabled=true;
-  document.getElementById('chat-hint-txt').textContent='🌀 Gemini 2.0 Flash — Google AI 엔진';
+  document.getElementById('chat-hint-txt').textContent='🌀 Gemini 2.5 Flash-Lite — Google AI 엔진';
   document.getElementById('chat-body').innerHTML=`<div class="chat-prompt"><div class="chat-prompt-icon">⬆️</div><h2>제품군과 모델을 먼저 선택하세요</h2><p style="font-size:13px;color:var(--text2);margin-top:6px;">위 드롭다운에서 선택 후 <strong style="color:var(--accent);">적용</strong>을 누르면 챗봇이 활성화됩니다.</p></div>`;
 }
 function renderWelcome(){

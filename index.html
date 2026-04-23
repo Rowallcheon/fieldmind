@@ -135,6 +135,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .send-btn:active{transform:scale(.95);}
 .send-btn:disabled{opacity:.3;cursor:not-allowed;}
 .chat-hint-txt{font-size:11px;color:var(--text3);margin-top:6px;text-align:center;}
+/* ── 음성 기능 ── */
+.mic-btn{width:44px;height:44px;flex-shrink:0;background:var(--bg3);border:2px solid var(--border2);border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;transition:all .2s;}
+.mic-btn:disabled{opacity:.3;cursor:not-allowed;}
+.mic-btn.listening{background:rgba(248,81,73,.2);border-color:var(--danger);animation:mic-pulse 1s infinite;}
+@keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 rgba(248,81,73,.5);}50%{box-shadow:0 0 0 8px rgba(248,81,73,0);}}
+.hf-banner{background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.3);border-radius:10px;padding:11px 16px;margin:0 0 8px;display:none;align-items:center;gap:10px;flex-shrink:0;}
+.hf-banner.active{display:flex;}
+.hf-dot{width:10px;height:10px;border-radius:50%;background:var(--danger);flex-shrink:0;animation:mic-pulse 1.2s infinite;}
+.hf-dot.speaking{background:var(--info);animation:none;}
+.hf-dot.waiting{background:var(--warn);animation:none;}
+.hf-txt{font-size:12px;font-weight:600;color:var(--text);flex:1;line-height:1.4;}
+.hf-sub{font-size:11px;color:var(--text3);}
+.hf-close{background:none;border:1px solid var(--border);border-radius:6px;color:var(--text3);cursor:pointer;font-size:12px;padding:3px 8px;font-family:var(--font);}
+.tts-speak-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--text3);cursor:pointer;font-family:var(--font);margin-top:6px;display:inline-flex;align-items:center;gap:4px;transition:all .2s;}
+.tts-speak-btn:hover{border-color:var(--info);color:var(--info);}
+.voice-status-bar{font-size:11px;color:var(--info);text-align:center;margin-top:4px;min-height:16px;}
 .bnav{border-top:1px solid var(--border);background:var(--bg2);display:flex;padding-bottom:env(safe-area-inset-bottom);}
 .bnav-btn{flex:1;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;font-size:10px;color:var(--text3);font-family:var(--font);transition:color .2s;}
 .bnav-btn.active{color:var(--accent);}
@@ -271,18 +287,33 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <span class="ctx-chip ctx-chip-model" id="ctx-model-chip">—</span>
     <span class="ctx-scope" id="ctx-scope-txt"></span>
   </div>
+
+  <!-- 핸즈프리 배너 -->
+  <div class="hf-banner" id="hf-banner" style="max-width:720px;width:100%;margin:8px auto 0;padding:11px 16px;">
+    <div class="hf-dot" id="hf-dot"></div>
+    <div><div class="hf-txt" id="hf-txt">🚗 핸즈프리 모드 활성화</div><div class="hf-sub" id="hf-sub">말씀하세요...</div></div>
+    <button class="hf-close" onclick="stopHandsfree()">종료</button>
+  </div>
   <div class="chat-body" id="chat-body">
     <div class="chat-prompt"><div class="chat-prompt-icon">⬆️</div><h2>제품군과 모델을 먼저 선택하세요</h2><p style="font-size:13px;color:var(--text2);margin-top:6px;">위 드롭다운에서 선택 후 <strong style="color:var(--accent);">적용</strong>을 누르면 챗봇이 활성화됩니다.</p></div>
   </div>
   <div style="max-width:720px;width:100%;margin:0 auto;align-self:stretch;">
     <div class="chat-foot">
       <div class="chat-inp-row">
+        <button class="mic-btn" id="mic-btn" onclick="toggleMic()" disabled title="음성 입력 (마이크)">🎤</button>
         <textarea class="chat-inp" id="chat-inp" placeholder="제품군과 모델을 먼저 선택하세요" rows="1" disabled
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"
           oninput="autoResize(this)"></textarea>
         <button class="send-btn" id="send-btn" onclick="sendMsg()" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
         </button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap;gap:4px;">
+        <div class="voice-status-bar" id="voice-status"></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button id="tts-toggle-btn" onclick="toggleTTS()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;color:var(--text3);cursor:pointer;font-family:var(--font);">🔊 읽기 OFF</button>
+          <button id="hf-toggle-btn" onclick="toggleHandsfree()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;color:var(--text3);cursor:pointer;font-family:var(--font);" disabled>🚗 핸즈프리</button>
+        </div>
       </div>
       <div class="chat-hint-txt" id="chat-hint-txt">🌀 Gemini 2.5 Flash-Lite — Google AI 엔진</div>
     </div>
@@ -614,6 +645,78 @@ let chatHistory=[];
 let delTargetId=null, modalDocRef=null, currentDocCat='기술교본', docFilter='전체';
 let csvPending=[];
 
+
+/* ════════ 음성 기능 ════════ */
+let recognition=null, ttsEnabled=false, handsfreeMode=false;
+let isListening=false, isBotSpeaking=false, currentUtterance=null;
+
+function initSpeech(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){return;}
+  recognition=new SR();
+  recognition.lang='ko-KR'; recognition.continuous=false; recognition.interimResults=true;
+  recognition.onstart=()=>{isListening=true;document.getElementById('mic-btn').classList.add('listening');document.getElementById('mic-btn').textContent='🔴';setVoiceStatus('🎤 듣고 있습니다... 말씀하세요');};
+  recognition.onresult=(e)=>{let interim='',final='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript;else interim+=e.results[i][0].transcript;}const inp=document.getElementById('chat-inp');if(final){inp.value=final;autoResize(inp);setVoiceStatus('✅ 인식: '+final);}else if(interim){inp.value=interim;autoResize(inp);}};
+  recognition.onend=()=>{isListening=false;document.getElementById('mic-btn').classList.remove('listening');document.getElementById('mic-btn').textContent='🎤';const text=document.getElementById('chat-inp').value.trim();if(text){setVoiceStatus('');sendMsg();}else{setVoiceStatus('');if(handsfreeMode)startListeningHF();}};
+  recognition.onerror=(e)=>{isListening=false;document.getElementById('mic-btn').classList.remove('listening');document.getElementById('mic-btn').textContent='🎤';if(e.error==='not-allowed'){setVoiceStatus('❌ 마이크 권한이 필요합니다.');}else{setVoiceStatus('');if(handsfreeMode)startListeningHF();}};
+}
+function toggleMic(){
+  if(!recognition){showToast('Chrome 브라우저에서만 음성 입력 가능합니다.','error');return;}
+  if(isListening){recognition.stop();}else{stopTTS();document.getElementById('chat-inp').value='';try{recognition.start();}catch(e){setVoiceStatus('');}}
+}
+function toggleTTS(){
+  ttsEnabled=!ttsEnabled;
+  const btn=document.getElementById('tts-toggle-btn');
+  if(ttsEnabled){btn.textContent='🔊 읽기 ON';btn.style.borderColor='var(--info)';btn.style.color='var(--info)';showToast('🔊 AI 답변 자동 읽기 켜짐','success');}
+  else{btn.textContent='🔊 읽기 OFF';btn.style.borderColor='var(--border)';btn.style.color='var(--text3)';stopTTS();showToast('🔇 읽기 꺼짐');}
+}
+function speakText(text){
+  if(!window.speechSynthesis)return;
+  stopTTS();
+  const clean=text.replace(/[#*`>_~\[\]]/g,'').replace(/\n+/g,' ').slice(0,1000);
+  currentUtterance=new SpeechSynthesisUtterance(clean);
+  currentUtterance.lang='ko-KR'; currentUtterance.rate=1.05; isBotSpeaking=true;
+  currentUtterance.onstart=()=>{setVoiceStatus('🔊 답변을 읽고 있습니다...');if(handsfreeMode)updateHFBanner('speaking');};
+  currentUtterance.onend=()=>{isBotSpeaking=false;setVoiceStatus('');if(handsfreeMode){updateHFBanner('listening');setTimeout(()=>startListeningHF(),600);}};
+  currentUtterance.onerror=()=>{isBotSpeaking=false;setVoiceStatus('');if(handsfreeMode)setTimeout(()=>startListeningHF(),600);};
+  window.speechSynthesis.speak(currentUtterance);
+}
+function stopTTS(){if(window.speechSynthesis)window.speechSynthesis.cancel();isBotSpeaking=false;currentUtterance=null;}
+function toggleHandsfree(){
+  if(handsfreeMode){stopHandsfree();return;}
+  if(!recognition){showToast('Chrome 브라우저에서만 핸즈프리 모드 가능합니다.','error');return;}
+  handsfreeMode=true; ttsEnabled=true;
+  const tBtn=document.getElementById('tts-toggle-btn');
+  tBtn.textContent='🔊 읽기 ON';tBtn.style.borderColor='var(--info)';tBtn.style.color='var(--info)';
+  const hBtn=document.getElementById('hf-toggle-btn');
+  hBtn.textContent='🚗 핸즈프리 ON';hBtn.style.borderColor='var(--danger)';hBtn.style.color='var(--danger)';
+  document.getElementById('hf-banner').classList.add('active');
+  showToast('🚗 핸즈프리 모드 시작!','success');
+  startListeningHF();
+}
+function stopHandsfree(){
+  handsfreeMode=false;
+  if(isListening&&recognition)recognition.stop();
+  stopTTS();
+  document.getElementById('hf-banner').classList.remove('active');
+  const hBtn=document.getElementById('hf-toggle-btn');
+  hBtn.textContent='🚗 핸즈프리';hBtn.style.borderColor='var(--border)';hBtn.style.color='var(--text3)';
+  setVoiceStatus('');
+}
+function startListeningHF(){
+  if(!handsfreeMode||!recognition||isBotSpeaking)return;
+  updateHFBanner('listening');
+  document.getElementById('chat-inp').value='';
+  try{recognition.start();}catch(e){}
+}
+function updateHFBanner(state){
+  const dot=document.getElementById('hf-dot'),txt=document.getElementById('hf-txt'),sub=document.getElementById('hf-sub');
+  if(state==='listening'){dot.className='hf-dot';txt.textContent='🎤 듣고 있습니다';sub.textContent='질문을 말씀하세요...';}
+  else if(state==='thinking'){dot.className='hf-dot waiting';txt.textContent='💭 답변 생성 중';sub.textContent='잠시만 기다려 주세요...';}
+  else if(state==='speaking'){dot.className='hf-dot speaking';txt.textContent='🔊 답변 읽는 중';sub.textContent='답변이 끝나면 다시 듣습니다';}
+}
+function setVoiceStatus(msg){const el=document.getElementById('voice-status');if(el)el.textContent=msg;}
+
 /* ════════ AUTH ════════ */
 function doLogin(){
   const id=document.getElementById('login-id').value.trim();
@@ -631,9 +734,10 @@ function doLogin(){
     document.getElementById('chat-uname').textContent=u.name;
     document.getElementById('chat-avatar').textContent=u.name[0];
     purgeHistory(); populateCatDD(); showScreen('chat');
+    initSpeech();
   }
 }
-function doLogout(){currentUser=null;selProduct=null;selModel=null;chatHistory=[];document.getElementById('login-id').value='';document.getElementById('login-pw').value='';resetChatState();showScreen('login');}
+function doLogout(){stopHandsfree();stopTTS();currentUser=null;selProduct=null;selModel=null;chatHistory=[];document.getElementById('login-id').value='';document.getElementById('login-pw').value='';resetChatState();showScreen('login');}
 
 /* ════════ SCREEN ════════ */
 function showScreen(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+n).classList.add('active');const mb=document.getElementById('admin-menu-btn');if(mb)mb.style.display=(n==='admin'&&window.innerWidth<=640)?'block':'none';}
@@ -693,6 +797,8 @@ function activateChat(){
   const inp=document.getElementById('chat-inp');
   inp.disabled=false; inp.placeholder='질문을 입력하세요...';
   document.getElementById('send-btn').disabled=false;
+  document.getElementById('mic-btn').disabled=false;
+  document.getElementById('hf-toggle-btn').disabled=false;
   document.getElementById('chat-hint-txt').textContent='['+selProduct.name+' > '+selModel.name+'] 등록 문서 기반 답변 · 🌀 Gemini 무료 · 이력 7일';
   renderWelcome();
   showToast(selProduct.name+' > '+selModel.name+' 선택됨','success');
@@ -702,6 +808,8 @@ function resetChatState(){
   const inp=document.getElementById('chat-inp');
   inp.disabled=true;inp.placeholder='제품군과 모델을 먼저 선택하세요';
   document.getElementById('send-btn').disabled=true;
+  document.getElementById('mic-btn').disabled=true;
+  document.getElementById('hf-toggle-btn').disabled=true;
   document.getElementById('chat-hint-txt').textContent='🌀 Gemini 2.5 Flash-Lite — Google AI 엔진';
   document.getElementById('chat-body').innerHTML=`<div class="chat-prompt"><div class="chat-prompt-icon">⬆️</div><h2>제품군과 모델을 먼저 선택하세요</h2><p style="font-size:13px;color:var(--text2);margin-top:6px;">위 드롭다운에서 선택 후 <strong style="color:var(--accent);">적용</strong>을 누르면 챗봇이 활성화됩니다.</p></div>`;
 }
@@ -734,6 +842,7 @@ async function sendMsg(){
   document.querySelector('.chat-prompt')?.remove();
   appendMsg('user',text,null);
   const tid=appendTyping();
+  if(handsfreeMode) updateHFBanner('thinking');
   chatHistory.push({role:'user',content:text,cat:selProduct.name,model:selModel.name,time:Date.now()});
 
   // 실제 문서 텍스트를 컨텍스트로 구성
@@ -794,6 +903,7 @@ ${docCtx}`;
     const refDocs=selModel.docs.length>0?selModel.docs.slice(0,2):null;
     appendMsg('bot',reply,refDocs);
     chatHistory.push({role:'assistant',content:reply,time:Date.now()});
+    if(ttsEnabled) speakText(reply);
     // 로그 기록
     chatLogs.unshift({time:fmtT(Date.now()),user:currentUser.name,cat:selProduct.name,model:selModel.name,q:text,ref:refDocs?refDocs[0].title:'—',ok:true});
   }catch(e){
@@ -801,6 +911,7 @@ ${docCtx}`;
     const msg=e.message.includes('401')?'❌ API 키가 올바르지 않습니다.':e.message.includes('429')?'⚠️ 요청 한도 초과. 잠시 후 다시 시도해 주세요.':'⚠️ 오류: '+e.message;
     appendMsg('bot',msg,null);
     chatLogs.unshift({time:fmtT(Date.now()),user:currentUser?.name||'?',cat:selProduct.name,model:selModel.name,q:text,ref:'—',ok:false});
+    if(handsfreeMode) setTimeout(()=>startListeningHF(),1000);
   }
 }
 
@@ -811,7 +922,9 @@ function appendMsg(role,text,srcDocs){
   let src='';
   if(srcDocs&&srcDocs.length>0)
     src=`<div class="msg-src"><div class="msg-src-title">참조 문서</div>${srcDocs.map(d=>`<div class="msg-src-item">📄 [${d.cat}] ${d.title}</div>`).join('')}</div>`;
-  div.innerHTML=av+`<div class="msg-bubble">${text.replace(/\n/g,'<br>')}${src}</div>`;
+  let speakBtn='';
+  if(role==='bot') speakBtn=`<button class="tts-speak-btn" onclick="speakText(this.dataset.text)" data-text="${text.replace(/"/g,'&quot;').replace(/\n/g,' ')}">🔊 읽기</button>`;
+  div.innerHTML=av+`<div class="msg-bubble">${text.replace(/\n/g,'<br>')}${src}${speakBtn}</div>`;
   body.appendChild(div); body.scrollTop=body.scrollHeight;
 }
 function appendTyping(){

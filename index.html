@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>FieldMind — 현장 지식 챗봇</title>
+<title>CUCKOO ProGuide — 현장 기술 지원</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap');
 :root{
@@ -252,8 +252,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <!-- LOGIN -->
 <div id="screen-login" class="screen active">
   <div class="login-card">
-    <div class="login-logo"><div class="login-logo-icon">🏗️</div><div class="login-logo-text">Field<span>Mind</span></div></div>
-    <div class="login-sub">현장 지식 챗봇 · Powered by Gemini</div>
+    <div class="login-logo"><div class="login-logo-icon">🏗️</div><div class="login-logo-text">CUCKOO <span>ProGuide</span></div></div>
+    <div class="login-sub">CUCKOO ProGuide · Powered by Gemini</div>
     <div class="form-group"><label class="form-label">아이디</label><input class="form-input" id="login-id" type="text" placeholder="아이디 입력" autocomplete="username"></div>
     <div class="form-group"><label class="form-label">비밀번호</label><input class="form-input" id="login-pw" type="password" placeholder="비밀번호 입력"></div>
     <div class="login-error" id="login-error"></div>
@@ -265,7 +265,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <!-- CHAT -->
 <div id="screen-chat" class="screen">
   <div class="topnav">
-    <div class="nav-logo"><div class="nav-logo-icon">🏗️</div>Field<span>Mind</span></div>
+    <div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span></div>
     <div class="nav-right">
       <span class="nav-badge badge-user">현장인력</span>
       <div class="nav-avatar" id="chat-avatar">U</div>
@@ -327,7 +327,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 <!-- HISTORY -->
 <div id="screen-history" class="screen">
-  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon">🏗️</div>Field<span>Mind</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
+  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
   <div class="hist-list" id="hist-list"></div>
   <div class="bnav">
     <button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button>
@@ -338,7 +338,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 <!-- NOTICE -->
 <div id="screen-notice" class="screen">
-  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon">🏗️</div>Field<span>Mind</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
+  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
   <div style="padding:16px;flex:1;overflow-y:auto;max-width:720px;width:100%;margin:0 auto;">
     <div style="font-size:16px;font-weight:700;margin-bottom:14px;">📢 공지사항</div>
     <div id="notice-list-user"></div>
@@ -355,7 +355,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="topnav">
     <div style="display:flex;align-items:center;gap:8px;">
       <button class="nav-btn" id="admin-menu-btn" onclick="toggleSB()" style="display:none;">☰</button>
-      <div class="nav-logo"><div class="nav-logo-icon">🏗️</div>Field<span>Mind</span><span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:4px;">관리자</span></div>
+      <div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span><span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:4px;">관리자</span></div>
     </div>
     <div class="nav-right">
       <span class="nav-badge badge-admin">관리자</span>
@@ -634,7 +634,7 @@ let users = [
 ];
 
 let notices = [
-  {title:'FieldMind 챗봇 오픈 안내',body:'현장 지식 챗봇이 오픈되었습니다. 문의사항은 관리자에게 연락하세요.',date:'2024-04-01'},
+  {title:'CUCKOO ProGuide 챗봇 오픈 안내',body:'CUCKOO ProGuide 현장 기술 지원 챗봇이 오픈되었습니다. 문의사항은 관리자에게 연락하세요.',date:'2024-04-01'},
 ];
 
 let chatLogs = [];
@@ -654,11 +654,63 @@ function initSpeech(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){return;}
   recognition=new SR();
-  recognition.lang='ko-KR'; recognition.continuous=false; recognition.interimResults=true;
-  recognition.onstart=()=>{isListening=true;document.getElementById('mic-btn').classList.add('listening');document.getElementById('mic-btn').textContent='🔴';setVoiceStatus('🎤 듣고 있습니다... 말씀하세요');};
-  recognition.onresult=(e)=>{let interim='',final='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript;else interim+=e.results[i][0].transcript;}const inp=document.getElementById('chat-inp');if(final){inp.value=final;autoResize(inp);setVoiceStatus('✅ 인식: '+final);}else if(interim){inp.value=interim;autoResize(inp);}};
-  recognition.onend=()=>{isListening=false;document.getElementById('mic-btn').classList.remove('listening');document.getElementById('mic-btn').textContent='🎤';const text=document.getElementById('chat-inp').value.trim();if(text){setVoiceStatus('');sendMsg();}else{setVoiceStatus('');if(handsfreeMode)startListeningHF();}};
-  recognition.onerror=(e)=>{isListening=false;document.getElementById('mic-btn').classList.remove('listening');document.getElementById('mic-btn').textContent='🎤';if(e.error==='not-allowed'){setVoiceStatus('❌ 마이크 권한이 필요합니다.');}else{setVoiceStatus('');if(handsfreeMode)startListeningHF();}};
+  recognition.lang='ko-KR';
+  recognition.continuous=true;   // 계속 듣기 (무음에 바로 끊기지 않음)
+  recognition.interimResults=true;
+  let silenceTimer=null;
+  const SILENCE_MS=2500;          // 무음 2.5초 후 전송
+
+  recognition.onstart=()=>{
+    isListening=true;
+    document.getElementById('mic-btn').classList.add('listening');
+    document.getElementById('mic-btn').textContent='🔴';
+    setVoiceStatus('🎤 듣고 있습니다... 말씀하세요');
+  };
+
+  recognition.onresult=(e)=>{
+    let interim='', final='';
+    for(let i=e.resultIndex; i<e.results.length; i++){
+      if(e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    const inp=document.getElementById('chat-inp');
+    if(final){
+      inp.value = ((inp.dataset.accumulated||'') + ' ' + final).trim();
+      inp.dataset.accumulated = inp.value;
+      autoResize(inp);
+      setVoiceStatus('🎤 계속 말씀하세요... (2.5초 멈추면 자동 전송)');
+    } else if(interim){
+      inp.value = ((inp.dataset.accumulated||'') + ' ' + interim).trim();
+      autoResize(inp);
+    }
+    // 말이 들어올 때마다 타이머 리셋
+    clearTimeout(silenceTimer);
+    if(inp.value.trim()){
+      silenceTimer = setTimeout(()=>{ recognition.stop(); }, SILENCE_MS);
+    }
+  };
+
+  recognition.onend=()=>{
+    clearTimeout(silenceTimer);
+    isListening=false;
+    document.getElementById('mic-btn').classList.remove('listening');
+    document.getElementById('mic-btn').textContent='🎤';
+    const inp=document.getElementById('chat-inp');
+    delete inp.dataset.accumulated;
+    const text=inp.value.trim();
+    if(text){ setVoiceStatus(''); sendMsg(); }
+    else{ setVoiceStatus(''); if(handsfreeMode) startListeningHF(); }
+  };
+
+  recognition.onerror=(e)=>{
+    clearTimeout(silenceTimer);
+    isListening=false;
+    document.getElementById('mic-btn').classList.remove('listening');
+    document.getElementById('mic-btn').textContent='🎤';
+    if(e.error==='not-allowed'){ setVoiceStatus('❌ 마이크 권한이 필요합니다.'); }
+    else if(e.error!=='no-speech'){ setVoiceStatus(''); }
+    if(handsfreeMode) startListeningHF();
+  };
 }
 function toggleMic(){
   if(!recognition){showToast('Chrome 브라우저에서만 음성 입력 가능합니다.','error');return;}
@@ -674,12 +726,35 @@ function speakText(text){
   if(!window.speechSynthesis)return;
   stopTTS();
   const clean=text.replace(/[#*`>_~\[\]]/g,'').replace(/\n+/g,' ').slice(0,1000);
-  currentUtterance=new SpeechSynthesisUtterance(clean);
-  currentUtterance.lang='ko-KR'; currentUtterance.rate=1.05; isBotSpeaking=true;
-  currentUtterance.onstart=()=>{setVoiceStatus('🔊 답변을 읽고 있습니다...');if(handsfreeMode)updateHFBanner('speaking');};
-  currentUtterance.onend=()=>{isBotSpeaking=false;setVoiceStatus('');if(handsfreeMode){updateHFBanner('listening');setTimeout(()=>startListeningHF(),600);}};
-  currentUtterance.onerror=()=>{isBotSpeaking=false;setVoiceStatus('');if(handsfreeMode)setTimeout(()=>startListeningHF(),600);};
-  window.speechSynthesis.speak(currentUtterance);
+  // 음성 목록 로드 보장 후 실행
+  const _doSpeak=()=>{
+    currentUtterance=new SpeechSynthesisUtterance(clean);
+    currentUtterance.lang='ko-KR';
+    currentUtterance.rate=0.90;    // 천천히 → 더 자연스럽게
+    currentUtterance.pitch=1.15;   // 약간 높고 부드러운 톤
+    currentUtterance.volume=1.0;
+
+    // 자연스러운 한국어 여성 목소리 우선순위 선택
+    const voices=window.speechSynthesis.getVoices();
+    const priority=['Google 한국의 여성','Yuna','SunHi','Microsoft SunHi Online','Microsoft YuJin Online','Google Korean'];
+    let chosen=null;
+    for(const name of priority){
+      chosen=voices.find(v=>v.name===name||v.name.includes(name));
+      if(chosen) break;
+    }
+    if(!chosen) chosen=voices.find(v=>(v.lang==='ko-KR'||v.lang==='ko')&&/female|woman|여성|yuna|sunhi|yuji/i.test(v.name));
+    if(!chosen) chosen=voices.find(v=>v.lang==='ko-KR'||v.lang==='ko');
+    if(chosen) currentUtterance.voice=chosen;
+
+    isBotSpeaking=true;
+    currentUtterance.onstart=()=>{setVoiceStatus('🔊 답변을 읽고 있습니다...');if(handsfreeMode)updateHFBanner('speaking');};
+    currentUtterance.onend=()=>{isBotSpeaking=false;setVoiceStatus('');if(handsfreeMode){updateHFBanner('listening');setTimeout(()=>startListeningHF(),600);}};
+    currentUtterance.onerror=()=>{isBotSpeaking=false;setVoiceStatus('');if(handsfreeMode)setTimeout(()=>startListeningHF(),600);};
+    window.speechSynthesis.speak(currentUtterance);
+  };
+  // 음성 목록이 이미 로드된 경우 바로 실행, 아니면 이벤트 대기
+  if(window.speechSynthesis.getVoices().length>0){ _doSpeak(); }
+  else{ window.speechSynthesis.onvoiceschanged=()=>{ window.speechSynthesis.onvoiceschanged=null; _doSpeak(); }; }
 }
 function stopTTS(){if(window.speechSynthesis)window.speechSynthesis.cancel();isBotSpeaking=false;currentUtterance=null;}
 function toggleHandsfree(){

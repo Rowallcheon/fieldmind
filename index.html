@@ -135,6 +135,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .send-btn:active{transform:scale(.95);}
 .send-btn:disabled{opacity:.3;cursor:not-allowed;}
 .chat-hint-txt{font-size:11px;color:var(--text3);margin-top:6px;text-align:center;}
+/* ── 문의하기 ── */
+.inq-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .2s;}
+.inq-card:hover{border-color:var(--border2);}
+.inq-title{font-size:14px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.inq-meta{font-size:11px;color:var(--text3);display:flex;gap:10px;flex-wrap:wrap;}
+.inq-status-wait{background:rgba(210,153,34,.15);color:var(--warn);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.inq-status-done{background:rgba(63,185,80,.15);color:var(--success);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.inq-badge-new{background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;}
 /* ── 음성 기능 ── */
 .mic-btn{width:44px;height:44px;flex-shrink:0;background:var(--bg3);border:2px solid var(--border2);border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;transition:all .2s;}
 .mic-btn:disabled{opacity:.3;cursor:not-allowed;}
@@ -266,9 +274,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="topnav">
     <div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span></div>
     <div class="nav-right">
-      <span class="nav-badge badge-user">현장인력</span>
+      <span class="nav-badge badge-user">사용자</span>
       <div class="nav-avatar" id="chat-avatar">U</div>
       <span id="chat-uname" style="font-size:13px;color:var(--text2);"></span>
+      <button class="nav-btn" onclick="openInquiryList()" id="inq-nav-btn" style="position:relative;">문의하기<span id="inq-new-dot" style="display:none;position:absolute;top:4px;right:4px;width:7px;height:7px;background:var(--danger);border-radius:50%;"></span></button>
       <button class="nav-btn" onclick="doLogout()">로그아웃</button>
     </div>
   </div>
@@ -277,8 +286,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="sel-wrap"><select id="dd-cat" onchange="onCatChange()"><option value="">-- 선택 --</option></select><span class="sel-arrow-icon">▼</span></div>
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
     <div class="sel-wrap"><select id="dd-model" onchange="onModelChange()" disabled><option value="">-- 선택 --</option></select><span class="sel-arrow-icon">▼</span></div>
-    <button class="sel-confirm-btn" id="sel-confirm-btn" onclick="applySelection()">적용</button>
-    <span class="groq-badge">🌀 Gemini · 무료</span>
+    <button class="sel-confirm-btn" id="sel-confirm-btn" onclick="applySelection()" style="display:none;">적용</button>
   </div>
   <div class="ctx-banner hidden" id="ctx-banner">
     <span class="ctx-chip ctx-chip-cat" id="ctx-cat-chip">—</span>
@@ -372,10 +380,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <div class="sb-sec">콘텐츠</div>
       <button class="sb-btn" id="sb-docs" onclick="showPanel('docs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>문서 관리</button>
       <button class="sb-btn" id="sb-notice" onclick="showPanel('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지사항</button>
+      <div class="sb-sec">문의</div>
+      <button class="sb-btn" id="sb-inquiries" onclick="showPanel('inquiries')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></svg>문의 관리 <span id="inq-admin-badge" style="display:none;background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;margin-left:auto;"></span></button>
       <div class="sb-sec">회원</div>
       <button class="sb-btn" id="sb-users" onclick="showPanel('users')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>회원 관리</button>
       <div class="sb-sec">분석</div>
       <button class="sb-btn" id="sb-logs" onclick="showPanel('logs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>대화 로그</button>
+      <div class="sb-sec">미리보기</div>
+      <button class="sb-btn" id="sb-preview" onclick="goUserPreview()" style="color:var(--info);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>사용자 화면 보기</button>
     </div>
     <div class="admin-main">
 
@@ -485,7 +497,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
             <div class="form-group" style="margin:0;"><label class="form-label">이름</label><input class="form-input" id="u-name" placeholder="홍길동"></div>
             <div class="form-group" style="margin:0;"><label class="form-label">소속</label><input class="form-input" id="u-dept" placeholder="1공구 현장"></div>
             <div class="form-group" style="margin:0;"><label class="form-label">초기 비밀번호</label><input class="form-input" id="u-pw" type="password" placeholder="비밀번호"></div>
-            <div class="form-group" style="margin:0;"><label class="form-label">권한</label><select class="form-input" id="u-role" style="background:var(--bg);"><option value="user">현장인력</option><option value="admin">관리자</option></select></div>
+            <div class="form-group" style="margin:0;"><label class="form-label">권한</label><select class="form-input" id="u-role" style="background:var(--bg);"><option value="user">사용자</option><option value="admin">관리자</option></select></div>
           </div>
           <div style="display:flex;justify-content:flex-end;margin-top:14px;"><button class="btn btn-primary" onclick="addUserSingle()">등록</button></div>
         </div>
@@ -513,16 +525,111 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           </div>
         </div>
         <div class="sec-hdr">
-          <div class="sec-title">전체 회원 목록</div>
-          <input class="form-input" id="u-search" style="width:200px;padding:7px 12px;font-size:13px;" placeholder="이름 / 아이디 검색" oninput="renderUsers()">
+          <div class="sec-title">전체 회원 목록 <span id="u-total-badge" style="font-size:12px;color:var(--text3);font-weight:400;"></span></div>
+          <input class="form-input" id="u-search" style="width:200px;padding:7px 12px;font-size:13px;" placeholder="이름 / 아이디 검색" oninput="uPage=1;renderUsers()">
         </div>
-        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>이름</th><th>아이디</th><th>소속</th><th>권한</th><th>상태</th><th>작업</th></tr></thead><tbody id="u-tbody"></tbody></table></div>
+        <!-- 일괄 작업 툴바 -->
+        <div id="u-bulk-bar" style="display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--accent-dim);border:1px solid var(--accent);border-radius:var(--radius-sm);margin-bottom:10px;flex-wrap:wrap;">
+          <span id="u-bulk-count" style="font-size:13px;font-weight:700;color:var(--accent);"></span>
+          <button class="btn btn-ghost btn-sm" onclick="bulkActivate()">✅ 활성화</button>
+          <button class="btn btn-ghost btn-sm" onclick="bulkDeactivate()">⛔ 비활성화</button>
+          <button class="btn btn-danger btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="bulkDelete()">🗑️ 선택 삭제</button>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="clearCheck()">✕ 선택 해제</button>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th style="width:36px;"><input type="checkbox" id="u-check-all" onchange="toggleCheckAll(this)" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;"></th>
+                <th>이름</th><th>아이디</th><th>소속</th><th>권한</th><th>상태</th><th>작업</th>
+              </tr>
+            </thead>
+            <tbody id="u-tbody"></tbody>
+          </table>
+        </div>
+        <!-- 페이지네이션 -->
+        <div id="u-pagination" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:14px;flex-wrap:wrap;"></div>
+      </div>
+
+      <!-- 문의 관리 -->
+      <div class="a-panel" id="panel-inquiries">
+        <div class="panel-title"><div class="p-icon">📬</div>문의 관리</div>
+        <div id="inq-admin-list"></div>
       </div>
 
       <!-- 로그 -->
       <div class="a-panel" id="panel-logs">
-        <div class="panel-title"><div class="p-icon">📜</div>대화 로그</div>
-        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>시각</th><th>사용자</th><th>제품군</th><th>모델</th><th>질문</th><th>참조 문서</th><th>상태</th></tr></thead><tbody id="log-tbody"></tbody></table></div>
+        <div class="panel-title"><div class="p-icon">📜</div>대화 로그 & 분석</div>
+
+        <!-- 탭 -->
+        <div style="display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--border);padding-bottom:0;">
+          <button class="log-tab active" id="ltab-log" onclick="switchLogTab('log')" style="padding:8px 18px;font-size:13px;font-weight:600;font-family:var(--font);background:none;border:none;border-bottom:2px solid var(--accent);color:var(--accent);cursor:pointer;margin-bottom:-1px;">📋 대화 로그</button>
+          <button class="log-tab" id="ltab-report" onclick="switchLogTab('report')" style="padding:8px 18px;font-size:13px;font-weight:600;font-family:var(--font);background:none;border:none;border-bottom:2px solid transparent;color:var(--text3);cursor:pointer;margin-bottom:-1px;">📊 분석 리포트</button>
+        </div>
+
+        <!-- ── 탭1: 대화 로그 ── -->
+        <div id="log-tab-log">
+          <!-- 필터 바 -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);">
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">기간</div>
+              <div style="display:flex;gap:4px;">
+                <button class="log-period-btn active" data-d="0"  onclick="setLogPeriod(this)" style="padding:5px 10px;font-size:11px;font-weight:600;font-family:var(--font);border-radius:var(--radius-sm);border:1px solid var(--accent);background:var(--accent-dim);color:var(--accent);cursor:pointer;">오늘</button>
+                <button class="log-period-btn" data-d="7"  onclick="setLogPeriod(this)" style="padding:5px 10px;font-size:11px;font-weight:600;font-family:var(--font);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;">7일</button>
+                <button class="log-period-btn" data-d="30" onclick="setLogPeriod(this)" style="padding:5px 10px;font-size:11px;font-weight:600;font-family:var(--font);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;">30일</button>
+                <button class="log-period-btn" data-d="-1" onclick="setLogPeriod(this)" style="padding:5px 10px;font-size:11px;font-weight:600;font-family:var(--font);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;">전체</button>
+                <button class="log-period-btn" data-d="custom" onclick="toggleLogCustom()" style="padding:5px 10px;font-size:11px;font-weight:600;font-family:var(--font);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;">📅 직접입력</button>
+              </div>
+              <!-- 직접입력 날짜 피커 -->
+              <div id="log-custom-range" style="display:none;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
+                <input type="date" id="log-date-from" class="form-input" style="padding:5px 10px;font-size:12px;width:140px;background:var(--bg);">
+                <span style="font-size:12px;color:var(--text3);">~</span>
+                <input type="date" id="log-date-to" class="form-input" style="padding:5px 10px;font-size:12px;width:140px;background:var(--bg);">
+                <button class="btn btn-primary btn-sm" onclick="applyLogCustomRange()">적용</button>
+              </div>
+              <div style="display:none">
+              </div>
+            </div>
+            <div><div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">제품군</div><select id="lf-cat" class="form-input" style="padding:6px 10px;font-size:12px;background:var(--bg);" onchange="updateLogModelFilter();renderLogs()"><option value="">전체</option></select></div>
+            <div><div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">모델</div><select id="lf-model" class="form-input" style="padding:6px 10px;font-size:12px;background:var(--bg);" onchange="renderLogs()"><option value="">전체</option></select></div>
+            <div><div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">상태</div><select id="lf-status" class="form-input" style="padding:6px 10px;font-size:12px;background:var(--bg);" onchange="renderLogs()"><option value="">전체</option><option value="ok">답변완료</option><option value="fail">미답변</option></select></div>
+            <div><div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">사용자</div><input id="lf-user" class="form-input" style="padding:6px 10px;font-size:12px;width:120px;" placeholder="이름 검색" oninput="renderLogs()"></div>
+            <button class="btn btn-ghost btn-sm" onclick="resetLogFilter()" style="margin-top:auto;">초기화</button>
+            <div style="margin-left:auto;margin-top:auto;font-size:12px;color:var(--text3);">총 <span id="log-count" style="color:var(--accent);font-weight:700;">0</span>건</div>
+          </div>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr><th>시각</th><th>사용자</th><th>제품군</th><th>모델</th><th>질문</th><th>참조 문서</th><th>상태</th></tr></thead>
+              <tbody id="log-tbody"></tbody>
+            </table>
+          </div>
+          <div id="log-pagination" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;flex-wrap:wrap;"></div>
+        </div>
+
+        <!-- ── 탭2: 분석 리포트 ── -->
+        <div id="log-tab-report" style="display:none;">
+          <!-- 기간 선택 -->
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:18px;flex-wrap:wrap;">
+            <span style="font-size:13px;font-weight:700;color:var(--text);">분석 기간</span>
+            <button class="rpt-period-btn active" data-d="7"  onclick="setRptPeriod(this)" style="padding:6px 14px;font-size:12px;font-weight:600;font-family:var(--font);border-radius:20px;border:1px solid var(--accent);background:var(--accent-dim);color:var(--accent);cursor:pointer;">최근 7일</button>
+            <button class="rpt-period-btn" data-d="30" onclick="setRptPeriod(this)" style="padding:6px 14px;font-size:12px;font-weight:600;font-family:var(--font);border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;">최근 30일</button>
+            <button class="rpt-period-btn" data-d="-1" onclick="setRptPeriod(this)" style="padding:6px 14px;font-size:12px;font-weight:600;font-family:var(--font);border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;">전체</button>
+            <button class="rpt-period-btn" data-d="custom" onclick="toggleRptCustom()" style="padding:6px 14px;font-size:12px;font-weight:600;font-family:var(--font);border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;">📅 직접입력</button>
+            <span id="rpt-range-txt" style="font-size:12px;color:var(--text3);margin-left:4px;"></span>
+          </div>
+          <!-- 직접입력 날짜 피커 -->
+          <div id="rpt-custom-range" style="display:none;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+            <input type="date" id="rpt-date-from" class="form-input" style="padding:6px 12px;font-size:13px;width:150px;background:var(--bg);">
+            <span style="font-size:13px;color:var(--text3);">~</span>
+            <input type="date" id="rpt-date-to" class="form-input" style="padding:6px 12px;font-size:13px;width:150px;background:var(--bg);">
+            <button class="btn btn-primary btn-sm" onclick="applyRptCustomRange()">적용</button>
+            <span id="rpt-custom-txt" style="font-size:12px;color:var(--info);"></span>
+          </div>
+          <div style="display:none">
+          </div>
+          <div id="report-body"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -591,6 +698,136 @@ E-301: 온도 초과 → 냉각수 순환 상태 확인
   </div>
 </div>
 
+<!-- 모달: 회원 상세/수정 -->
+<div class="modal-overlay" id="modal-member">
+  <div class="modal" style="max-width:480px;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+      <div id="modal-member-avatar" style="width:48px;height:48px;border-radius:50%;background:var(--accent-dim);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--accent);flex-shrink:0;"></div>
+      <div>
+        <div class="modal-title" style="margin-bottom:2px;" id="modal-member-title">회원 정보</div>
+        <div style="font-size:12px;color:var(--text3);" id="modal-member-sub"></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">이름</label>
+        <input class="form-input" id="me-name" placeholder="이름">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">아이디</label>
+        <input class="form-input" id="me-id" placeholder="아이디" style="font-family:var(--mono);">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">소속</label>
+        <input class="form-input" id="me-dept" placeholder="소속">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">새 비밀번호</label>
+        <input class="form-input" id="me-pw" type="password" placeholder="변경 시에만 입력">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">권한</label>
+        <select class="form-input" id="me-role" style="background:var(--bg);">
+          <option value="user">사용자</option>
+          <option value="admin">관리자</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">상태</label>
+        <select class="form-input" id="me-status" style="background:var(--bg);">
+          <option value="active">활성</option>
+          <option value="inactive">비활성</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 등록일 / 마지막 로그인 등 추가 정보 -->
+    <div style="margin-top:16px;padding:12px 14px;background:var(--bg3);border-radius:var(--radius-sm);display:flex;gap:20px;flex-wrap:wrap;">
+      <div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px;">권한</div><div id="me-role-badge" style="font-size:12px;"></div></div>
+      <div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px;">상태</div><div id="me-status-badge" style="font-size:12px;"></div></div>
+    </div>
+
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button class="btn btn-danger btn-sm" id="modal-member-del-btn" style="border-color:var(--danger);color:var(--danger);" onclick="memberDelete()">🗑️ 삭제</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="closeModal('modal-member')">취소</button>
+        <button class="btn btn-primary" onclick="saveMember()">💾 저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- 모달: 문의 목록 (사용자) -->
+<div class="modal-overlay" id="modal-inq-list">
+  <div class="modal" style="max-width:560px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="modal-title" style="margin:0;">📬 문의하기</div>
+      <button class="btn btn-primary btn-sm" onclick="openInquiryWrite()">+ 새 문의</button>
+    </div>
+    <div id="inq-list-body" style="max-height:400px;overflow-y:auto;"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('modal-inq-list')">닫기</button></div>
+  </div>
+</div>
+
+<!-- 모달: 문의 작성 (사용자) -->
+<div class="modal-overlay" id="modal-inq-write">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title" style="margin-bottom:16px;">✏️ 문의 작성</div>
+    <div class="form-group"><label class="form-label">제목</label><input class="form-input" id="inq-w-title" placeholder="문의 제목을 입력하세요"></div>
+    <div class="form-group"><label class="form-label">내용</label><textarea class="form-input" id="inq-w-body" rows="5" placeholder="문의 내용을 자세히 입력해 주세요." style="resize:vertical;"></textarea></div>
+    <div class="form-group"><label class="form-label">조회 비밀번호 <span style="font-size:10px;color:var(--text3);font-weight:400;">(답변 확인 시 사용)</span></label><input class="form-input" id="inq-w-pw" type="password" placeholder="숫자 4자리 이상"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-inq-write')">취소</button>
+      <button class="btn btn-primary" onclick="submitInquiry()">📨 문의 등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- 모달: 문의 상세 보기 (사용자 - 비번 확인) -->
+<div class="modal-overlay" id="modal-inq-view">
+  <div class="modal" style="max-width:520px;">
+    <div id="inq-view-pw-section">
+      <div class="modal-title" style="margin-bottom:8px;">🔒 비밀번호 확인</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">문의 내용을 확인하려면 등록 시 설정한 비밀번호를 입력하세요.</p>
+      <input class="form-input" id="inq-view-pw-input" type="password" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')checkInqPw()">
+      <div id="inq-view-pw-err" style="font-size:12px;color:var(--danger);margin-top:6px;display:none;">비밀번호가 올바르지 않습니다.</div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-inq-view')">취소</button>
+        <button class="btn btn-primary" onclick="checkInqPw()">확인</button>
+      </div>
+    </div>
+    <div id="inq-view-content" style="display:none;">
+      <div class="modal-title" id="inq-view-title" style="margin-bottom:6px;"></div>
+      <div id="inq-view-meta" style="font-size:12px;color:var(--text3);margin-bottom:14px;"></div>
+      <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px;font-size:13px;line-height:1.7;" id="inq-view-body"></div>
+      <div id="inq-view-answer-wrap" style="display:none;">
+        <div style="font-size:12px;font-weight:700;color:var(--success);margin-bottom:8px;display:flex;align-items:center;gap:6px;">✅ 관리자 답변 <span id="inq-view-answer-date" style="font-weight:400;color:var(--text3);"></span></div>
+        <div style="background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.25);border-radius:var(--radius-sm);padding:14px;font-size:13px;line-height:1.7;" id="inq-view-answer"></div>
+      </div>
+      <div id="inq-view-noanswer" style="display:none;padding:14px;background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.25);border-radius:var(--radius-sm);font-size:13px;color:var(--warn);">⏳ 아직 답변이 등록되지 않았습니다.</div>
+      <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('modal-inq-view')">닫기</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- 모달: 관리자 문의 답변 -->
+<div class="modal-overlay" id="modal-inq-admin">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-title" style="margin-bottom:6px;" id="inq-admin-title">문의 답변</div>
+    <div id="inq-admin-meta" style="font-size:12px;color:var(--text3);margin-bottom:12px;"></div>
+    <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;font-size:13px;line-height:1.7;" id="inq-admin-body"></div>
+    <div class="form-group">
+      <label class="form-label">답변 내용</label>
+      <textarea class="form-input" id="inq-admin-answer" rows="5" placeholder="답변을 입력하세요." style="resize:vertical;"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger btn-sm" style="border-color:var(--danger);color:var(--danger);margin-right:auto;" onclick="deleteInquiry()">🗑️ 삭제</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-inq-admin')">취소</button>
+      <button class="btn btn-primary" onclick="saveInqAnswer()">💾 답변 저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- 모달: 회원 삭제 -->
 <div class="modal-overlay" id="modal-del">
   <div class="modal">
@@ -637,6 +874,7 @@ let notices = [
 ];
 
 let chatLogs = [];
+let inquiries = []; // {id, name, userId, title, body, pw, date, answer, answerDate, read}
 
 /* session */
 let currentUser=null, selProduct=null, selModel=null;
@@ -809,6 +1047,7 @@ function doLogin(){
     document.getElementById('chat-avatar').textContent=u.name[0];
     purgeHistory(); populateCatDD(); showScreen('chat');
     initSpeech();
+    updateInqBadges();
   }
 }
 function doLogout(){stopHandsfree();stopTTS();currentUser=null;selProduct=null;selModel=null;chatHistory=[];document.getElementById('login-id').value='';document.getElementById('login-pw').value='';resetChatState();showScreen('login');}
@@ -816,6 +1055,34 @@ function doLogout(){stopHandsfree();stopTTS();currentUser=null;selProduct=null;s
 /* ════════ SCREEN ════════ */
 function showScreen(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+n).classList.add('active');const mb=document.getElementById('admin-menu-btn');if(mb)mb.style.display=(n==='admin'&&window.innerWidth<=640)?'block':'none';}
 function switchTab(t){if(t==='chat')showScreen('chat');else if(t==='history'){renderHistory();showScreen('history');}else if(t==='notice'){renderNoticesUser();showScreen('notice');}}
+function goUserPreview(){
+  // 관리자 → 사용자 화면으로 전환 (관리자 권한 유지, 돌아오기 버튼 포함)
+  document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sb-preview').classList.add('active');
+  if(window.innerWidth<=640) document.getElementById('admin-sidebar').classList.remove('open');
+
+  // 사용자 화면 표시 전 준비
+  purgeHistory();
+  populateCatDD();
+
+  // 돌아가기 버튼 삽입
+  const nav=document.querySelector('#screen-chat .topnav .nav-right');
+  if(nav && !document.getElementById('back-to-admin-btn')){
+    const backBtn=document.createElement('button');
+    backBtn.id='back-to-admin-btn';
+    backBtn.className='nav-btn';
+    backBtn.style.cssText='border-color:var(--accent);color:var(--accent);font-weight:700;';
+    backBtn.textContent='← 관리자로';
+    backBtn.onclick=()=>{
+      showScreen('admin');
+      document.getElementById('back-to-admin-btn').remove();
+      showPanel('dashboard');
+    };
+    nav.prepend(backBtn);
+  }
+  showScreen('chat');
+}
+
 function showPanel(n){document.querySelectorAll('.a-panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+n).classList.add('active');document.getElementById('sb-'+n).classList.add('active');if(window.innerWidth<=640)document.getElementById('admin-sidebar').classList.remove('open');}
 function toggleSB(){document.getElementById('admin-sidebar').classList.toggle('open');}
 
@@ -853,6 +1120,8 @@ function onModelChange(){
   const v=document.getElementById('dd-model').value;
   document.getElementById('dd-model').classList.toggle('has-val',!!v);
   document.getElementById('sel-confirm-btn').classList.toggle('ready',!!(document.getElementById('dd-cat').value&&v));
+  // 모델 선택과 동시에 바로 챗봇 활성화
+  if(document.getElementById('dd-cat').value && v) applySelection();
 }
 function applySelection(){
   const catId=document.getElementById('dd-cat').value;
@@ -873,7 +1142,7 @@ function activateChat(){
   document.getElementById('send-btn').disabled=false;
   document.getElementById('mic-btn').disabled=false;
   document.getElementById('hf-toggle-btn').disabled=false;
-  document.getElementById('chat-hint-txt').textContent='['+selProduct.name+' > '+selModel.name+'] 등록 문서 기반 답변 · 🌀 Gemini 무료 · 이력 7일';
+  document.getElementById('chat-hint-txt').textContent='['+selProduct.name+' > '+selModel.name+']';
   renderWelcome();
   showToast(selProduct.name+' > '+selModel.name+' 선택됨','success');
 }
@@ -893,7 +1162,7 @@ function renderWelcome(){
     <div class="chat-welcome">
       <div class="chat-welcome-icon">${selProduct.icon}</div>
       <h2>${selProduct.name} · ${selModel.name}</h2>
-      <p>${hasDocs?'등록된 '+selModel.docs.length+'건의 문서를 기반으로 답변합니다.':'<span style="color:var(--warn);">⚠️ 아직 등록된 문서가 없습니다.<br>관리자 페이지 → 문서 관리에서 내용을 입력해 주세요.</span>'}</p>
+      <p>${hasDocs?'등록된 '+selModel.docs.length+'건의 문서를 기반으로 답변합니다.':''}</p>
       ${hasDocs?`<div class="quick-btns">
         <button class="quick-btn" onclick="sendQuick('이 모델의 주요 사양을 알려주세요')">📋 주요 사양</button>
         <button class="quick-btn" onclick="sendQuick('에러코드 목록을 알려주세요')">🔧 에러코드</button>
@@ -979,12 +1248,12 @@ ${docCtx}`;
     chatHistory.push({role:'assistant',content:reply,time:Date.now()});
     if(ttsEnabled) speakText(reply);
     // 로그 기록
-    chatLogs.unshift({time:fmtT(Date.now()),user:currentUser.name,cat:selProduct.name,model:selModel.name,q:text,ref:refDocs?refDocs[0].title:'—',ok:true});
+    chatLogs.unshift({ts:Date.now(),time:fmtT(Date.now()),user:currentUser.name,cat:selProduct.name,model:selModel.name,q:text,ref:refDocs?refDocs[0].title:'—',ok:true});
   }catch(e){
     removeTyping(tid);
     const msg=e.message.includes('401')?'❌ API 키가 올바르지 않습니다.':e.message.includes('429')?'⚠️ 요청 한도 초과. 잠시 후 다시 시도해 주세요.':'⚠️ 오류: '+e.message;
     appendMsg('bot',msg,null);
-    chatLogs.unshift({time:fmtT(Date.now()),user:currentUser?.name||'?',cat:selProduct.name,model:selModel.name,q:text,ref:'—',ok:false});
+    chatLogs.unshift({ts:Date.now(),time:fmtT(Date.now()),user:currentUser?.name||'?',cat:selProduct.name,model:selModel.name,q:text,ref:'—',ok:false});
     if(handsfreeMode) setTimeout(()=>startListeningHF(),1000);
   }
 }
@@ -1027,7 +1296,7 @@ function fmtT(ms){if(!ms)return'';const d=new Date(ms);return d.getHours().toStr
 function renderNoticesUser(){document.getElementById('notice-list-user').innerHTML=notices.map(n=>`<div class="notice-card"><div class="notice-title">${n.title}</div><div class="notice-body">${n.body}</div><div class="notice-meta">${n.date}</div></div>`).join('');}
 
 /* ════════ ADMIN ════════ */
-function renderAdmin(){renderDash();renderDocTree();renderAdminNotices();renderUsers();renderLogs();renderCatSel();}
+function renderAdmin(){renderDash();renderDocTree();renderAdminNotices();renderUsers();renderLogs();renderCatSel();renderAdminInquiries();updateInqBadges();}
 
 function renderDash(){
   const totalM=products.reduce((a,p)=>a+p.models.length,0);
@@ -1336,37 +1605,751 @@ function submitCsv(){
 }
 function resetCsv(){csvPendingList=[];document.getElementById('csv-preview').style.display='none';document.getElementById('csv-submit-area').style.display='none';document.getElementById('csv-prog-area').style.display='none';}
 
-function renderUsers(){
+/* ── 회원 목록: 페이지네이션 + 체크박스 ── */
+let uPage=1;
+const U_PER_PAGE=50;
+let checkedIds=new Set();
+
+function getFilteredUsers(){
   const q=(document.getElementById('u-search')?.value||'').toLowerCase();
-  const list=q?users.filter(u=>u.name.toLowerCase().includes(q)||u.id.toLowerCase().includes(q)):users;
-  document.getElementById('u-tbody').innerHTML=list.map(u=>`<tr>
-    <td style="color:var(--text);font-weight:500;">${u.name}</td>
+  return q?users.filter(u=>u.name.toLowerCase().includes(q)||u.id.toLowerCase().includes(q)):users;
+}
+
+function renderUsers(){
+  const list=getFilteredUsers();
+  const total=list.length;
+  const totalPages=Math.max(1,Math.ceil(total/U_PER_PAGE));
+  if(uPage>totalPages) uPage=totalPages;
+  const start=(uPage-1)*U_PER_PAGE;
+  const paged=list.slice(start,start+U_PER_PAGE);
+
+  // 배지
+  document.getElementById('u-total-badge').textContent=`(전체 ${total}명)`;
+
+  // 테이블 행
+  document.getElementById('u-tbody').innerHTML=paged.map(u=>`<tr style="${checkedIds.has(u.id)?'background:var(--accent-dim);':''}">
+    <td style="text-align:center;">
+      ${u.id!==currentUser?.id
+        ?`<input type="checkbox" value="${u.id}" ${checkedIds.has(u.id)?'checked':''} onchange="onCheckRow(this)" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;">`
+        :'<span style="font-size:10px;color:var(--text3);">본인</span>'}
+    </td>
+    <td><button onclick="openMember('${u.id}')" style="background:none;border:none;color:var(--text);font-weight:600;font-size:13px;cursor:pointer;padding:0;font-family:var(--font);text-align:left;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--border2);">${u.name}</button></td>
     <td style="font-family:var(--mono);font-size:12px;">${u.id}</td>
     <td>${u.dept}</td>
-    <td><span class="badge ${u.role==='admin'?'badge-gold':'badge-blue'}">${u.role==='admin'?'관리자':'현장인력'}</span></td>
+    <td><span class="badge ${u.role==='admin'?'badge-gold':'badge-blue'}">${u.role==='admin'?'관리자':'사용자'}</span></td>
     <td><span class="badge ${u.status==='active'?'badge-green':'badge-red'}">${u.status==='active'?'활성':'비활성'}</span></td>
     <td style="display:flex;gap:6px;flex-wrap:wrap;">
       <button class="btn btn-ghost btn-sm" onclick="toggleStatus('${u.id}')">${u.status==='active'?'비활성':'활성화'}</button>
-      ${u.id!==currentUser?.id?`<button class="btn btn-danger btn-sm" onclick="openDel('${u.id}','${u.name}')">삭제</button>`:'<span style="font-size:11px;color:var(--text3)">본인</span>'}
+      ${u.id!==currentUser?.id?`<button class="btn btn-danger btn-sm" onclick="openDel('${u.id}','${u.name}')">삭제</button>`:''}
     </td>
   </tr>`).join('');
+
+  // 전체 체크 상태 동기화
+  const allChk=document.getElementById('u-check-all');
+  if(allChk){
+    const pageIds=paged.filter(u=>u.id!==currentUser?.id).map(u=>u.id);
+    allChk.checked=pageIds.length>0&&pageIds.every(id=>checkedIds.has(id));
+    allChk.indeterminate=!allChk.checked&&pageIds.some(id=>checkedIds.has(id));
+  }
+
+  // 일괄 작업 툴바
+  const bar=document.getElementById('u-bulk-bar');
+  if(checkedIds.size>0){
+    bar.style.display='flex';
+    document.getElementById('u-bulk-count').textContent=`${checkedIds.size}명 선택됨`;
+  } else {
+    bar.style.display='none';
+  }
+
+  // 페이지네이션
+  renderUserPagination(totalPages);
 }
+
+function renderUserPagination(totalPages){
+  const pg=document.getElementById('u-pagination');
+  if(totalPages<=1){pg.innerHTML='';return;}
+  const btnStyle='padding:5px 11px;font-size:12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-family:var(--font);';
+  const activeStyle='padding:5px 11px;font-size:12px;border-radius:var(--radius-sm);border:1px solid var(--accent);background:var(--accent-dim);color:var(--accent);cursor:pointer;font-family:var(--font);font-weight:700;';
+  let btns=`<button style="${btnStyle}" onclick="uPage=1;renderUsers()" ${uPage===1?'disabled':''}>«</button>
+    <button style="${btnStyle}" onclick="uPage--;renderUsers()" ${uPage===1?'disabled':''}>‹</button>`;
+  const s=Math.max(1,uPage-2), e=Math.min(totalPages,uPage+2);
+  for(let i=s;i<=e;i++) btns+=`<button style="${i===uPage?activeStyle:btnStyle}" onclick="uPage=${i};renderUsers()">${i}</button>`;
+  btns+=`<button style="${btnStyle}" onclick="uPage++;renderUsers()" ${uPage===totalPages?'disabled':''}>›</button>
+    <button style="${btnStyle}" onclick="uPage=${totalPages};renderUsers()" ${uPage===totalPages?'disabled':''}>»</button>
+    <span style="font-size:12px;color:var(--text3);margin-left:4px;">${uPage} / ${totalPages} 페이지</span>`;
+  pg.innerHTML=btns;
+}
+
+function onCheckRow(el){
+  if(el.checked) checkedIds.add(el.value);
+  else checkedIds.delete(el.value);
+  renderUsers();
+}
+
+function toggleCheckAll(el){
+  const list=getFilteredUsers();
+  const paged=list.slice((uPage-1)*U_PER_PAGE, uPage*U_PER_PAGE);
+  paged.forEach(u=>{
+    if(u.id===currentUser?.id) return;
+    if(el.checked) checkedIds.add(u.id);
+    else checkedIds.delete(u.id);
+  });
+  renderUsers();
+}
+
+function clearCheck(){checkedIds.clear();renderUsers();}
+
+function bulkActivate(){
+  if(!checkedIds.size) return;
+  users.forEach(u=>{if(checkedIds.has(u.id)) u.status='active';});
+  showToast(`✅ ${checkedIds.size}명 활성화됨`,'success');
+  checkedIds.clear(); renderUsers(); renderDash();
+}
+
+function bulkDeactivate(){
+  if(!checkedIds.size) return;
+  users.forEach(u=>{if(checkedIds.has(u.id)&&u.id!==currentUser?.id) u.status='inactive';});
+  showToast(`⛔ ${checkedIds.size}명 비활성화됨`);
+  checkedIds.clear(); renderUsers(); renderDash();
+}
+
+function bulkDelete(){
+  if(!checkedIds.size) return;
+  const cnt=checkedIds.size;
+  if(!confirm(`선택한 ${cnt}명을 삭제하시겠습니까?`)) return;
+  users=users.filter(u=>!checkedIds.has(u.id)||u.id===currentUser?.id);
+  showToast(`🗑️ ${cnt}명 삭제됨`,'success');
+  checkedIds.clear(); renderUsers(); renderDash();
+}
+
+/* ── 회원 상세/수정 모달 ── */
+let editMemberId = null;
+
+function openMember(id){
+  const u = users.find(x => x.id === id);
+  if(!u) return;
+  editMemberId = id;
+
+  // 아바타
+  document.getElementById('modal-member-avatar').textContent = u.name[0];
+  document.getElementById('modal-member-title').textContent = u.name + ' 회원 정보';
+  document.getElementById('modal-member-sub').textContent = u.dept + ' · ' + (u.role==='admin'?'관리자':'사용자');
+
+  // 폼 채우기
+  document.getElementById('me-name').value = u.name;
+  document.getElementById('me-id').value = u.id;
+  document.getElementById('me-dept').value = u.dept;
+  document.getElementById('me-pw').value = '';
+  document.getElementById('me-role').value = u.role;
+  document.getElementById('me-status').value = u.status;
+
+  // 배지
+  document.getElementById('me-role-badge').innerHTML = `<span class="badge ${u.role==='admin'?'badge-gold':'badge-blue'}">${u.role==='admin'?'관리자':'사용자'}</span>`;
+  document.getElementById('me-status-badge').innerHTML = `<span class="badge ${u.status==='active'?'badge-green':'badge-red'}">${u.status==='active'?'활성':'비활성'}</span>`;
+
+  // 본인이면 삭제 버튼 숨김
+  const delBtn = document.getElementById('modal-member-del-btn');
+  delBtn.style.display = (id === currentUser?.id) ? 'none' : 'inline-flex';
+
+  // 아이디 필드: 본인이면 수정 불가
+  document.getElementById('me-id').disabled = (id === currentUser?.id);
+
+  // role/status select 연동 → 배지 실시간 갱신
+  document.getElementById('me-role').onchange = function(){
+    const r = this.value;
+    document.getElementById('me-role-badge').innerHTML = `<span class="badge ${r==='admin'?'badge-gold':'badge-blue'}">${r==='admin'?'관리자':'사용자'}</span>`;
+  };
+  document.getElementById('me-status').onchange = function(){
+    const s = this.value;
+    document.getElementById('me-status-badge').innerHTML = `<span class="badge ${s==='active'?'badge-green':'badge-red'}">${s==='active'?'활성':'비활성'}</span>`;
+  };
+
+  document.getElementById('modal-member').classList.add('open');
+}
+
+function saveMember(){
+  const u = users.find(x => x.id === editMemberId);
+  if(!u) return;
+
+  const newName  = document.getElementById('me-name').value.trim();
+  const newId    = document.getElementById('me-id').value.trim();
+  const newDept  = document.getElementById('me-dept').value.trim();
+  const newPw    = document.getElementById('me-pw').value;
+  const newRole  = document.getElementById('me-role').value;
+  const newStatus= document.getElementById('me-status').value;
+
+  if(!newName || !newId || !newDept){ showToast('이름, 아이디, 소속은 필수입니다.','error'); return; }
+
+  // 아이디 중복 체크 (본인 제외)
+  if(newId !== u.id && users.find(x => x.id === newId)){
+    showToast('이미 사용 중인 아이디입니다.','error'); return;
+  }
+
+  // 본인 계정 비활성/권한 강등 방지
+  if(u.id === currentUser?.id){
+    if(newStatus === 'inactive'){ showToast('본인 계정을 비활성화할 수 없습니다.','error'); return; }
+    if(newRole !== 'admin'){ showToast('본인 권한을 변경할 수 없습니다.','error'); return; }
+  }
+
+  u.name   = newName;
+  u.id     = newId;
+  u.dept   = newDept;
+  u.role   = newRole;
+  u.status = newStatus;
+  if(newPw) u.pw = newPw;
+
+  // 본인 아이디 변경 시 currentUser 동기화
+  if(editMemberId === currentUser?.id){
+    currentUser.name = newName;
+    currentUser.id   = newId;
+    document.getElementById('admin-uname').textContent = newName;
+    document.getElementById('admin-avatar').textContent = newName[0];
+  }
+
+  editMemberId = null;
+  closeModal('modal-member');
+  renderUsers(); renderDash();
+  showToast('✅ 회원 정보가 수정되었습니다.','success');
+}
+
+function memberDelete(){
+  const u = users.find(x => x.id === editMemberId);
+  if(!u || u.id === currentUser?.id) return;
+  if(!confirm(`"${u.name}" 회원을 삭제하시겠습니까?`)) return;
+  users = users.filter(x => x.id !== editMemberId);
+  editMemberId = null;
+  closeModal('modal-member');
+  renderUsers(); renderDash();
+  showToast('회원 삭제됨','success');
+}
+
 function toggleStatus(id){const u=users.find(x=>x.id===id);if(u){u.status=u.status==='active'?'inactive':'active';renderUsers();showToast('상태 변경됨');}}
 function openDel(id,name){delTargetId=id;document.getElementById('modal-del-msg').textContent=`"${name}" 회원을 삭제하시겠습니까?`;document.getElementById('modal-del').classList.add('open');}
 function confirmDel(){users=users.filter(u=>u.id!==delTargetId);closeModal('modal-del');renderUsers();renderDash();showToast('회원 삭제됨','success');}
 
+/* ════════ 대화 로그 & 분석 ════════ */
+let logPeriodDays=0, rptPeriodDays=7, logPage=1;
+let logCustomFrom=null, logCustomTo=null;   // 대화로그 직접입력
+let rptCustomFrom=null, rptCustomTo=null;   // 리포트 직접입력
+const LOG_PER_PAGE=50;
+
+function switchLogTab(t){
+  ['log','report'].forEach(x=>{
+    document.getElementById('log-tab-'+x).style.display=x===t?'block':'none';
+    const btn=document.getElementById('ltab-'+x);
+    if(btn){btn.style.borderBottomColor=x===t?'var(--accent)':'transparent';btn.style.color=x===t?'var(--accent)':'var(--text3)';}
+  });
+  if(t==='report') renderReport();
+}
+
+function setLogPeriod(el){
+  document.querySelectorAll('.log-period-btn').forEach(b=>{b.style.borderColor='var(--border)';b.style.background='var(--bg3)';b.style.color='var(--text3)';});
+  el.style.borderColor='var(--accent)';el.style.background='var(--accent-dim)';el.style.color='var(--accent)';
+  logPeriodDays=parseInt(el.dataset.d);
+  logCustomFrom=null; logCustomTo=null;
+  const cr=document.getElementById('log-custom-range');
+  if(cr) cr.style.display='none';
+  logPage=1; renderLogs();
+}
+
+function toggleLogCustom(){
+  const cr=document.getElementById('log-custom-range');
+  if(!cr) return;
+  const isOpen=cr.style.display==='flex';
+  cr.style.display=isOpen?'none':'flex';
+  if(!isOpen){
+    // 오늘 날짜를 기본값으로
+    const today=new Date().toISOString().slice(0,10);
+    const monthAgo=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+    document.getElementById('log-date-from').value=monthAgo;
+    document.getElementById('log-date-to').value=today;
+    // 직접입력 버튼 하이라이트
+    document.querySelectorAll('.log-period-btn').forEach(b=>{b.style.borderColor='var(--border)';b.style.background='var(--bg3)';b.style.color='var(--text3)';});
+    const customBtn=document.querySelector('.log-period-btn[data-d="custom"]');
+    if(customBtn){customBtn.style.borderColor='var(--accent)';customBtn.style.background='var(--accent-dim)';customBtn.style.color='var(--accent)';}
+  }
+}
+
+function applyLogCustomRange(){
+  const from=document.getElementById('log-date-from').value;
+  const to=document.getElementById('log-date-to').value;
+  if(!from||!to){showToast('시작일과 종료일을 모두 선택하세요.','error');return;}
+  if(from>to){showToast('시작일이 종료일보다 늦을 수 없습니다.','error');return;}
+  logCustomFrom=new Date(from).setHours(0,0,0,0);
+  logCustomTo=new Date(to).setHours(23,59,59,999);
+  logPeriodDays=-2; // custom 플래그
+  logPage=1;
+  showToast(`✅ ${from} ~ ${to} 기간 적용`,'success');
+  renderLogs();
+}
+
+function setRptPeriod(el){
+  document.querySelectorAll('.rpt-period-btn').forEach(b=>{b.style.borderColor='var(--border)';b.style.background='var(--bg3)';b.style.color='var(--text3)';});
+  el.style.borderColor='var(--accent)';el.style.background='var(--accent-dim)';el.style.color='var(--accent)';
+  rptPeriodDays=parseInt(el.dataset.d);
+  rptCustomFrom=null; rptCustomTo=null;
+  const cr=document.getElementById('rpt-custom-range');
+  if(cr) cr.style.display='none';
+  const ct=document.getElementById('rpt-custom-txt');
+  if(ct) ct.textContent='';
+  renderReport();
+}
+
+function toggleRptCustom(){
+  const cr=document.getElementById('rpt-custom-range');
+  if(!cr) return;
+  const isOpen=cr.style.display==='flex';
+  cr.style.display=isOpen?'none':'flex';
+  if(!isOpen){
+    const today=new Date().toISOString().slice(0,10);
+    const monthAgo=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+    document.getElementById('rpt-date-from').value=monthAgo;
+    document.getElementById('rpt-date-to').value=today;
+    document.querySelectorAll('.rpt-period-btn').forEach(b=>{b.style.borderColor='var(--border)';b.style.background='var(--bg3)';b.style.color='var(--text3)';});
+    const customBtn=document.querySelector('.rpt-period-btn[data-d="custom"]');
+    if(customBtn){customBtn.style.borderColor='var(--accent)';customBtn.style.background='var(--accent-dim)';customBtn.style.color='var(--accent)';}
+  }
+}
+
+function applyRptCustomRange(){
+  const from=document.getElementById('rpt-date-from').value;
+  const to=document.getElementById('rpt-date-to').value;
+  if(!from||!to){showToast('시작일과 종료일을 모두 선택하세요.','error');return;}
+  if(from>to){showToast('시작일이 종료일보다 늦을 수 없습니다.','error');return;}
+  rptCustomFrom=new Date(from).setHours(0,0,0,0);
+  rptCustomTo=new Date(to).setHours(23,59,59,999);
+  rptPeriodDays=-2; // custom 플래그
+  const ct=document.getElementById('rpt-custom-txt');
+  if(ct) ct.textContent=`${from} ~ ${to}`;
+  showToast(`✅ ${from} ~ ${to} 기간 적용`,'success');
+  renderReport();
+}
+
+function resetLogFilter(){
+  document.getElementById('lf-cat').value='';
+  document.getElementById('lf-model').value='';
+  document.getElementById('lf-status').value='';
+  document.getElementById('lf-user').value='';
+  logCustomFrom=null; logCustomTo=null;
+  const cr=document.getElementById('log-custom-range');
+  if(cr) cr.style.display='none';
+  logPeriodDays=0; logPage=1;
+  document.querySelectorAll('.log-period-btn').forEach((b,i)=>{
+    const isFirst=i===0;
+    b.style.borderColor=isFirst?'var(--accent)':'var(--border)';
+    b.style.background=isFirst?'var(--accent-dim)':'var(--bg3)';
+    b.style.color=isFirst?'var(--accent)':'var(--text3)';
+  });
+  renderLogs();
+}
+
+function initLogFilters(){
+  const cats=[...new Set(chatLogs.map(l=>l.cat).filter(Boolean))];
+  const catSel=document.getElementById('lf-cat');
+  if(catSel){catSel.innerHTML='<option value="">전체</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');}
+  updateLogModelFilter();
+}
+
+function updateLogModelFilter(){
+  const catVal=document.getElementById('lf-cat')?.value||'';
+  const models=[...new Set(chatLogs.filter(l=>!catVal||l.cat===catVal).map(l=>l.model).filter(Boolean))];
+  const mSel=document.getElementById('lf-model');
+  if(mSel){mSel.innerHTML='<option value="">전체</option>'+models.map(m=>`<option value="${m}">${m}</option>`).join('');}
+}
+
+function getFilteredLogs(){
+  const now=Date.now();
+  const catVal=document.getElementById('lf-cat')?.value||'';
+  const modelVal=document.getElementById('lf-model')?.value||'';
+  const statusVal=document.getElementById('lf-status')?.value||'';
+  const userVal=(document.getElementById('lf-user')?.value||'').toLowerCase();
+  return chatLogs.filter(l=>{
+    if(logPeriodDays===-2){
+      if(logCustomFrom&&logCustomTo&&l.ts&&(l.ts<logCustomFrom||l.ts>logCustomTo)) return false;
+    } else if(logPeriodDays>=0 && l.ts && (now-l.ts)>logPeriodDays*86400000) return false;
+    if(catVal && l.cat!==catVal) return false;
+    if(modelVal && l.model!==modelVal) return false;
+    if(statusVal==='ok' && !l.ok) return false;
+    if(statusVal==='fail' && l.ok) return false;
+    if(userVal && !l.user.toLowerCase().includes(userVal)) return false;
+    return true;
+  });
+}
+
 function renderLogs(){
-  document.getElementById('log-tbody').innerHTML=chatLogs.length===0
-    ?'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px;">아직 대화 기록이 없습니다</td></tr>'
-    :chatLogs.slice(0,50).map(l=>`<tr>
-      <td style="font-family:var(--mono);font-size:12px;">${l.time}</td>
-      <td>${l.user}</td>
-      <td><span class="badge badge-gold" style="font-size:10px;">${l.cat}</span></td>
-      <td><span class="badge badge-blue" style="font-size:10px;">${l.model}</span></td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.q}</td>
-      <td style="font-size:12px;color:var(--text3);">${l.ref}</td>
-      <td><span class="badge ${l.ok?'badge-green':'badge-red'}">${l.ok?'답변완료':'미답변'}</span></td>
+  initLogFilters();
+  updateLogModelFilter();
+  const filtered=getFilteredLogs();
+  const total=filtered.length;
+  const totalPages=Math.max(1,Math.ceil(total/LOG_PER_PAGE));
+  if(logPage>totalPages) logPage=totalPages;
+  const paged=filtered.slice((logPage-1)*LOG_PER_PAGE, logPage*LOG_PER_PAGE);
+  document.getElementById('log-count').textContent=total;
+  document.getElementById('log-tbody').innerHTML=total===0
+    ?'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px;">조건에 맞는 로그가 없습니다</td></tr>'
+    :paged.map(l=>`<tr>
+      <td style="font-family:var(--mono);font-size:12px;white-space:nowrap;">${l.time}</td>
+      <td style="white-space:nowrap;">${l.user}</td>
+      <td><span class="badge badge-gold" style="font-size:10px;white-space:nowrap;">${l.cat}</span></td>
+      <td><span class="badge badge-blue" style="font-size:10px;white-space:nowrap;">${l.model}</span></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${l.q}">${l.q}</td>
+      <td style="font-size:12px;color:var(--text3);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.ref}</td>
+      <td><span class="badge ${l.ok?'badge-green':'badge-red'}" style="white-space:nowrap;">${l.ok?'답변완료':'미답변'}</span></td>
     </tr>`).join('');
+
+  // 페이지네이션
+  const pg=document.getElementById('log-pagination');
+  if(totalPages<=1){pg.innerHTML='';return;}
+  const bs='padding:5px 10px;font-size:12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-family:var(--font);';
+  const as='padding:5px 10px;font-size:12px;border-radius:var(--radius-sm);border:1px solid var(--accent);background:var(--accent-dim);color:var(--accent);cursor:pointer;font-family:var(--font);font-weight:700;';
+  let btns=`<button style="${bs}" onclick="logPage=1;renderLogs()" ${logPage===1?'disabled':''}>«</button>
+    <button style="${bs}" onclick="logPage--;renderLogs()" ${logPage===1?'disabled':''}>‹</button>`;
+  const s=Math.max(1,logPage-2),e=Math.min(totalPages,logPage+2);
+  for(let i=s;i<=e;i++) btns+=`<button style="${i===logPage?as:bs}" onclick="logPage=${i};renderLogs()">${i}</button>`;
+  btns+=`<button style="${bs}" onclick="logPage++;renderLogs()" ${logPage===totalPages?'disabled':''}>›</button>
+    <button style="${bs}" onclick="logPage=${totalPages};renderLogs()" ${logPage===totalPages?'disabled':''}>»</button>
+    <span style="font-size:12px;color:var(--text3);margin-left:4px;">${logPage}/${totalPages}</span>`;
+  pg.innerHTML=btns;
+}
+
+/* ── 분석 리포트 ── */
+function getRptLogs(){
+  const now=Date.now();
+  return chatLogs.filter(l=>{
+    if(rptPeriodDays===-2){
+      if(!l.ts) return true;
+      return (!rptCustomFrom||l.ts>=rptCustomFrom)&&(!rptCustomTo||l.ts<=rptCustomTo);
+    }
+    return rptPeriodDays<0||!l.ts||(now-l.ts)<=rptPeriodDays*86400000;
+  });
+}
+
+function countBy(arr,key){
+  const m={};arr.forEach(l=>{const v=l[key]||'—';m[v]=(m[v]||0)+1;});
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+}
+
+function barHtml(label,count,max,badgeClass){
+  const pct=max>0?Math.round(count/max*100):0;
+  const w=Math.max(4,pct);
+  return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+    <span class="badge ${badgeClass}" style="font-size:11px;min-width:90px;justify-content:center;">${label}</span>
+    <div style="flex:1;background:var(--bg4);border-radius:4px;height:10px;overflow:hidden;">
+      <div style="height:100%;background:var(--accent);border-radius:4px;width:${w}%;transition:width .4s;"></div>
+    </div>
+    <span style="font-size:12px;font-weight:700;color:var(--text);min-width:32px;text-align:right;">${count}건</span>
+    <span style="font-size:11px;color:var(--text3);min-width:30px;">${pct}%</span>
+  </div>`;
+}
+
+function cardHtml(icon,title,val,sub,color){
+  return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
+    <div style="font-size:22px;margin-bottom:6px;">${icon}</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">${title}</div>
+    <div style="font-size:26px;font-weight:900;color:${color};">${val}</div>
+    ${sub?`<div style="font-size:11px;color:var(--text3);margin-top:3px;">${sub}</div>`:''}
+  </div>`;
+}
+
+function keywordCloud(logs){
+  const stopWords=new Set(['이','가','은','는','을','를','의','에','에서','로','으로','와','과','도','만','좀','좀요','알려','주세요','어떻게','무엇','어떤','뭐','어디','알고','싶어요','해주세요','알려주세요','있나요','인가요','이고','하는','되는','위한','대한','것이','것은','것을','있는','없는','해야','하면','했을','됩니다']);
+  const freq={};
+  logs.forEach(l=>{
+    (l.q||'').replace(/[^\w가-힣\s]/g,'').split(/\s+/).forEach(w=>{
+      if(w.length<2||stopWords.has(w)) return;
+      freq[w]=(freq[w]||0)+1;
+    });
+  });
+  const sorted=Object.entries(freq).filter(([,v])=>v>1).sort((a,b)=>b[1]-a[1]).slice(0,30);
+  if(!sorted.length) return '<div style="font-size:13px;color:var(--text3);padding:12px 0;">질문 데이터가 부족합니다.</div>';
+  const max=sorted[0][1];
+  return sorted.map(([w,c])=>{
+    const sz=12+Math.round((c/max)*14);
+    const op=0.5+((c/max)*0.5);
+    return `<span style="font-size:${sz}px;color:var(--accent);opacity:${op};padding:3px 6px;display:inline-block;cursor:default;" title="${c}회">${w}</span>`;
+  }).join('');
+}
+
+function renderReport(){
+  const logs=getRptLogs();
+  const total=logs.length;
+  const ok=logs.filter(l=>l.ok).length;
+  const fail=total-ok;
+  const answerRate=total>0?Math.round(ok/total*100):0;
+
+  // 기간 텍스트
+  const rngEl=document.getElementById('rpt-range-txt');
+  if(rngEl){
+    if(rptPeriodDays===-2){
+      const f=document.getElementById('rpt-date-from')?.value||'';
+      const t=document.getElementById('rpt-date-to')?.value||'';
+      rngEl.textContent=`${f} ~ ${t} · ${total}건`;
+    } else {
+      rngEl.textContent=rptPeriodDays<0?`전체 ${total}건`:`최근 ${rptPeriodDays}일 · ${total}건`;
+    }
+  }
+
+  // 제품군별
+  const byCat=countBy(logs,'cat');
+  const byModel=countBy(logs,'model');
+  const byUser=countBy(logs,'user');
+  const byRef=countBy(logs.filter(l=>l.ref&&l.ref!=='—'),'ref');
+  const catMax=byCat[0]?.[1]||1;
+  const modelMax=byModel[0]?.[1]||1;
+  const userMax=byUser[0]?.[1]||1;
+  const refMax=byRef[0]?.[1]||1;
+
+  // 미답변 질문
+  const failLogs=logs.filter(l=>!l.ok).slice(0,10);
+
+  const el=document.getElementById('report-body');
+  if(!el) return;
+
+  el.innerHTML=`
+    <!-- 요약 카드 -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:24px;">
+      ${cardHtml('💬','총 질문',total+'건','','var(--info)')}
+      ${cardHtml('✅','답변완료',ok+'건',answerRate+'%','var(--success)')}
+      ${cardHtml('❌','미답변',fail+'건',total>0?(100-answerRate)+'%':'0%','var(--danger)')}
+      ${cardHtml('👥','참여 인원',[...new Set(logs.map(l=>l.user))].length+'명','','var(--accent)')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <!-- 제품군별 -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">📦</span>제품군별 질문 빈도</div>
+        ${byCat.length?byCat.map(([k,v])=>barHtml(k,v,catMax,'badge-gold')).join(''):'<div style="font-size:12px;color:var(--text3);">데이터 없음</div>'}
+      </div>
+      <!-- 모델별 -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">🔩</span>모델별 질문 빈도</div>
+        ${byModel.length?byModel.map(([k,v])=>barHtml(k,v,modelMax,'badge-blue')).join(''):'<div style="font-size:12px;color:var(--text3);">데이터 없음</div>'}
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <!-- 많이 참조된 문서 -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">📄</span>많이 참조된 문서 Top 10</div>
+        ${byRef.length?byRef.slice(0,10).map(([k,v])=>barHtml(k.length>18?k.slice(0,18)+'…':k,v,refMax,'badge-gray')).join(''):'<div style="font-size:12px;color:var(--text3);">데이터 없음</div>'}
+      </div>
+      <!-- 사용자별 활동 -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">👥</span>사용자별 활동량</div>
+        ${byUser.length?byUser.slice(0,10).map(([k,v])=>barHtml(k,v,userMax,'badge-blue')).join(''):'<div style="font-size:12px;color:var(--text3);">데이터 없음</div>'}
+      </div>
+    </div>
+
+    <!-- 자주 묻는 질문 키워드 -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">☁️</span>자주 묻는 질문 키워드</div>
+      <div style="line-height:2.2;">${keywordCloud(logs)}</div>
+    </div>
+
+    <!-- 미답변 질문 -->
+    <div style="background:rgba(248,81,73,.06);border:1px solid rgba(248,81,73,.25);border-radius:var(--radius);padding:16px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;color:var(--danger);"><span style="font-size:16px;">⚠️</span>미답변 질문 (문서 보완 필요)</div>
+      ${failLogs.length===0
+        ?'<div style="font-size:12px;color:var(--text3);">미답변 질문이 없습니다 🎉</div>'
+        :failLogs.map(l=>`
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(248,81,73,.15);">
+            <span class="badge badge-red" style="font-size:10px;flex-shrink:0;">${l.cat}</span>
+            <span class="badge badge-blue" style="font-size:10px;flex-shrink:0;">${l.model}</span>
+            <span style="font-size:13px;color:var(--text);flex:1;">${l.q}</span>
+            <span style="font-size:11px;color:var(--text3);flex-shrink:0;">${l.user}</span>
+          </div>`).join('')
+      }
+    </div>
+  `;
+}
+
+
+/* ════════ 문의하기 ════════ */
+let viewInqId = null;
+
+function openInquiryList(){
+  renderInqList();
+  document.getElementById('modal-inq-list').classList.add('open');
+}
+
+function renderInqList(){
+  const myInqs = inquiries.filter(i => i.userId === currentUser?.id);
+  const el = document.getElementById('inq-list-body');
+  if(!myInqs.length){
+    el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px;font-size:13px;">등록된 문의가 없습니다.<br><small style="display:block;margin-top:6px;">위의 새 문의 버튼을 눌러 문의해 주세요.</small></div>';
+    return;
+  }
+  el.innerHTML = myInqs.map(i => `
+    <div class="inq-card" onclick="openInqView('${i.id}')">
+      <div class="inq-title">
+        ${i.answer ? '<span class="inq-status-done">답변완료</span>' : '<span class="inq-status-wait">답변대기</span>'}
+        <span style="flex:1;">${i.title}</span>
+        ${i.answer && !i.read ? '<span class="inq-badge-new">NEW</span>' : ''}
+      </div>
+      <div class="inq-meta">
+        <span>${i.date}</span>
+        ${i.answer ? `<span style="color:var(--success);">답변: ${i.answerDate}</span>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+function openInquiryWrite(){
+  document.getElementById('inq-w-title').value = '';
+  document.getElementById('inq-w-body').value = '';
+  document.getElementById('inq-w-pw').value = '';
+  document.getElementById('modal-inq-write').classList.add('open');
+}
+
+function submitInquiry(){
+  const title = document.getElementById('inq-w-title').value.trim();
+  const body  = document.getElementById('inq-w-body').value.trim();
+  const pw    = document.getElementById('inq-w-pw').value;
+  if(!title){ showToast('제목을 입력하세요.','error'); return; }
+  if(!body){  showToast('내용을 입력하세요.','error'); return; }
+  if(pw.length < 4){ showToast('비밀번호는 4자리 이상 입력하세요.','error'); return; }
+  inquiries.unshift({
+    id: 'iq' + Date.now(),
+    userId: currentUser?.id,
+    name: currentUser?.name,
+    title, body, pw,
+    date: new Date().toLocaleDateString('ko-KR'),
+    answer: '', answerDate: '', read: false
+  });
+  closeModal('modal-inq-write');
+  renderInqList();
+  updateInqBadges();
+  showToast('✅ 문의가 등록되었습니다.','success');
+}
+
+function openInqView(id){
+  viewInqId = id;
+  const inq = inquiries.find(i => i.id === id);
+  if(!inq) return;
+  // 비번 확인 화면 초기화
+  document.getElementById('inq-view-pw-section').style.display = 'block';
+  document.getElementById('inq-view-content').style.display = 'none';
+  document.getElementById('inq-view-pw-input').value = '';
+  document.getElementById('inq-view-pw-err').style.display = 'none';
+  document.getElementById('modal-inq-view').classList.add('open');
+}
+
+function checkInqPw(){
+  const inq = inquiries.find(i => i.id === viewInqId);
+  if(!inq) return;
+  const pw = document.getElementById('inq-view-pw-input').value;
+  if(pw !== inq.pw){
+    document.getElementById('inq-view-pw-err').style.display = 'block';
+    return;
+  }
+  // 읽음 처리
+  inq.read = true;
+  updateInqBadges();
+  renderInqList();
+  // 내용 표시
+  document.getElementById('inq-view-pw-section').style.display = 'none';
+  document.getElementById('inq-view-content').style.display = 'block';
+  document.getElementById('inq-view-title').textContent = inq.title;
+  document.getElementById('inq-view-meta').textContent = inq.name + ' · ' + inq.date;
+  document.getElementById('inq-view-body').textContent = inq.body;
+  const aw = document.getElementById('inq-view-answer-wrap');
+  const na = document.getElementById('inq-view-noanswer');
+  if(inq.answer){
+    aw.style.display = 'block'; na.style.display = 'none';
+    document.getElementById('inq-view-answer').textContent = inq.answer;
+    document.getElementById('inq-view-answer-date').textContent = inq.answerDate;
+  } else {
+    aw.style.display = 'none'; na.style.display = 'block';
+  }
+}
+
+function updateInqBadges(){
+  // 사용자 nav 빨간 점
+  const dot = document.getElementById('inq-new-dot');
+  if(dot){
+    const hasNew = inquiries.some(i => i.userId===currentUser?.id && i.answer && !i.read);
+    dot.style.display = hasNew ? 'block' : 'none';
+  }
+  // 관리자 배지
+  const badge = document.getElementById('inq-admin-badge');
+  if(badge){
+    const unans = inquiries.filter(i => !i.answer).length;
+    badge.style.display = unans > 0 ? 'inline' : 'none';
+    badge.textContent = unans;
+  }
+}
+
+/* ── 관리자 문의 관리 ── */
+function renderAdminInquiries(){
+  const el = document.getElementById('inq-admin-list');
+  if(!el) return;
+  if(!inquiries.length){
+    el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:40px;font-size:13px;">등록된 문의가 없습니다.</div>';
+    return;
+  }
+  el.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <button onclick="filterAdminInq('all',this)" class="inq-filter-btn" style="padding:5px 12px;font-size:12px;font-weight:600;border-radius:20px;border:1px solid var(--accent);background:var(--accent-dim);color:var(--accent);cursor:pointer;font-family:var(--font);">전체 (${inquiries.length})</button>
+      <button onclick="filterAdminInq('wait',this)" class="inq-filter-btn" style="padding:5px 12px;font-size:12px;font-weight:600;border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;font-family:var(--font);">답변대기 (${inquiries.filter(i=>!i.answer).length})</button>
+      <button onclick="filterAdminInq('done',this)" class="inq-filter-btn" style="padding:5px 12px;font-size:12px;font-weight:600;border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;font-family:var(--font);">답변완료 (${inquiries.filter(i=>i.answer).length})</button>
+    </div>
+    <div id="inq-admin-items"></div>`;
+  renderAdminInqItems(inquiries);
+}
+
+function filterAdminInq(type, el){
+  document.querySelectorAll('.inq-filter-btn').forEach(b=>{b.style.borderColor='var(--border)';b.style.background='var(--bg3)';b.style.color='var(--text3)';});
+  el.style.borderColor='var(--accent)';el.style.background='var(--accent-dim)';el.style.color='var(--accent)';
+  const list = type==='wait' ? inquiries.filter(i=>!i.answer) : type==='done' ? inquiries.filter(i=>i.answer) : inquiries;
+  renderAdminInqItems(list);
+}
+
+function renderAdminInqItems(list){
+  const el = document.getElementById('inq-admin-items');
+  if(!el) return;
+  if(!list.length){ el.innerHTML='<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px;">해당하는 문의가 없습니다.</div>'; return; }
+  el.innerHTML = list.map(i => `
+    <div class="inq-card" onclick="openAdminInqModal('${i.id}')">
+      <div class="inq-title">
+        ${i.answer ? '<span class="inq-status-done">답변완료</span>' : '<span class="inq-status-wait">답변대기</span>'}
+        <span style="flex:1;">${i.title}</span>
+        <span style="font-size:11px;color:var(--text3);">${i.name}</span>
+      </div>
+      <div class="inq-meta"><span>${i.date}</span>${i.answer?`<span style="color:var(--success);">답변: ${i.answerDate}</span>`:''}</div>
+    </div>`).join('');
+}
+
+function openAdminInqModal(id){
+  const inq = inquiries.find(i => i.id === id);
+  if(!inq) return;
+  viewInqId = id;
+  document.getElementById('inq-admin-title').textContent = inq.title;
+  document.getElementById('inq-admin-meta').textContent = inq.name + ' · ' + inq.date;
+  document.getElementById('inq-admin-body').textContent = inq.body;
+  document.getElementById('inq-admin-answer').value = inq.answer || '';
+  document.getElementById('modal-inq-admin').classList.add('open');
+}
+
+function saveInqAnswer(){
+  const inq = inquiries.find(i => i.id === viewInqId);
+  if(!inq) return;
+  const ans = document.getElementById('inq-admin-answer').value.trim();
+  if(!ans){ showToast('답변 내용을 입력하세요.','error'); return; }
+  inq.answer = ans;
+  inq.answerDate = new Date().toLocaleDateString('ko-KR');
+  inq.read = false; // 답변 새로 달리면 사용자가 다시 읽어야
+  closeModal('modal-inq-admin');
+  renderAdminInquiries();
+  updateInqBadges();
+  showToast('✅ 답변이 저장되었습니다.','success');
+}
+
+function deleteInquiry(){
+  if(!confirm('이 문의를 삭제하시겠습니까?')) return;
+  inquiries = inquiries.filter(i => i.id !== viewInqId);
+  closeModal('modal-inq-admin');
+  renderAdminInquiries();
+  updateInqBadges();
+  showToast('문의가 삭제됨');
 }
 
 /* UTILS */

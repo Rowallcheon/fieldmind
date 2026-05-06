@@ -572,7 +572,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <div style="display:flex;justify-content:flex-end;margin-top:14px;"><button class="btn btn-primary" onclick="addUserSingle()">등록</button></div>
         </div>
         <div id="utab-csv-body" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;">
-          <div class="csv-zone" onclick="simCsvUpload()">
+          <!-- 양식 다운로드 버튼 -->
+          <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+            <button class="btn btn-ghost btn-sm" onclick="downloadCsvTemplate()" style="display:flex;align-items:center;gap:5px;">
+              ⬇️ 엑셀 양식 다운로드
+            </button>
+          </div>
+          <div class="csv-zone" id="csv-drop-zone"
+            onclick="document.getElementById('csv-file-input').click()"
+            ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+            ondragleave="this.style.borderColor=''"
+            ondrop="csvDropHandler(event)">
+            <input type="file" id="csv-file-input" accept=".csv,.xlsx" style="display:none" onchange="csvFileSelected(this.files[0])">
             <div style="font-size:36px;margin-bottom:8px;">📂</div>
             <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">CSV 또는 Excel 파일 업로드</div>
             <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">클릭하거나 파일을 드래그하세요</div>
@@ -587,7 +598,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
             <div id="csv-preview-rows"></div>
           </div>
           <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;">
-            <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;">양식: <code style="font-family:var(--mono);color:var(--accent);font-size:11px;">아이디, 이름, 소속, 비밀번호, 권한(user/admin)</code></div>
+            <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px;">📋 CSV 양식</div>
+            <code style="font-family:var(--mono);color:var(--accent);font-size:11px;">아이디, 이름, 소속, 비밀번호, 권한(user/admin)</code>
+            <div style="font-size:11px;color:var(--text3);margin-top:6px;">예) user001, 홍길동, 1공구 현장, pass1234, user</div>
+            <div style="font-size:11px;color:var(--text3);">권한 생략 시 자동으로 <strong>user</strong>로 설정됩니다.</div>
           </div>
           <div id="csv-submit-area" style="display:none;justify-content:flex-end;gap:8px;margin-top:12px;">
             <button class="btn btn-ghost" onclick="resetCsv()">취소</button>
@@ -2096,39 +2110,117 @@ async function addUserSingle(){
   renderUsers(); renderDash(); showToast('✅ 회원 등록됨','success');
 }
 let csvPendingList=[];
-function simCsvUpload(){
-  csvPendingList=[
-    {id:'user010',pw:'pass1234',name:'김현장',dept:'1공구 현장',role:'user'},
-    {id:'user011',pw:'pass5678',name:'이안전',dept:'안전팀',role:'user'},
-    {id:'user012',pw:'pass9012',name:'박기술',dept:'기술팀',role:'user'},
-  ];
-  const prog=document.getElementById('csv-prog-area');
-  const bar=document.getElementById('csv-prog-bar');
-  document.getElementById('csv-prog-name').textContent='파일 분석 중: 회원목록.xlsx';
+
+/* ── 엑셀 양식 다운로드 ── */
+function downloadCsvTemplate(){
+  const header = 'id,name,dept,pw,role';
+  const sample = [
+    'user001,홍길동,1공구 현장,pass1234,user',
+    'user002,김안전,안전팀,pass5678,user',
+    'user003,이기술,기술팀,pass9012,user',
+  ].join('\n');
+  const bom = '\uFEFF'; // 한글 깨짐 방지 BOM
+  const blob = new Blob([bom + header + '\n' + sample], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'CUCKOO_ProGuide_회원등록양식.csv';
+  a.click(); URL.revokeObjectURL(url);
+  showToast('✅ 양식 파일 다운로드됨','success');
+}
+
+/* ── 파일 드롭 ── */
+function csvDropHandler(e){
+  e.preventDefault();
+  document.getElementById('csv-drop-zone').style.borderColor='';
+  const file = e.dataTransfer.files[0];
+  if(file) csvFileSelected(file);
+}
+
+/* ── 파일 선택/파싱 ── */
+function csvFileSelected(file){
+  if(!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if(!['csv','xlsx'].includes(ext)){ showToast('CSV 또는 XLSX 파일만 가능합니다.','error'); return; }
+
+  const prog = document.getElementById('csv-prog-area');
+  const bar  = document.getElementById('csv-prog-bar');
+  document.getElementById('csv-prog-name').textContent = '파일 분석 중: ' + file.name;
   prog.style.display='block'; bar.style.width='0%';
   document.getElementById('csv-preview').style.display='none';
   document.getElementById('csv-submit-area').style.display='none';
-  let p=0;
-  const iv=setInterval(()=>{p+=Math.random()*25+15;if(p>=100){p=100;clearInterval(iv);prog.style.display='none';
-    document.getElementById('csv-preview').style.display='block';
-    document.getElementById('csv-submit-area').style.display='flex';
-    document.getElementById('csv-preview-rows').innerHTML=csvPendingList.slice(0,3).map(u=>`
-      <div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap;">
-        <span class="badge badge-gray">${u.id}</span><span style="color:var(--text);">${u.name}</span><span style="color:var(--text3);">${u.dept}</span>
-      </div>`).join('');
-    document.getElementById('csv-submit-btn').textContent=csvPendingList.length+'명 일괄 등록';
-  }bar.style.width=p+'%';},80);
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      let rows = [];
+      if(ext==='csv'){
+        // CSV 파싱
+        const text = e.target.result;
+        const lines = text.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+        // 첫 줄이 헤더인지 확인 (id, name, 아이디, 이름 등)
+        const firstLine = lines[0].toLowerCase();
+        const startIdx = (firstLine.includes('id')||firstLine.includes('아이디')) ? 1 : 0;
+        rows = lines.slice(startIdx).map(line=>{
+          const cols = line.split(',').map(c=>c.trim());
+          return { id:cols[0]||'', name:cols[1]||'', dept:cols[2]||'', pw:cols[3]||'1234', role:(cols[4]||'user').toLowerCase()==='admin'?'admin':'user' };
+        }).filter(r=>r.id&&r.name);
+      } else {
+        // XLSX는 SheetJS 없이 처리 불가 → 안내
+        showToast('XLSX는 준비 중입니다. CSV로 저장 후 업로드해 주세요.','error');
+        prog.style.display='none'; return;
+      }
+
+      if(!rows.length){ showToast('유효한 데이터가 없습니다.','error'); prog.style.display='none'; return; }
+
+      csvPendingList = rows;
+      bar.style.width='100%';
+      setTimeout(()=>{
+        prog.style.display='none';
+        document.getElementById('csv-preview').style.display='block';
+        document.getElementById('csv-submit-area').style.display='flex';
+        document.getElementById('csv-preview-rows').innerHTML =
+          csvPendingList.slice(0,5).map(u=>
+            '<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap;">'
+            +'<span class="badge badge-gray">'+u.id+'</span>'
+            +'<span style="color:var(--text);">'+u.name+'</span>'
+            +'<span style="color:var(--text3);">'+u.dept+'</span>'
+            +(u.role==='admin'?'<span class="badge badge-gold" style="font-size:10px;">관리자</span>':'')
+            +'</div>'
+          ).join('')
+          +(csvPendingList.length>5?'<div style="font-size:11px;color:var(--text3);padding-top:6px;">외 '+(csvPendingList.length-5)+'명...</div>':'');
+        document.getElementById('csv-submit-btn').textContent = csvPendingList.length+'명 일괄 등록';
+      },300);
+    } catch(err){
+      prog.style.display='none';
+      showToast('파일 파싱 오류: '+err.message,'error');
+    }
+  };
+  if(ext==='csv') reader.readAsText(file, 'UTF-8');
+  else reader.readAsArrayBuffer(file);
 }
-function submitCsv(){
-  let added=0,skip=0;
-  csvPendingList.forEach(u=>{if(users.find(x=>x.id===u.id)){skip++;return;}users.push({...u,status:'active'});added++;});
+
+async function submitCsv(){
+  if(!csvPendingList.length){ showToast('등록할 데이터가 없습니다.','error'); return; }
+  let added=0, skip=0;
+  for(const u of csvPendingList){
+    if(users.find(x=>x.id===u.id)){ skip++; continue; }
+    const ok = await dbIns('users',{id:u.id,pw:u.pw,name:u.name,dept:u.dept,role:u.role,status:'active'});
+    if(ok){ users.push({...u,status:'active'}); added++; }
+  }
   csvPendingList=[];
   document.getElementById('csv-preview').style.display='none';
   document.getElementById('csv-submit-area').style.display='none';
+  document.getElementById('csv-file-input').value='';
   renderUsers(); renderDash();
-  showToast(`✅ ${added}명 등록${skip>0?' ('+skip+'명 중복 제외)':''}`, 'success');
+  showToast('✅ '+added+'명 등록'+(skip>0?' ('+skip+'명 중복 제외)':''), 'success');
 }
-function resetCsv(){csvPendingList=[];document.getElementById('csv-preview').style.display='none';document.getElementById('csv-submit-area').style.display='none';document.getElementById('csv-prog-area').style.display='none';}
+function resetCsv(){
+  csvPendingList=[];
+  document.getElementById('csv-preview').style.display='none';
+  document.getElementById('csv-submit-area').style.display='none';
+  document.getElementById('csv-prog-area').style.display='none';
+  document.getElementById('csv-file-input').value='';
+}
 
 /* ── 회원 목록: 페이지네이션 + 체크박스 ── */
 let uPage=1;

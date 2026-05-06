@@ -182,9 +182,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 /* HISTORY */
 #screen-history{background:var(--bg);}
 .hist-list{padding:16px;flex:1;overflow-y:auto;max-width:720px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:8px;}
-.hist-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px;}
-.hist-q{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px;}
-.hist-meta{font-size:11px;color:var(--text3);display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.hist-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px;cursor:pointer;transition:border-color .2s;}
+.hist-item:hover{border-color:var(--border2);}
+.hist-q{font-size:13px;font-weight:600;margin-bottom:5px;line-height:1.5;}
+.hist-preview{font-size:12px;color:var(--text3);margin-top:5px;line-height:1.6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.hist-meta{font-size:11px;color:var(--text3);display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
 .hist-sec{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:6px 0 2px;}
 
 /* NOTICE */
@@ -896,6 +898,37 @@ E-301: 온도 초과 → 냉각수 순환 상태 확인
   </div>
 </div>
 
+<!-- 모달: 대화 상세 -->
+<div class="modal-overlay" id="modal-hist-detail">
+  <div class="modal" style="max-width:560px;max-height:80vh;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0;">
+      <div class="modal-title" style="margin:0;font-size:15px;" id="hist-detail-title">대화 상세</div>
+      <button onclick="closeModal('modal-hist-detail')" style="background:none;border:none;font-size:20px;color:var(--text3);cursor:pointer;line-height:1;">×</button>
+    </div>
+    <div id="hist-detail-meta" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;flex-shrink:0;"></div>
+    <div style="overflow-y:auto;flex:1;">
+      <!-- 질문 -->
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;">질문</div>
+        <div style="background:var(--accent-dim);border:1px solid rgba(240,165,0,.2);border-radius:var(--radius-sm);padding:12px;font-size:13px;line-height:1.7;" id="hist-detail-question"></div>
+      </div>
+      <!-- 답변 -->
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;">AI 답변</div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:13px;line-height:1.8;" id="hist-detail-answer"></div>
+      </div>
+      <!-- 참조 문서 -->
+      <div id="hist-detail-ref-wrap" style="margin-top:12px;display:none;">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;">참조 문서</div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:12px;color:var(--text2);" id="hist-detail-ref"></div>
+      </div>
+    </div>
+    <div class="modal-actions" style="flex-shrink:0;margin-top:14px;">
+      <button class="btn btn-ghost" onclick="closeModal('modal-hist-detail')">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 모달: 회원 삭제 -->
 <div class="modal-overlay" id="modal-del">
   <div class="modal">
@@ -1190,9 +1223,14 @@ async function doLogin(){
   if(!u){err.style.display='block';err.textContent='아이디 또는 비밀번호가 올바르지 않습니다.';return;}
   if(u.status==='inactive'){err.style.display='block';err.textContent='비활성화된 계정입니다.';return;}
   currentUser=u;
-  // 7일 이전 개인 대화이력 자동 삭제 (방법 A)
-  const cutoff7 = Date.now() - 7*24*60*60*1000;
-  sb.from('user_chat_logs').delete().eq('user_id',u.id).lt('ts', cutoff7).then(()=>{});
+  // 로그인 시 20건 초과 대화이력 자동 삭제
+  sb.from('user_chat_logs').select('id,ts').eq('user_id',u.id).order('ts',{ascending:false}).then(res=>{
+    const all = res.data||[];
+    if(all.length>20){
+      const toDelete = all.slice(20).map(r=>r.id);
+      sb.from('user_chat_logs').delete().in('id',toDelete).then(()=>{});
+    }
+  });
   if(u.role==='admin'){
     document.getElementById('admin-uname').textContent=u.name;
     document.getElementById('admin-avatar').textContent=u.name[0];
@@ -1230,12 +1268,11 @@ async function renderMypage(){
   document.getElementById('my-role-badge').innerHTML =
     '<span class="badge '+(u.role==='admin'?'badge-gold':'badge-blue')+'">'+( u.role==='admin'?'관리자':'사용자')+'</span>';
   // 대화이력 요약
-  const cutoff = Date.now()-7*24*60*60*1000;
-  const res = await sb.from('user_chat_logs').select('id',{count:'exact'}).eq('user_id',u.id).gte('ts',cutoff);
-  const cnt = res.count||0;
+  const res2 = await sb.from('user_chat_logs').select('id,ts').eq('user_id',u.id).order('ts',{ascending:false}).limit(20);
+  const cnt = (res2.data||[]).length;
   document.getElementById('my-hist-summary').innerHTML =
-    '최근 7일간 <strong style="color:var(--accent);">'+cnt+'건</strong>의 대화를 했습니다.<br>'
-    +'<span style="font-size:11px;">7일 지난 대화는 자동으로 삭제됩니다.</span>';
+    '저장된 대화 이력 <strong style="color:var(--accent);">'+cnt+'건</strong> / 최대 20건<br>'
+    +'<span style="font-size:11px;">20건을 초과하면 오래된 대화부터 자동 삭제됩니다.</span>';
   // 입력창 초기화
   ['my-pw-current','my-pw-new','my-pw-confirm'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
@@ -1482,9 +1519,19 @@ ${docCtx}`;
     chatLogs.unshift(logRow);
     // 관리자 로그
     dbIns('chat_logs',{ts:logTs,user_name:logRow.user,cat:logRow.cat,model_name:logRow.model,question:logRow.q,ref_doc:logRow.ref,is_ok:true});
-    // 사용자 개인 대화이력 (7일 보관)
+    // 사용자 개인 대화이력 저장 (최대 20건)
     if(currentUser){
-      dbIns('user_chat_logs',{user_id:currentUser.id,ts:logTs,cat:selProduct.name,model_name:selModel.name,question:text,answer:reply,ref_doc:refDocs?refDocs[0].title:'—'});
+      await dbIns('user_chat_logs',{user_id:currentUser.id,ts:logTs,cat:selProduct.name,model_name:selModel.name,question:text,answer:reply,ref_doc:refDocs?refDocs[0].title:'—'});
+      // 20건 초과 시 오래된 것 자동 삭제
+      const allLogs = await sb.from('user_chat_logs')
+        .select('id,ts')
+        .eq('user_id', currentUser.id)
+        .order('ts', {ascending: false});
+      const all = allLogs.data || [];
+      if(all.length > 20){
+        const toDelete = all.slice(20).map(r=>r.id);
+        await sb.from('user_chat_logs').delete().in('id', toDelete);
+      }
     }
   }catch(e){
     removeTyping(tid);
@@ -1545,30 +1592,63 @@ async function renderHistory(){
   if(!currentUser){ list.innerHTML=''; return; }
   list.innerHTML='<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px;">불러오는 중...</div>';
   try {
-    const cutoff = Date.now() - 7*24*60*60*1000;
+    // 최신 20건만 가져오기
     const res = await sb.from('user_chat_logs')
       .select('*')
       .eq('user_id', currentUser.id)
-      .gte('ts', cutoff)
-      .order('ts', {ascending: false});
+      .order('ts', {ascending: false})
+      .limit(20);
     const rows = res.data || [];
     if(!rows.length){
-      list.innerHTML='<div style="text-align:center;color:var(--text3);padding:48px;font-size:13px;">대화 이력이 없습니다<br><small style="display:block;margin-top:8px;font-size:11px;">7일 보관 후 자동 삭제</small></div>';
+      list.innerHTML='<div style="text-align:center;color:var(--text3);padding:48px;font-size:13px;">대화 이력이 없습니다<br><small style="display:block;margin-top:8px;font-size:11px;">최근 20건 자동 보관</small></div>';
       return;
     }
-    list.innerHTML='<div class="hist-sec">최근 대화 (7일 보관)</div>'
-      + rows.map(r=>`<div class="hist-item">
-          <div class="hist-q">${r.question||''}</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:6px;line-height:1.6;background:var(--bg3);padding:8px;border-radius:var(--radius-sm);">${(r.answer||'').slice(0,120)}${(r.answer||'').length>120?'…':''}</div>
-          <div class="hist-meta">
-            <span class="badge badge-gold" style="font-size:10px;">${r.cat||'—'}</span>
-            <span class="badge badge-blue" style="font-size:10px;">${r.model_name||'—'}</span>
-            <span>${new Date(r.ts).toLocaleDateString('ko-KR')} ${new Date(r.ts).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}</span>
-          </div>
-        </div>`).join('');
+    list.innerHTML='<div class="hist-sec">최근 대화 (최대 20건 · 클릭하면 전체 답변 보기)</div>'
+      + rows.map(r=>{
+          const dt = new Date(r.ts);
+          const dateStr = dt.toLocaleDateString('ko-KR') + ' ' + dt.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+          const previewAns = (r.answer||'').replace(/[#*`>_~]/g,'').slice(0,60) + ((r.answer||'').length>60?'…':'');
+          return '<div class="hist-item" onclick="openHistDetail('+JSON.stringify(r).replace(/"/g,'&quot;')+')">'
+            +'<div class="hist-q">'+( r.question||'')+'</div>'
+            +'<div class="hist-preview">'+previewAns+'</div>'
+            +'<div class="hist-meta">'
+            +'<span class="badge badge-gold" style="font-size:10px;">'+(r.cat||'—')+'</span>'
+            +'<span class="badge badge-blue" style="font-size:10px;">'+(r.model_name||'—')+'</span>'
+            +'<span>'+dateStr+'</span>'
+            +'<span style="margin-left:auto;font-size:10px;color:var(--accent);">전체 보기 ›</span>'
+            +'</div></div>';
+        }).join('');
   } catch(e) {
+    console.error(e);
     list.innerHTML='<div style="text-align:center;color:var(--text3);padding:24px;">불러오기 실패</div>';
   }
+}
+
+function openHistDetail(r){
+  if(typeof r === 'string') r = JSON.parse(r);
+  const dt = new Date(r.ts);
+  const dateStr = dt.toLocaleDateString('ko-KR') + ' ' + dt.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  // 제목
+  document.getElementById('hist-detail-title').textContent = r.question||'대화 상세';
+  // 메타
+  document.getElementById('hist-detail-meta').innerHTML =
+    '<span class="badge badge-gold" style="font-size:11px;">'+(r.cat||'—')+'</span>'
+    +'<span class="badge badge-blue" style="font-size:11px;">'+(r.model_name||'—')+'</span>'
+    +'<span style="font-size:12px;color:var(--text3);">'+dateStr+'</span>';
+  // 질문
+  document.getElementById('hist-detail-question').textContent = r.question||'';
+  // 답변 (마크다운 렌더링)
+  document.getElementById('hist-detail-answer').innerHTML = mdToHtml(r.answer||'');
+  // 참조 문서
+  const refWrap = document.getElementById('hist-detail-ref-wrap');
+  const refEl   = document.getElementById('hist-detail-ref');
+  if(r.ref_doc && r.ref_doc !== '—'){
+    refWrap.style.display = 'block';
+    refEl.textContent = '📄 ' + r.ref_doc;
+  } else {
+    refWrap.style.display = 'none';
+  }
+  document.getElementById('modal-hist-detail').classList.add('open');
 }
 function fmtT(ms){if(!ms)return'';const d=new Date(ms);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
 

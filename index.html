@@ -141,6 +141,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .send-btn:active{transform:scale(.95);}
 .send-btn:disabled{opacity:.3;cursor:not-allowed;}
 .chat-hint-txt{font-size:11px;color:var(--text3);margin-top:6px;text-align:center;}
+
+/* ── 마이페이지 ── */
+#screen-mypage{background:var(--bg);}
+.my-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px;}
+.my-section-title{font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;}
+.my-field{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
+.my-field:last-child{border-bottom:none;}
+.my-field-label{font-size:13px;color:var(--text3);}
+.my-field-value{font-size:13px;font-weight:600;color:var(--text);}
 /* ── 문의하기 ── */
 .inq-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .2s;}
 .inq-card:hover{border-color:var(--border2);}
@@ -342,22 +351,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <div class="chat-hint-txt" id="chat-hint-txt">🌀 Gemini 2.5 Flash-Lite — Google AI 엔진</div>
     </div>
   </div>
-  <div class="bnav">
-    <button class="bnav-btn active" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button>
-    <button class="bnav-btn" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button>
-    <button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button>
-  </div>
+  <div class="bnav"><button class="bnav-btn active" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
 </div>
 
 <!-- HISTORY -->
 <div id="screen-history" class="screen">
   <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
   <div class="hist-list" id="hist-list"></div>
-  <div class="bnav">
-    <button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button>
-    <button class="bnav-btn active" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button>
-    <button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button>
-  </div>
+  <div class="bnav"><button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn active" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
 </div>
 
 <!-- NOTICE -->
@@ -367,11 +368,55 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div style="font-size:16px;font-weight:700;margin-bottom:14px;">📢 공지사항</div>
     <div id="notice-list-user"></div>
   </div>
-  <div class="bnav">
-    <button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button>
-    <button class="bnav-btn" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button>
-    <button class="bnav-btn active" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button>
+  <div class="bnav"><button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn active" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
+</div>
+<!-- MYPAGE -->
+<div id="screen-mypage" class="screen">
+  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
+  <div style="padding:16px;flex:1;overflow-y:auto;max-width:560px;width:100%;margin:0 auto;">
+
+    <!-- 프로필 -->
+    <div class="my-section">
+      <div class="my-section-title">내 정보</div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+        <div id="my-avatar" style="width:52px;height:52px;border-radius:50%;background:var(--accent-dim);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:var(--accent);flex-shrink:0;"></div>
+        <div>
+          <div id="my-name" style="font-size:16px;font-weight:700;"></div>
+          <div id="my-role-badge" style="margin-top:4px;"></div>
+        </div>
+      </div>
+      <div class="my-field"><span class="my-field-label">아이디</span><span class="my-field-value" id="my-id"></span></div>
+      <div class="my-field"><span class="my-field-label">소속</span><span class="my-field-value" id="my-dept"></span></div>
+      <div class="my-field"><span class="my-field-label">권한</span><span class="my-field-value" id="my-role"></span></div>
+    </div>
+
+    <!-- 비밀번호 변경 -->
+    <div class="my-section">
+      <div class="my-section-title">비밀번호 변경</div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label">현재 비밀번호</label>
+        <input class="form-input" id="my-pw-current" type="password" placeholder="현재 비밀번호 입력">
+      </div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label">새 비밀번호</label>
+        <input class="form-input" id="my-pw-new" type="password" placeholder="새 비밀번호 (4자 이상)">
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label class="form-label">새 비밀번호 확인</label>
+        <input class="form-input" id="my-pw-confirm" type="password" placeholder="새 비밀번호 재입력">
+      </div>
+      <div id="my-pw-err" style="font-size:12px;color:var(--danger);margin-bottom:8px;display:none;"></div>
+      <button class="btn btn-primary" style="width:100%;" onclick="changeMyPassword()">🔒 비밀번호 변경</button>
+    </div>
+
+    <!-- 대화이력 요약 -->
+    <div class="my-section">
+      <div class="my-section-title">내 대화이력</div>
+      <div id="my-hist-summary" style="font-size:13px;color:var(--text3);"></div>
+    </div>
+
   </div>
+  <div class="bnav"><button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn active" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
 </div>
 
 <!-- ADMIN -->
@@ -1136,6 +1181,9 @@ async function doLogin(){
   if(!u){err.style.display='block';err.textContent='아이디 또는 비밀번호가 올바르지 않습니다.';return;}
   if(u.status==='inactive'){err.style.display='block';err.textContent='비활성화된 계정입니다.';return;}
   currentUser=u;
+  // 7일 이전 개인 대화이력 자동 삭제 (방법 A)
+  const cutoff7 = Date.now() - 7*24*60*60*1000;
+  sb.from('user_chat_logs').delete().eq('user_id',u.id).lt('ts', cutoff7).then(()=>{});
   if(u.role==='admin'){
     document.getElementById('admin-uname').textContent=u.name;
     document.getElementById('admin-avatar').textContent=u.name[0];
@@ -1161,7 +1209,63 @@ function doLogout(){
 
 /* ════════ SCREEN ════════ */
 function showScreen(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+n).classList.add('active');const mb=document.getElementById('admin-menu-btn');if(mb)mb.style.display=(n==='admin'&&window.innerWidth<=640)?'block':'none';}
-function switchTab(t){if(t==='chat')showScreen('chat');else if(t==='history'){renderHistory();showScreen('history');}else if(t==='notice'){renderNoticesUser();showScreen('notice');}}
+/* ════════ 마이페이지 ════════ */
+async function renderMypage(){
+  const u = currentUser;
+  if(!u) return;
+  document.getElementById('my-avatar').textContent = u.name[0];
+  document.getElementById('my-name').textContent = u.name;
+  document.getElementById('my-id').textContent = u.id;
+  document.getElementById('my-dept').textContent = u.dept;
+  document.getElementById('my-role').textContent = u.role==='admin'?'관리자':'사용자';
+  document.getElementById('my-role-badge').innerHTML =
+    '<span class="badge '+(u.role==='admin'?'badge-gold':'badge-blue')+'">'+( u.role==='admin'?'관리자':'사용자')+'</span>';
+  // 대화이력 요약
+  const cutoff = Date.now()-7*24*60*60*1000;
+  const res = await sb.from('user_chat_logs').select('id',{count:'exact'}).eq('user_id',u.id).gte('ts',cutoff);
+  const cnt = res.count||0;
+  document.getElementById('my-hist-summary').innerHTML =
+    '최근 7일간 <strong style="color:var(--accent);">'+cnt+'건</strong>의 대화를 했습니다.<br>'
+    +'<span style="font-size:11px;">7일 지난 대화는 자동으로 삭제됩니다.</span>';
+  // 입력창 초기화
+  ['my-pw-current','my-pw-new','my-pw-confirm'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('my-pw-err').style.display='none';
+}
+
+async function changeMyPassword(){
+  const current = document.getElementById('my-pw-current').value;
+  const newPw   = document.getElementById('my-pw-new').value;
+  const confirm = document.getElementById('my-pw-confirm').value;
+  const errEl   = document.getElementById('my-pw-err');
+  errEl.style.display='none';
+
+  if(!current||!newPw||!confirm){ errEl.textContent='모든 항목을 입력해 주세요.'; errEl.style.display='block'; return; }
+  if(current !== currentUser.pw){ errEl.textContent='현재 비밀번호가 올바르지 않습니다.'; errEl.style.display='block'; return; }
+  if(newPw.length < 4){ errEl.textContent='새 비밀번호는 4자 이상이어야 합니다.'; errEl.style.display='block'; return; }
+  if(newPw !== confirm){ errEl.textContent='새 비밀번호가 일치하지 않습니다.'; errEl.style.display='block'; return; }
+  if(newPw === current){ errEl.textContent='현재 비밀번호와 동일한 비밀번호입니다.'; errEl.style.display='block'; return; }
+
+  const ok = await dbUpd('users',{id:currentUser.id},{pw:newPw});
+  if(!ok){ errEl.textContent='변경 실패. 다시 시도해 주세요.'; errEl.style.display='block'; return; }
+
+  currentUser.pw = newPw;
+  // 저장된 비번도 업데이트
+  if(localStorage.getItem('remember')==='1') localStorage.setItem('saved_pw', newPw);
+
+  ['my-pw-current','my-pw-new','my-pw-confirm'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  showToast('✅ 비밀번호가 변경되었습니다.','success');
+}
+
+function switchTab(t){
+  if(t==='chat') showScreen('chat');
+  else if(t==='history'){ renderHistory(); showScreen('history'); }
+  else if(t==='notice'){ renderNoticesUser(); showScreen('notice'); }
+  else if(t==='mypage'){ renderMypage(); showScreen('mypage'); }
+}
 function goUserPreview(){
   // 관리자 → 사용자 화면으로 전환 (관리자 권한 유지, 돌아오기 버튼 포함)
   document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));
@@ -1356,9 +1460,15 @@ ${docCtx}`;
     chatHistory.push({role:'assistant',content:reply,time:Date.now()});
     if(ttsEnabled) speakText(reply);
     // 로그 기록
-    const logRow={ts:Date.now(),time:fmtT(Date.now()),user:currentUser.name,cat:selProduct.name,model:selModel.name,q:text,ref:refDocs?refDocs[0].title:'—',ok:true};
+    const logTs=Date.now();
+    const logRow={ts:logTs,time:fmtT(logTs),user:currentUser.name,cat:selProduct.name,model:selModel.name,q:text,ref:refDocs?refDocs[0].title:'—',ok:true};
     chatLogs.unshift(logRow);
-    dbIns('chat_logs',{ts:logRow.ts,user_name:logRow.user,cat:logRow.cat,model_name:logRow.model,question:logRow.q,ref_doc:logRow.ref,is_ok:true});
+    // 관리자 로그
+    dbIns('chat_logs',{ts:logTs,user_name:logRow.user,cat:logRow.cat,model_name:logRow.model,question:logRow.q,ref_doc:logRow.ref,is_ok:true});
+    // 사용자 개인 대화이력 (7일 보관)
+    if(currentUser){
+      dbIns('user_chat_logs',{user_id:currentUser.id,ts:logTs,cat:selProduct.name,model_name:selModel.name,question:text,answer:reply,ref_doc:refDocs?refDocs[0].title:'—'});
+    }
   }catch(e){
     removeTyping(tid);
     const msg=e.message.includes('401')?'❌ API 키가 올바르지 않습니다.':e.message.includes('429')?'⚠️ 요청 한도 초과. 잠시 후 다시 시도해 주세요.':'⚠️ 오류: '+e.message;
@@ -1391,14 +1501,35 @@ function removeTyping(id){document.getElementById(id)?.remove();}
 
 /* ════════ HISTORY ════════ */
 function purgeHistory(){const now=Date.now();chatHistory=chatHistory.filter(h=>(now-h.time)<HISTORY_TTL);}
-function renderHistory(){
-  purgeHistory();
+async function renderHistory(){
   const list=document.getElementById('hist-list');
-  const msgs=chatHistory.filter(h=>h.role==='user');
-  if(!msgs.length){list.innerHTML=`<div style="text-align:center;color:var(--text3);padding:48px;font-size:13px;">대화 이력이 없습니다<br><small style="display:block;margin-top:8px;font-size:11px;">7일 후 자동 삭제</small></div>`;return;}
-  list.innerHTML='<div class="hist-sec">최근 대화 (7일 보관)</div>'+[...msgs].reverse().map(m=>`
-    <div class="hist-item"><div class="hist-q">${m.content}</div>
-    <div class="hist-meta"><span class="badge badge-gold" style="font-size:10px;">${m.cat||'—'}</span><span class="badge badge-blue" style="font-size:10px;">${m.model||'—'}</span><span>${fmtT(m.time)}</span></div></div>`).join('');
+  if(!currentUser){ list.innerHTML=''; return; }
+  list.innerHTML='<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px;">불러오는 중...</div>';
+  try {
+    const cutoff = Date.now() - 7*24*60*60*1000;
+    const res = await sb.from('user_chat_logs')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .gte('ts', cutoff)
+      .order('ts', {ascending: false});
+    const rows = res.data || [];
+    if(!rows.length){
+      list.innerHTML='<div style="text-align:center;color:var(--text3);padding:48px;font-size:13px;">대화 이력이 없습니다<br><small style="display:block;margin-top:8px;font-size:11px;">7일 보관 후 자동 삭제</small></div>';
+      return;
+    }
+    list.innerHTML='<div class="hist-sec">최근 대화 (7일 보관)</div>'
+      + rows.map(r=>`<div class="hist-item">
+          <div class="hist-q">${r.question||''}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:6px;line-height:1.6;background:var(--bg3);padding:8px;border-radius:var(--radius-sm);">${(r.answer||'').slice(0,120)}${(r.answer||'').length>120?'…':''}</div>
+          <div class="hist-meta">
+            <span class="badge badge-gold" style="font-size:10px;">${r.cat||'—'}</span>
+            <span class="badge badge-blue" style="font-size:10px;">${r.model_name||'—'}</span>
+            <span>${new Date(r.ts).toLocaleDateString('ko-KR')} ${new Date(r.ts).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}</span>
+          </div>
+        </div>`).join('');
+  } catch(e) {
+    list.innerHTML='<div style="text-align:center;color:var(--text3);padding:24px;">불러오기 실패</div>';
+  }
 }
 function fmtT(ms){if(!ms)return'';const d=new Date(ms);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
 

@@ -1427,33 +1427,55 @@ function toggleSortMode(){
 function renderDocTree(){
   const tree = document.getElementById('doc-tree');
   if(!tree) return;
+
   tree.innerHTML = products.map((p,pi)=>{
     const td = p.models.reduce((a,m)=>a+m.docs.length,0);
     const handle = _sortMode ? '<span class="sort-handle">☰</span>' : '';
-    return '<div class="cat-block" data-pi="'+pi+'"'
-      +(_sortMode ? ' draggable="true" ondragstart="catDragStart(event,'+pi+')" ondragover="catDragOver(event)" ondragleave="catDragLeave(event)" ondrop="catDrop(event,'+pi+')" ondragend="catDragEnd(event)"' : '')
-      +'><div class="cat-hdr"'
-      +(_sortMode ? '' : ' onclick="toggleCat(\"cm-'+pi+'\",\"cv-'+pi+'\")"')
-      +'><div class="cat-hdr-l">'+handle+'<span class="cat-icon-lg">'+p.icon+'</span><span class="cat-name">'+p.name+'</span><span class="cat-sub">모델 '+p.models.length+'개 · 문서 '+td+'건</span></div>'
-      +(_sortMode ? '<span style="font-size:11px;color:var(--text3);">드래그로 순서 변경</span>' : '<span class="cat-chev" id="cv-'+pi+'">▼</span>')
-      +'</div>'
-      +'<div class="cat-models" id="cm-'+pi+'"'+(_sortMode?' style="display:block"':'')+'>'
-      + p.models.map((m,mi)=>{
-          const mHandle = _sortMode ? '<span class="sort-handle">☰</span>' : '';
-          return '<div class="model-row" data-pi="'+pi+'" data-mi="'+mi+'"'
-            +(_sortMode ? ' draggable="true" ondragstart="modelDragStart(event,'+pi+','+mi+')" ondragover="modelDragOver(event)" ondragleave="modelDragLeave(event)" ondrop="modelDrop(event,'+pi+','+mi+')" ondragend="modelDragEnd(event)"' : '')
-            +'><div style="display:flex;align-items:center;gap:8px;">'+mHandle+'<div><div class="model-nm">'+m.name+'</div><div class="model-dc">문서 '+m.docs.length+'건 등록됨</div></div></div>'
-            +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
-            +(_sortMode ? '' : '<button class="btn btn-primary btn-sm" onclick="openDocInputModal('+pi+','+mi+')">📝 내용 입력</button>'
-              +'<button class="btn btn-ghost btn-sm" onclick="editModelName('+pi+','+mi+')">✏️ 이름 수정</button>'
-              +'<button class="btn btn-danger btn-sm" onclick="delModel('+pi+','+mi+')">삭제</button>')
-            +'</div></div>';
-        }).join('')
-      +(_sortMode ? '' : '<div style="padding:10px 16px 10px 48px;display:flex;gap:8px;flex-wrap:wrap;">'
-        +'<button class="btn btn-ghost btn-sm" onclick="editCatName('+pi+')">✏️ 제품군명 수정</button>'
-        +'<button class="btn btn-danger btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="delCat('+pi+')">🗑️ 제품군 삭제</button>'
-        +'</div>')
-      +'</div></div>';
+
+    const catAttrs = _sortMode
+      ? `draggable="true" ondragstart="catDragStart(event,${pi})" ondragover="catDragOver(event)" ondragleave="catDragLeave(event)" ondrop="catDrop(event,${pi})" ondragend="catDragEnd(event)"`
+      : '';
+
+    const catChev = _sortMode
+      ? '<span style="font-size:11px;color:var(--text3);">드래그로 순서 변경</span>'
+      : `<span class="cat-chev" id="cv-${pi}">▼</span>`;
+
+    const catModelsStyle = _sortMode ? ' style="display:block"' : '';
+
+    const bottomBtns = _sortMode ? '' : `
+      <div style="padding:10px 16px 10px 48px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="editCatName(${pi})">✏️ 제품군명 수정</button>
+        <button class="btn btn-danger btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="delCat(${pi})">🗑️ 제품군 삭제</button>
+      </div>`;
+
+    const modelRows = p.models.map((m,mi)=>{
+      const mHandle = _sortMode ? '<span class="sort-handle">☰</span>' : '';
+      const mAttrs = _sortMode
+        ? `draggable="true" ondragstart="modelDragStart(event,${pi},${mi})" ondragover="modelDragOver(event)" ondragleave="modelDragLeave(event)" ondrop="modelDrop(event,${pi},${mi})" ondragend="modelDragEnd(event)"`
+        : '';
+      const mBtns = _sortMode ? '' : `
+        <button class="btn btn-primary btn-sm" onclick="openDocInputModal(${pi},${mi})">📝 내용 입력</button>
+        <button class="btn btn-ghost btn-sm" onclick="editModelName(${pi},${mi})">✏️ 이름 수정</button>
+        <button class="btn btn-danger btn-sm" onclick="delModel(${pi},${mi})">삭제</button>`;
+      return `<div class="model-row" data-pi="${pi}" data-mi="${mi}" ${mAttrs}>
+        <div style="display:flex;align-items:center;gap:8px;">${mHandle}<div>
+          <div class="model-nm">${m.name}</div>
+          <div class="model-dc">문서 ${m.docs.length}건 등록됨</div>
+        </div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">${mBtns}</div>
+      </div>`;
+    }).join('');
+
+    return `<div class="cat-block" data-pi="${pi}" ${catAttrs}>
+      <div class="cat-hdr" onclick="if(!_sortMode)toggleCat('cm-${pi}','cv-${pi}')">
+        <div class="cat-hdr-l">${handle}<span class="cat-icon-lg">${p.icon}</span><span class="cat-name">${p.name}</span><span class="cat-sub">모델 ${p.models.length}개 · 문서 ${td}건</span></div>
+        ${catChev}
+      </div>
+      <div class="cat-models" id="cm-${pi}"${catModelsStyle}>
+        ${modelRows}
+        ${bottomBtns}
+      </div>
+    </div>`;
   }).join('');
 }
 

@@ -1427,56 +1427,116 @@ function toggleSortMode(){
 function renderDocTree(){
   const tree = document.getElementById('doc-tree');
   if(!tree) return;
+  tree.innerHTML = '';
 
-  tree.innerHTML = products.map((p,pi)=>{
-    const td = p.models.reduce((a,m)=>a+m.docs.length,0);
-    const handle = _sortMode ? '<span class="sort-handle">☰</span>' : '';
+  products.forEach(function(p, pi){
+    const td = p.models.reduce(function(a,m){return a+m.docs.length;},0);
 
-    const catAttrs = _sortMode
-      ? `draggable="true" ondragstart="catDragStart(event,${pi})" ondragover="catDragOver(event)" ondragleave="catDragLeave(event)" ondrop="catDrop(event,${pi})" ondragend="catDragEnd(event)"`
-      : '';
+    /* ── 제품군 블록 ── */
+    const block = document.createElement('div');
+    block.className = 'cat-block';
+    block.dataset.pi = pi;
+    if(_sortMode){
+      block.draggable = true;
+      block.ondragstart = function(e){ catDragStart(e,pi); };
+      block.ondragover  = function(e){ catDragOver(e); };
+      block.ondragleave = function(e){ catDragLeave(e); };
+      block.ondrop      = function(e){ catDrop(e,pi); };
+      block.ondragend   = function(e){ catDragEnd(e); };
+    }
 
-    const catChev = _sortMode
-      ? '<span style="font-size:11px;color:var(--text3);">드래그로 순서 변경</span>'
-      : `<span class="cat-chev" id="cv-${pi}">▼</span>`;
+    /* 헤더 */
+    const hdr = document.createElement('div');
+    hdr.className = 'cat-hdr';
+    if(!_sortMode){
+      hdr.onclick = function(){ toggleCat('cm-'+pi,'cv-'+pi); };
+    }
 
-    const catModelsStyle = _sortMode ? ' style="display:block"' : '';
+    const hdrL = document.createElement('div');
+    hdrL.className = 'cat-hdr-l';
+    if(_sortMode){
+      const sh = document.createElement('span');
+      sh.className = 'sort-handle'; sh.textContent = '☰';
+      hdrL.appendChild(sh);
+    }
+    const iconEl = document.createElement('span'); iconEl.className='cat-icon-lg'; iconEl.textContent=p.icon;
+    const nameEl = document.createElement('span'); nameEl.className='cat-name';    nameEl.textContent=p.name;
+    const subEl  = document.createElement('span'); subEl.className='cat-sub';      subEl.textContent='모델 '+p.models.length+'개 · 문서 '+td+'건';
+    hdrL.appendChild(iconEl); hdrL.appendChild(nameEl); hdrL.appendChild(subEl);
+    hdr.appendChild(hdrL);
 
-    const bottomBtns = _sortMode ? '' : `
-      <div style="padding:10px 16px 10px 48px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-ghost btn-sm" onclick="editCatName(${pi})">✏️ 제품군명 수정</button>
-        <button class="btn btn-danger btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="delCat(${pi})">🗑️ 제품군 삭제</button>
-      </div>`;
+    const chevEl = document.createElement('span');
+    if(_sortMode){
+      chevEl.style.fontSize='11px'; chevEl.style.color='var(--text3)'; chevEl.textContent='드래그로 순서 변경';
+    } else {
+      chevEl.className='cat-chev'; chevEl.id='cv-'+pi; chevEl.textContent='▼';
+    }
+    hdr.appendChild(chevEl);
+    block.appendChild(hdr);
 
-    const modelRows = p.models.map((m,mi)=>{
-      const mHandle = _sortMode ? '<span class="sort-handle">☰</span>' : '';
-      const mAttrs = _sortMode
-        ? `draggable="true" ondragstart="modelDragStart(event,${pi},${mi})" ondragover="modelDragOver(event)" ondragleave="modelDragLeave(event)" ondrop="modelDrop(event,${pi},${mi})" ondragend="modelDragEnd(event)"`
-        : '';
-      const mBtns = _sortMode ? '' : `
-        <button class="btn btn-primary btn-sm" onclick="openDocInputModal(${pi},${mi})">📝 내용 입력</button>
-        <button class="btn btn-ghost btn-sm" onclick="editModelName(${pi},${mi})">✏️ 이름 수정</button>
-        <button class="btn btn-danger btn-sm" onclick="delModel(${pi},${mi})">삭제</button>`;
-      return `<div class="model-row" data-pi="${pi}" data-mi="${mi}" ${mAttrs}>
-        <div style="display:flex;align-items:center;gap:8px;">${mHandle}<div>
-          <div class="model-nm">${m.name}</div>
-          <div class="model-dc">문서 ${m.docs.length}건 등록됨</div>
-        </div></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">${mBtns}</div>
-      </div>`;
-    }).join('');
+    /* 모델 목록 */
+    const catModels = document.createElement('div');
+    catModels.className = 'cat-models';
+    catModels.id = 'cm-'+pi;
+    if(_sortMode) catModels.style.display='block';
 
-    return `<div class="cat-block" data-pi="${pi}" ${catAttrs}>
-      <div class="cat-hdr" onclick="if(!_sortMode)toggleCat('cm-${pi}','cv-${pi}')">
-        <div class="cat-hdr-l">${handle}<span class="cat-icon-lg">${p.icon}</span><span class="cat-name">${p.name}</span><span class="cat-sub">모델 ${p.models.length}개 · 문서 ${td}건</span></div>
-        ${catChev}
-      </div>
-      <div class="cat-models" id="cm-${pi}"${catModelsStyle}>
-        ${modelRows}
-        ${bottomBtns}
-      </div>
-    </div>`;
-  }).join('');
+    p.models.forEach(function(m, mi){
+      const row = document.createElement('div');
+      row.className = 'model-row';
+      row.dataset.pi = pi; row.dataset.mi = mi;
+      if(_sortMode){
+        row.draggable = true;
+        row.ondragstart = function(e){ modelDragStart(e,pi,mi); };
+        row.ondragover  = function(e){ modelDragOver(e); };
+        row.ondragleave = function(e){ modelDragLeave(e); };
+        row.ondrop      = function(e){ modelDrop(e,pi,mi); };
+        row.ondragend   = function(e){ modelDragEnd(e); };
+      }
+
+      const rowL = document.createElement('div');
+      rowL.style.cssText = 'display:flex;align-items:center;gap:8px;';
+      if(_sortMode){
+        const msh = document.createElement('span'); msh.className='sort-handle'; msh.textContent='☰';
+        rowL.appendChild(msh);
+      }
+      const mInfo = document.createElement('div');
+      const mName = document.createElement('div'); mName.className='model-nm'; mName.textContent=m.name;
+      const mDc   = document.createElement('div'); mDc.className='model-dc';   mDc.textContent='문서 '+m.docs.length+'건 등록됨';
+      mInfo.appendChild(mName); mInfo.appendChild(mDc);
+      rowL.appendChild(mInfo);
+
+      const rowR = document.createElement('div');
+      rowR.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+      if(!_sortMode){
+        const b1 = document.createElement('button'); b1.className='btn btn-primary btn-sm'; b1.textContent='📝 내용 입력';
+        b1.onclick = (function(a,b){return function(){openDocInputModal(a,b);};})(pi,mi);
+        const b2 = document.createElement('button'); b2.className='btn btn-ghost btn-sm';   b2.textContent='✏️ 이름 수정';
+        b2.onclick = (function(a,b){return function(){editModelName(a,b);};})(pi,mi);
+        const b3 = document.createElement('button'); b3.className='btn btn-danger btn-sm';  b3.textContent='삭제';
+        b3.onclick = (function(a,b){return function(){delModel(a,b);};})(pi,mi);
+        rowR.appendChild(b1); rowR.appendChild(b2); rowR.appendChild(b3);
+      }
+
+      row.appendChild(rowL); row.appendChild(rowR);
+      catModels.appendChild(row);
+    });
+
+    /* 하단 버튼 (순서모드 아닐 때만) */
+    if(!_sortMode){
+      const footer = document.createElement('div');
+      footer.style.cssText = 'padding:10px 16px 10px 48px;display:flex;gap:8px;flex-wrap:wrap;';
+      const ec = document.createElement('button'); ec.className='btn btn-ghost btn-sm'; ec.textContent='✏️ 제품군명 수정';
+      ec.onclick = (function(a){return function(){editCatName(a);};})(pi);
+      const dc = document.createElement('button'); dc.className='btn btn-danger btn-sm'; dc.textContent='🗑️ 제품군 삭제';
+      dc.style.cssText='border-color:var(--danger);color:var(--danger);';
+      dc.onclick = (function(a){return function(){delCat(a);};})(pi);
+      footer.appendChild(ec); footer.appendChild(dc);
+      catModels.appendChild(footer);
+    }
+
+    block.appendChild(catModels);
+    tree.appendChild(block);
+  });
 }
 
 /* ── 제품군 드래그 ── */

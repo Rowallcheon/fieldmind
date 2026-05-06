@@ -261,7 +261,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .stat-grid{grid-template-columns:repeat(2,1fr);}
 }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -856,6 +855,7 @@ E-301: 온도 초과 → 냉각수 순환 상태 확인
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ════════ CONFIG ════════ */
 const _SB_URL = 'https://lixiqdhymlefrynleglw.supabase.co';
@@ -1433,7 +1433,7 @@ function renderDocTree(){
     return '<div class="cat-block" data-pi="'+pi+'"'
       +(_sortMode ? ' draggable="true" ondragstart="catDragStart(event,'+pi+')" ondragover="catDragOver(event)" ondragleave="catDragLeave(event)" ondrop="catDrop(event,'+pi+')" ondragend="catDragEnd(event)"' : '')
       +'><div class="cat-hdr"'
-      +(_sortMode ? '' : ' onclick="toggleCat('cm-'+pi+'','cv-'+pi+'')"')
+      +(_sortMode ? '' : ' onclick="toggleCat(\"cm-'+pi+'\",\"cv-'+pi+'\")"')
       +'><div class="cat-hdr-l">'+handle+'<span class="cat-icon-lg">'+p.icon+'</span><span class="cat-name">'+p.name+'</span><span class="cat-sub">모델 '+p.models.length+'개 · 문서 '+td+'건</span></div>'
       +(_sortMode ? '<span style="font-size:11px;color:var(--text3);">드래그로 순서 변경</span>' : '<span class="cat-chev" id="cv-'+pi+'">▼</span>')
       +'</div>'

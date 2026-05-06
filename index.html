@@ -1092,7 +1092,7 @@ function updateHFBanner(state){
   else if(state==='thinking'){dot.className='hf-dot waiting';txt.textContent='💭 답변 생성 중';sub.textContent='잠시만 기다려 주세요...';}
   else if(state==='speaking'){dot.className='hf-dot speaking';txt.textContent='🔊 답변 읽는 중';sub.textContent='답변이 끝나면 다시 듣습니다';}
 }
-function setVoiceStatus(msg){const el=document.getElementById('voice-status');if(el)el.textContent=msg;}
+async function setVoiceStatus(msg){const el=document.getElementById('voice-status');if(el)el.textContent=msg;}
 
 /* ════════ AUTH ════════ */
 async function doLogin(){
@@ -1151,8 +1151,8 @@ function goUserPreview(){
   showScreen('chat');
 }
 
-function showPanel(n){document.querySelectorAll('.a-panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+n).classList.add('active');document.getElementById('sb-'+n).classList.add('active');if(window.innerWidth<=640)document.getElementById('admin-sidebar').classList.remove('open');}
-function toggleSB(){document.getElementById('admin-sidebar').classList.toggle('open');}
+async function showPanel(n){document.querySelectorAll('.a-panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+n).classList.add('active');document.getElementById('sb-'+n).classList.add('active');if(window.innerWidth<=640)document.getElementById('admin-sidebar').classList.remove('open');}
+async function toggleSB(){document.getElementById('admin-sidebar').classList.toggle('open');}
 
 /* ════════ API KEY ════════ */
 async function saveGroqKey(){
@@ -1242,8 +1242,8 @@ function renderWelcome(){
 }
 
 /* ════════ CHAT ════════ */
-function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
-function sendQuick(t){document.getElementById('chat-inp').value=t;sendMsg();}
+async function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+async function sendQuick(t){document.getElementById('chat-inp').value=t;sendMsg();}
 
 async function sendMsg(){
   if(!selProduct||!selModel){showToast('제품군과 모델을 먼저 선택하세요.','error');return;}
@@ -1418,10 +1418,10 @@ function renderDocTree(){
     </div>`;
   }).join('');
 }
-function toggleCat(mid,cvid){document.getElementById(mid).classList.toggle('open');document.getElementById(cvid).classList.toggle('open');}
+async function toggleCat(mid,cvid){document.getElementById(mid).classList.toggle('open');document.getElementById(cvid).classList.toggle('open');}
 
 /* CAT / MODEL */
-function renderCatSel(){document.getElementById('new-model-cat').innerHTML=products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');}
+async function renderCatSel(){document.getElementById('new-model-cat').innerHTML=products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');}
 async function addCat(){
   const name=document.getElementById('new-cat').value.trim();
   const icon=document.getElementById('new-cat-icon').value.trim()||'📦';
@@ -1853,7 +1853,7 @@ function openMember(id){
   document.getElementById('modal-member').classList.add('open');
 }
 
-function saveMember(){
+async function saveMember(){
   const u = users.find(x => x.id === editMemberId);
   if(!u) return;
 
@@ -1919,7 +1919,7 @@ async function toggleStatus(id){
   if(!ok){showToast('DB 업데이트 실패','error');return;}
   u.status=newStatus; renderUsers(); showToast('상태 변경됨');
 }
-function openDel(id,name){delTargetId=id;document.getElementById('modal-del-msg').textContent=`"${name}" 회원을 삭제하시겠습니까?`;document.getElementById('modal-del').classList.add('open');}
+async function openDel(id,name){delTargetId=id;document.getElementById('modal-del-msg').textContent=`"${name}" 회원을 삭제하시겠습니까?`;document.getElementById('modal-del').classList.add('open');}
 async function confirmDel(){
   const ok=await dbDel('users',{id:delTargetId});
   if(!ok){showToast('DB 삭제 실패','error');closeModal('modal-del');return;}
@@ -2300,7 +2300,7 @@ function openInquiryWrite(){
   document.getElementById('modal-inq-write').classList.add('open');
 }
 
-function submitInquiry(){
+async function submitInquiry(){
   const title = document.getElementById('inq-w-title').value.trim();
   const body  = document.getElementById('inq-w-body').value.trim();
   const pw    = document.getElementById('inq-w-pw').value;

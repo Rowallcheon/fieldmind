@@ -254,6 +254,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .stat-grid{grid-template-columns:repeat(2,1fr);}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -844,37 +845,101 @@ E-301: 온도 초과 → 냉각수 순환 상태 확인
 
 <script>
 /* ════════ CONFIG ════════ */
+const _SB_URL = 'https://lixiqdhymlefrynleglw.supabase.co';
+const _SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpeGlxZGh5bWxlZnJ5bmxlZ2x3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTUwMjEsImV4cCI6MjA5MzU5MTAyMX0.fktKL_X0oyKLfcMVBWBuZy6oDjAqYoVjIaIOtwdtDfg';
+const sb = supabase.createClient(_SB_URL, _SB_KEY);
+
+async function dbQ(table, sel) {
+  sel = sel || '*';
+  const res = await sb.from(table).select(sel);
+  if (res.error) { console.error(table, res.error); return []; }
+  return res.data || [];
+}
+async function dbIns(table, row) {
+  const res = await sb.from(table).insert(row);
+  if (res.error) console.error('insert', table, res.error);
+  return !res.error;
+}
+async function dbUpd(table, match, changes) {
+  const res = await sb.from(table).update(changes).match(match);
+  if (res.error) console.error('update', table, res.error);
+  return !res.error;
+}
+async function dbDel(table, match) {
+  const res = await sb.from(table).delete().match(match);
+  if (res.error) console.error('delete', table, res.error);
+  return !res.error;
+}
+async function dbUps(table, row, col) {
+  col = col || 'id';
+  const res = await sb.from(table).upsert(row, {onConflict: col});
+  if (res.error) console.error('upsert', table, res.error);
+  return !res.error;
+}
+
 let GEMINI_API_KEY = '';
 let GEMINI_MODEL  = 'gemini-2.5-flash-lite';
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
 const HISTORY_TTL  = 7 * 24 * 60 * 60 * 1000;
 
-/* ════════ DATA ════════ */
-// 문서 구조: docs 배열에 {id, title, cat, content, date} 형태로 실제 텍스트 저장
-let products = [
-  {id:'p1',name:'펌프류',icon:'💧',models:[
-    {id:'m1',name:'XP-200A',docs:[]},
-    {id:'m2',name:'CP-500',docs:[]},
-  ]},
-  {id:'p2',name:'압축기류',icon:'⚙️',models:[
-    {id:'m4',name:'AC-300',docs:[]},
-  ]},
-];
-
-let users = [
-  {id:'admin',   pw:'admin123',name:'김철수',dept:'관리팀',    role:'admin',status:'active'},
-  {id:'user001', pw:'1234',    name:'이현장',dept:'1공구 현장',role:'user', status:'active'},
-  {id:'user002', pw:'1234',    name:'박안전',dept:'안전팀',    role:'user', status:'active'},
-  {id:'user003', pw:'1234',    name:'최기술',dept:'기술팀',    role:'user', status:'inactive'},
-  {id:'user004', pw:'1234',    name:'정작업',dept:'2공구 현장',role:'user', status:'active'},
-];
-
-let notices = [
-  {title:'CUCKOO ProGuide 챗봇 오픈 안내',body:'CUCKOO ProGuide 현장 기술 지원 챗봇이 오픈되었습니다. 문의사항은 관리자에게 연락하세요.',date:'2024-04-01'},
-];
-
+/* ════════ DATA (Supabase 연동) ════════ */
+let products = [];
+let users = [];
+let notices = [];
 let chatLogs = [];
-let inquiries = []; // {id, name, userId, title, body, pw, date, answer, answerDate, read}
+let inquiries = [];
+
+function showLoadingOverlay(show) {
+  var el = document.getElementById('db-loading');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'db-loading';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(13,17,23,.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;';
+    el.innerHTML = '<div style="width:38px;height:38px;border:3px solid #30363d;border-top-color:#f0a500;border-radius:50%;animation:dbspin .8s linear infinite;"></div><div style="font-size:14px;color:#8b949e;">데이터 불러오는 중...</div><style>@keyframes dbspin{to{transform:rotate(360deg)}}</style>';
+    document.body.appendChild(el);
+  }
+  el.style.display = show ? 'flex' : 'none';
+}
+
+async function loadAllData() {
+  showLoadingOverlay(true);
+  try {
+    users = await dbQ('users');
+    var nRows = await dbQ('notices');
+    notices = nRows.map(function(n) {
+      return { id: n.id, title: n.title, body: n.body, date: (n.created_at||'').slice(0,10) };
+    });
+    var iqRows = await dbQ('inquiries');
+    inquiries = iqRows.map(function(i) {
+      return { id: i.id, userId: i.user_id, name: i.name, title: i.title, body: i.body, pw: i.pw,
+        answer: i.answer||'', answerDate: i.answer_date||'', read: i.is_read||false,
+        date: (i.created_at||'').slice(0,10) };
+    });
+    var pRows = await dbQ('products');
+    var mRows = await dbQ('models');
+    var dRows = await dbQ('documents');
+    products = pRows.map(function(p) {
+      return { id: p.id, name: p.name, icon: p.icon||'📦',
+        models: mRows.filter(function(m){ return m.product_id===p.id; }).map(function(m) {
+          return { id: m.id, name: m.name,
+            docs: dRows.filter(function(d){ return d.model_id===m.id; }).map(function(d) {
+              return { id: d.id, title: d.title, cat: d.cat, content: d.content, date: (d.created_at||'').slice(0,10) };
+            })
+          };
+        })
+      };
+    });
+    var settings = await dbQ('app_settings');
+    var ks = settings.find(function(s){ return s.key==='gemini_api_key'; });
+    if (ks && ks.value) GEMINI_API_KEY = ks.value;
+    var ms2 = settings.find(function(s){ return s.key==='gemini_model'; });
+    if (ms2 && ms2.value) GEMINI_MODEL = ms2.value;
+  } catch(e) {
+    console.error('loadAllData:', e);
+    showToast('데이터 로드 실패. 새로고침 해주세요.', 'error');
+  }
+  showLoadingOverlay(false);
+}
 
 /* session */
 let currentUser=null, selProduct=null, selModel=null;
@@ -1030,14 +1095,17 @@ function updateHFBanner(state){
 function setVoiceStatus(msg){const el=document.getElementById('voice-status');if(el)el.textContent=msg;}
 
 /* ════════ AUTH ════════ */
-function doLogin(){
+async function doLogin(){
   const id=document.getElementById('login-id').value.trim();
   const pw=document.getElementById('login-pw').value;
-  const u=users.find(x=>x.id===id&&x.pw===pw);
   const err=document.getElementById('login-error');
+  err.style.display='none';
+  // DB에서 인증
+  if(users.length===0) await loadAllData();
+  const u=users.find(x=>x.id===id&&x.pw===pw);
   if(!u){err.style.display='block';err.textContent='아이디 또는 비밀번호가 올바르지 않습니다.';return;}
   if(u.status==='inactive'){err.style.display='block';err.textContent='비활성화된 계정입니다.';return;}
-  err.style.display='none'; currentUser=u;
+  currentUser=u;
   if(u.role==='admin'){
     document.getElementById('admin-uname').textContent=u.name;
     document.getElementById('admin-avatar').textContent=u.name[0];
@@ -1087,10 +1155,11 @@ function showPanel(n){document.querySelectorAll('.a-panel').forEach(p=>p.classLi
 function toggleSB(){document.getElementById('admin-sidebar').classList.toggle('open');}
 
 /* ════════ API KEY ════════ */
-function saveGroqKey(){
+async function saveGroqKey(){
   const key=document.getElementById('groq-key-input').value.trim();
   if(!key.startsWith('AIza')){showToast('올바른 Gemini API 키 형식이 아닙니다. (AIza로 시작)','error');return;}
   GEMINI_API_KEY=key;
+  await dbUps('app_settings',{key:'gemini_api_key',value:key},'key');
   document.getElementById('groq-key-status').innerHTML='<span style="color:var(--success);">● Gemini API 키 저장됨 · 챗봇 활성화</span>';
   showToast('✅ Gemini API 키가 저장되었습니다.','success');
 }
@@ -1248,7 +1317,9 @@ ${docCtx}`;
     chatHistory.push({role:'assistant',content:reply,time:Date.now()});
     if(ttsEnabled) speakText(reply);
     // 로그 기록
-    chatLogs.unshift({ts:Date.now(),time:fmtT(Date.now()),user:currentUser.name,cat:selProduct.name,model:selModel.name,q:text,ref:refDocs?refDocs[0].title:'—',ok:true});
+    const logRow={ts:Date.now(),time:fmtT(Date.now()),user:currentUser.name,cat:selProduct.name,model:selModel.name,q:text,ref:refDocs?refDocs[0].title:'—',ok:true};
+    chatLogs.unshift(logRow);
+    dbIns('chat_logs',{ts:logRow.ts,user_name:logRow.user,cat:logRow.cat,model_name:logRow.model,question:logRow.q,ref_doc:logRow.ref,is_ok:true});
   }catch(e){
     removeTyping(tid);
     const msg=e.message.includes('401')?'❌ API 키가 올바르지 않습니다.':e.message.includes('429')?'⚠️ 요청 한도 초과. 잠시 후 다시 시도해 주세요.':'⚠️ 오류: '+e.message;
@@ -1351,24 +1422,28 @@ function toggleCat(mid,cvid){document.getElementById(mid).classList.toggle('open
 
 /* CAT / MODEL */
 function renderCatSel(){document.getElementById('new-model-cat').innerHTML=products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');}
-function addCat(){
+async function addCat(){
   const name=document.getElementById('new-cat').value.trim();
   const icon=document.getElementById('new-cat-icon').value.trim()||'📦';
   if(!name){showToast('제품군명을 입력하세요.','error');return;}
   if(products.find(p=>p.name===name)){showToast('이미 존재하는 제품군입니다.','error');return;}
-  products.push({id:'p'+Date.now(),name,icon,models:[]});
+  const newId='p'+Date.now();
+  await dbIns('products',{id:newId,name,icon});
+  products.push({id:newId,name,icon,models:[]});
   document.getElementById('new-cat').value=''; document.getElementById('new-cat-icon').value='';
   renderDocTree();renderCatSel();renderDash();
   showToast('✅ 제품군 추가됨','success');
 }
-function addModel(){
+async function addModel(){
   const catId=document.getElementById('new-model-cat').value;
   const name=document.getElementById('new-model').value.trim();
   if(!name){showToast('모델명을 입력하세요.','error');return;}
   const p=products.find(x=>x.id===catId);
   if(!p){showToast('제품군을 선택하세요.','error');return;}
   if(p.models.find(m=>m.name===name)){showToast('이미 존재하는 모델명입니다.','error');return;}
-  p.models.push({id:'m'+Date.now(),name,docs:[]});
+  const newMId='m'+Date.now();
+  await dbIns('models',{id:newMId,product_id:catId,name});
+  p.models.push({id:newMId,name,docs:[]});
   document.getElementById('new-model').value='';
   renderDocTree();renderDash();
   showToast('✅ 모델 추가됨','success');
@@ -1425,13 +1500,14 @@ function editDocContent(idx){
   showToast('내용을 수정 후 "수정 저장" 버튼을 클릭하세요.');
 }
 
-function saveDocEdit(idx){
+async function saveDocEdit(idx){
   if(!modalDocRef) return;
   const title=document.getElementById('doc-input-title').value.trim();
   const content=document.getElementById('doc-input-content').value.trim();
   if(!title){showToast('문서 제목을 입력하세요.','error');return;}
   if(content.length<10){showToast('내용을 입력하세요.','error');return;}
   const docs=products[modalDocRef.pi].models[modalDocRef.mi].docs;
+  if(docs[idx]&&docs[idx].id) await dbUpd('documents',{id:docs[idx].id},{title,content,cat:currentDocCat});
   docs[idx].title=title;
   docs[idx].content=content;
   docs[idx].cat=currentDocCat;
@@ -1509,14 +1585,17 @@ function renderExistingDocs(){
       </div>`).join('');
 }
 
-function saveDocContent(){
+async function saveDocContent(){
   if(!modalDocRef)return;
   const title=document.getElementById('doc-input-title').value.trim();
   const content=document.getElementById('doc-input-content').value.trim();
   if(!title){showToast('문서 제목을 입력하세요.','error');return;}
   if(content.length<10){showToast('내용을 입력하세요. (10자 이상)','error');return;}
+  const modelId=products[modalDocRef.pi].models[modalDocRef.mi].id;
+  const docId='d'+Date.now();
+  await dbIns('documents',{id:docId,model_id:modelId,title,cat:currentDocCat,content});
   products[modalDocRef.pi].models[modalDocRef.mi].docs.push({
-    id:'d'+Date.now(), title, cat:currentDocCat, content,
+    id:docId, title, cat:currentDocCat, content,
     date:new Date().toISOString().slice(0,10)
   });
   document.getElementById('doc-input-title').value='';
@@ -1528,7 +1607,7 @@ function saveDocContent(){
   showToast('✅ 문서가 저장되었습니다. 챗봇이 즉시 반영됩니다.','success');
 }
 
-function delDocContent(idx){
+async function delDocContent(idx){
   if(!modalDocRef)return;
   const docs=products[modalDocRef.pi].models[modalDocRef.mi].docs;
   docs.splice(idx,1);
@@ -1537,10 +1616,11 @@ function delDocContent(idx){
 }
 
 /* NOTICES */
-function addNotice(){
+async function addNotice(){
   const title=document.getElementById('ntc-title').value.trim();
   const body=document.getElementById('ntc-body').value.trim();
   if(!title||!body){showToast('제목과 내용을 입력하세요.','error');return;}
+  await dbIns('notices',{title,body});
   notices.unshift({title,body,date:new Date().toISOString().slice(0,10)});
   document.getElementById('ntc-title').value=''; document.getElementById('ntc-body').value='';
   renderAdminNotices(); showToast('✅ 공지 등록됨','success');
@@ -1552,13 +1632,17 @@ function renderAdminNotices(){
       <button class="btn btn-danger btn-sm" style="flex-shrink:0;" onclick="delNotice(${i})">삭제</button>
     </div>`).join('');
 }
-function delNotice(i){notices.splice(i,1);renderAdminNotices();showToast('공지 삭제됨');}
+async function delNotice(i){
+  const n=notices[i];
+  if(n && n.id){ await dbDel('notices',{id:n.id}); }
+  notices.splice(i,1);renderAdminNotices();showToast('공지 삭제됨');
+}
 
 /* USERS */
 function switchUtab(t){
   ['single','csv'].forEach(x=>{document.getElementById('utab-'+x+'-body').style.display=x===t?'block':'none';document.getElementById('utab-'+x).classList.toggle('active',x===t);});
 }
-function addUserSingle(){
+async function addUserSingle(){
   const id=document.getElementById('u-id').value.trim();
   const name=document.getElementById('u-name').value.trim();
   const dept=document.getElementById('u-dept').value.trim();
@@ -1566,6 +1650,8 @@ function addUserSingle(){
   const role=document.getElementById('u-role').value;
   if(!id||!name||!dept||!pw){showToast('모든 항목을 입력하세요.','error');return;}
   if(users.find(u=>u.id===id)){showToast('이미 존재하는 아이디입니다.','error');return;}
+  const ok = await dbIns('users',{id,pw,name,dept,role,status:'active'});
+  if(!ok){showToast('DB 저장 실패','error');return;}
   users.push({id,pw,name,dept,role,status:'active'});
   ['u-id','u-name','u-dept','u-pw'].forEach(f=>document.getElementById(f).value='');
   renderUsers(); renderDash(); showToast('✅ 회원 등록됨','success');
@@ -1806,6 +1892,8 @@ function saveMember(){
     document.getElementById('admin-avatar').textContent = newName[0];
   }
 
+  const ok=await dbUpd('users',{id:editMemberId},{name:newName,id:newId,dept:newDept,role:newRole,status:newStatus});
+  if(!ok){showToast('DB 업데이트 실패','error');return;}
   editMemberId = null;
   closeModal('modal-member');
   renderUsers(); renderDash();
@@ -1823,9 +1911,21 @@ function memberDelete(){
   showToast('회원 삭제됨','success');
 }
 
-function toggleStatus(id){const u=users.find(x=>x.id===id);if(u){u.status=u.status==='active'?'inactive':'active';renderUsers();showToast('상태 변경됨');}}
+async function toggleStatus(id){
+  const u=users.find(x=>x.id===id);
+  if(!u) return;
+  const newStatus=u.status==='active'?'inactive':'active';
+  const ok=await dbUpd('users',{id},{status:newStatus});
+  if(!ok){showToast('DB 업데이트 실패','error');return;}
+  u.status=newStatus; renderUsers(); showToast('상태 변경됨');
+}
 function openDel(id,name){delTargetId=id;document.getElementById('modal-del-msg').textContent=`"${name}" 회원을 삭제하시겠습니까?`;document.getElementById('modal-del').classList.add('open');}
-function confirmDel(){users=users.filter(u=>u.id!==delTargetId);closeModal('modal-del');renderUsers();renderDash();showToast('회원 삭제됨','success');}
+async function confirmDel(){
+  const ok=await dbDel('users',{id:delTargetId});
+  if(!ok){showToast('DB 삭제 실패','error');closeModal('modal-del');return;}
+  users=users.filter(u=>u.id!==delTargetId);
+  closeModal('modal-del'); renderUsers(); renderDash(); showToast('회원 삭제됨','success');
+}
 
 /* ════════ 대화 로그 & 분석 ════════ */
 let logPeriodDays=0, rptPeriodDays=7, logPage=1;
@@ -2207,12 +2307,12 @@ function submitInquiry(){
   if(!title){ showToast('제목을 입력하세요.','error'); return; }
   if(!body){  showToast('내용을 입력하세요.','error'); return; }
   if(pw.length < 4){ showToast('비밀번호는 4자리 이상 입력하세요.','error'); return; }
+  const newId='iq'+Date.now();
+  const ok=await dbIns('inquiries',{id:newId,user_id:currentUser?.id,name:currentUser?.name,title,body,pw,answer:'',answer_date:'',is_read:false});
+  if(!ok){showToast('DB 저장 실패','error');return;}
   inquiries.unshift({
-    id: 'iq' + Date.now(),
-    userId: currentUser?.id,
-    name: currentUser?.name,
-    title, body, pw,
-    date: new Date().toLocaleDateString('ko-KR'),
+    id: newId, userId: currentUser?.id, name: currentUser?.name,
+    title, body, pw, date: new Date().toLocaleDateString('ko-KR'),
     answer: '', answerDate: '', read: false
   });
   closeModal('modal-inq-write');
@@ -2329,13 +2429,15 @@ function openAdminInqModal(id){
   document.getElementById('modal-inq-admin').classList.add('open');
 }
 
-function saveInqAnswer(){
+async function saveInqAnswer(){
   const inq = inquiries.find(i => i.id === viewInqId);
   if(!inq) return;
   const ans = document.getElementById('inq-admin-answer').value.trim();
   if(!ans){ showToast('답변 내용을 입력하세요.','error'); return; }
+  const aDate=new Date().toLocaleDateString('ko-KR');
+  await dbUpd('inquiries',{id:viewInqId},{answer:ans,answer_date:aDate,is_read:false});
   inq.answer = ans;
-  inq.answerDate = new Date().toLocaleDateString('ko-KR');
+  inq.answerDate = aDate;
   inq.read = false; // 답변 새로 달리면 사용자가 다시 읽어야
   closeModal('modal-inq-admin');
   renderAdminInquiries();
@@ -2374,6 +2476,8 @@ function showToast(msg,type=''){
 }
 
 document.getElementById('login-pw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+// 페이지 로드 시 DB 데이터 미리 로드
+window.addEventListener('DOMContentLoaded', function(){ loadAllData(); });
 window.addEventListener('resize',()=>{const mb=document.getElementById('admin-menu-btn');if(mb)mb.style.display=(currentUser?.role==='admin'&&window.innerWidth<=640)?'block':'none';});
 </script>
 </body>

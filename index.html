@@ -2212,43 +2212,77 @@ async function createGroup(){
   showToast('✅ 그룹 "'+name+'" 생성됨','success');
 }
 
-/* ── 그룹 목록 렌더링 ── */
+/* ── 그룹 목록 렌더링 (DOM 방식) ── */
 function renderGroupList(){
   const el = document.getElementById('group-list');
   if(!el) return;
+  el.innerHTML = '';
   if(!groups.length){
     el.innerHTML='<div style="text-align:center;color:var(--text3);padding:32px;font-size:13px;">생성된 그룹이 없습니다.<br><small>위에서 새 그룹을 만드세요.</small></div>';
     return;
   }
-  el.innerHTML = groups.map(g=>{
-    const cats = products.filter(p=>g.catIds.includes(p.id));
-    const members = users.filter(u=>g.memberIds.includes(u.id));
-    return '<div class="group-card">'
-      +'<div class="group-card-hdr">'
-        +'<div><div class="group-name">'+g.name+'</div>'
-        +'<div class="group-meta">회원 '+members.length+'명 · 제품군 '+cats.length+'개</div></div>'
-        +'<div style="display:flex;gap:6px;">'
-          +'<button class="btn btn-ghost btn-sm" onclick="openGrpMemberModal(''+g.id+'')">+ 회원 추가</button>'
-          +'<button class="btn btn-ghost btn-sm" onclick="openEditGroup(''+g.id+'')">✏️ 수정</button>'
-          +'<button class="btn btn-danger btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="deleteGroup(''+g.id+'')">삭제</button>'
-        +'</div>'
-      +'</div>'
-      // 허용 제품군 배지
-      +'<div class="group-cats">'
-        +(cats.length ? cats.map(p=>'<span class="badge badge-gold" style="font-size:11px;">'+p.icon+' '+p.name+'</span>').join('')
-          : '<span style="font-size:12px;color:var(--text3);">허용 제품군 없음</span>')
-      +'</div>'
-      // 회원 칩
-      +'<div class="group-members">'
-        +(members.length ? members.map(u=>
-          '<span class="member-chip">'+u.name
-          +'<button onclick="removeGroupMember(''+g.id+'',''+u.id+'')" title="제거">×</button>'
-          +'</span>'
-        ).join('')
-        : '<span style="font-size:12px;color:var(--text3);">배정된 회원 없음</span>')
-      +'</div>'
-    +'</div>';
-  }).join('');
+  groups.forEach(function(g){
+    const cats    = products.filter(function(p){ return g.catIds.includes(p.id); });
+    const members = users.filter(function(u){ return g.memberIds.includes(u.id); });
+
+    const card = document.createElement('div');
+    card.className = 'group-card';
+
+    // 헤더
+    const hdr = document.createElement('div');
+    hdr.className = 'group-card-hdr';
+
+    const hdrL = document.createElement('div');
+    const nm = document.createElement('div'); nm.className='group-name'; nm.textContent=g.name;
+    const mt = document.createElement('div'); mt.className='group-meta'; mt.textContent='회원 '+members.length+'명 · 제품군 '+cats.length+'개';
+    hdrL.appendChild(nm); hdrL.appendChild(mt);
+
+    const hdrR = document.createElement('div');
+    hdrR.style.cssText='display:flex;gap:6px;';
+
+    const btnAdd = document.createElement('button'); btnAdd.className='btn btn-ghost btn-sm'; btnAdd.textContent='+ 회원 추가';
+    btnAdd.onclick = (function(id){ return function(){ openGrpMemberModal(id); }; })(g.id);
+    const btnEdit = document.createElement('button'); btnEdit.className='btn btn-ghost btn-sm'; btnEdit.textContent='✏️ 수정';
+    btnEdit.onclick = (function(id){ return function(){ openEditGroup(id); }; })(g.id);
+    const btnDel = document.createElement('button'); btnDel.className='btn btn-danger btn-sm'; btnDel.textContent='삭제';
+    btnDel.style.cssText='border-color:var(--danger);color:var(--danger);';
+    btnDel.onclick = (function(id){ return function(){ deleteGroup(id); }; })(g.id);
+    hdrR.appendChild(btnAdd); hdrR.appendChild(btnEdit); hdrR.appendChild(btnDel);
+
+    hdr.appendChild(hdrL); hdr.appendChild(hdrR);
+    card.appendChild(hdr);
+
+    // 제품군 배지
+    const catDiv = document.createElement('div'); catDiv.className='group-cats';
+    if(cats.length){
+      cats.forEach(function(p){
+        const badge = document.createElement('span');
+        badge.className='badge badge-gold'; badge.style.fontSize='11px';
+        badge.textContent=p.icon+' '+p.name;
+        catDiv.appendChild(badge);
+      });
+    } else {
+      catDiv.innerHTML='<span style="font-size:12px;color:var(--text3);">허용 제품군 없음</span>';
+    }
+    card.appendChild(catDiv);
+
+    // 회원 칩
+    const memDiv = document.createElement('div'); memDiv.className='group-members';
+    if(members.length){
+      members.forEach(function(u){
+        const chip = document.createElement('span'); chip.className='member-chip';
+        chip.appendChild(document.createTextNode(u.name));
+        const xBtn = document.createElement('button'); xBtn.textContent='×'; xBtn.title='제거';
+        xBtn.onclick = (function(gid,uid){ return function(){ toggleGrpMember(uid); }; })(g.id, u.id);
+        chip.appendChild(xBtn);
+        memDiv.appendChild(chip);
+      });
+    } else {
+      memDiv.innerHTML='<span style="font-size:12px;color:var(--text3);">배정된 회원 없음</span>';
+    }
+    card.appendChild(memDiv);
+    el.appendChild(card);
+  });
 }
 
 /* ── 그룹 수정 ── */
@@ -2319,17 +2353,21 @@ function renderGrpMemberList(){
   const filtered = users.filter(u=>u.role!=='admin'&&(u.name.toLowerCase().includes(q)||u.id.toLowerCase().includes(q)));
   const el = document.getElementById('grp-member-list');
   if(!filtered.length){ el.innerHTML='<div style="text-align:center;color:var(--text3);padding:16px;font-size:13px;">검색 결과 없음</div>'; return; }
-  el.innerHTML = filtered.map(u=>{
+  el.innerHTML = '';
+  filtered.forEach(function(u){
     const inGroup = g.memberIds.includes(u.id);
-    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg3);border-radius:var(--radius-sm);">'
-      +'<div><span style="font-size:13px;font-weight:600;">'+(u.name)+'</span>'
-      +' <span style="font-size:11px;color:var(--text3);">'+u.id+' · '+u.dept+'</span></div>'
-      +'<button class="btn btn-sm '+(inGroup?'btn-danger':'btn-primary')+'" '
-      +'style="'+(inGroup?'border-color:var(--danger);color:var(--danger);':'')+'" '
-      +'onclick="toggleGrpMember(''+u.id+'')">'
-      +(inGroup?'제거':'추가')+'</button>'
-    +'</div>';
-  }).join('');
+    const row = document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg3);border-radius:var(--radius-sm);';
+    const info = document.createElement('div');
+    info.innerHTML='<span style="font-size:13px;font-weight:600;">'+u.name+'</span> <span style="font-size:11px;color:var(--text3);">'+u.id+' · '+u.dept+'</span>';
+    const btn = document.createElement('button');
+    btn.className='btn btn-sm '+(inGroup?'btn-danger':'btn-primary');
+    if(inGroup) btn.style.cssText='border-color:var(--danger);color:var(--danger);';
+    btn.textContent = inGroup?'제거':'추가';
+    btn.onclick = (function(uid){ return function(){ toggleGrpMember(uid); }; })(u.id);
+    row.appendChild(info); row.appendChild(btn);
+    el.appendChild(row);
+  });
 }
 
 async function toggleGrpMember(userId){

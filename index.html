@@ -225,6 +225,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .api-config-box{background:var(--bg2);border:1px solid rgba(88,166,255,.3);border-radius:var(--radius);padding:16px;margin-bottom:20px;}
 .api-config-title{font-size:13px;font-weight:700;color:var(--info);margin-bottom:12px;}
 .doc-tree{display:flex;flex-direction:column;gap:10px;}
+
+/* ── 그룹 관리 ── */
+.group-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;}
+.group-card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.group-name{font-size:14px;font-weight:700;color:var(--text);}
+.group-meta{font-size:12px;color:var(--text3);}
+.group-cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.group-members{display:flex;gap:5px;flex-wrap:wrap;}
+.member-chip{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--text2);display:flex;align-items:center;gap:5px;}
+.member-chip button{background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:0;line-height:1;}
+.member-chip button:hover{color:var(--danger);}
 /* ── 순서 관리 ── */
 .sort-handle{cursor:grab;color:var(--text3);font-size:18px;padding:0 8px;user-select:none;flex-shrink:0;}
 .sort-handle:active{cursor:grabbing;}
@@ -560,6 +571,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <div class="tab-row">
           <button class="utab active" id="utab-single" onclick="switchUtab('single')">개별 등록</button>
           <button class="utab" id="utab-csv" onclick="switchUtab('csv')">CSV / Excel 일괄 등록</button>
+          <button class="utab" id="utab-group" onclick="switchUtab('group')">🔑 그룹 권한 관리</button>
         </div>
         <div id="utab-single-body" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;">
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;">
@@ -607,6 +619,30 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
             <button class="btn btn-ghost" onclick="resetCsv()">취소</button>
             <button class="btn btn-primary" id="csv-submit-btn" onclick="submitCsv()">일괄 등록</button>
           </div>
+        </div>
+
+        <!-- 그룹 권한 관리 탭 -->
+        <div id="utab-group-body" style="display:none;margin-bottom:20px;">
+
+          <!-- 그룹 생성 -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">+ 새 그룹 만들기</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+              <div class="form-group" style="margin:0;flex:1;min-width:140px;">
+                <label class="form-label">그룹명</label>
+                <input class="form-input" id="grp-name" placeholder="예: 정수기팀">
+              </div>
+              <button class="btn btn-primary" onclick="createGroup()">그룹 생성</button>
+            </div>
+            <!-- 제품군 권한 선택 -->
+            <div style="margin-top:14px;">
+              <label class="form-label">허용할 제품군 선택 <span style="font-size:11px;color:var(--text3);font-weight:400;">(복수 선택 가능)</span></label>
+              <div id="grp-cat-checkboxes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;"></div>
+            </div>
+          </div>
+
+          <!-- 그룹 목록 -->
+          <div id="group-list"></div>
         </div>
         <div class="sec-hdr">
           <div class="sec-title">전체 회원 목록 <span id="u-total-badge" style="font-size:12px;color:var(--text3);font-weight:400;"></span></div>
@@ -943,6 +979,20 @@ E-301: 온도 초과 → 냉각수 순환 상태 확인
   </div>
 </div>
 
+<!-- 모달: 그룹 회원 추가 -->
+<div class="modal-overlay" id="modal-group-member">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title" style="margin-bottom:14px;">👥 그룹 회원 추가 — <span id="modal-grp-name"></span></div>
+    <div style="margin-bottom:10px;">
+      <input class="form-input" id="grp-member-search" placeholder="이름 또는 아이디 검색" oninput="renderGrpMemberList()">
+    </div>
+    <div id="grp-member-list" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-group-member')">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 모달: 회원 삭제 -->
 <div class="modal-overlay" id="modal-del">
   <div class="modal">
@@ -1003,6 +1053,7 @@ let users = [];
 let notices = [];
 let chatLogs = [];
 let inquiries = [];
+let groups = []; // {id, name, catIds:[], memberIds:[]}
 
 function showLoadingOverlay(show) {
   var el = document.getElementById('db-loading');
@@ -1052,6 +1103,18 @@ async function loadAllData() {
     if (ks && ks.value) GEMINI_API_KEY = ks.value;
     var ms2 = settings.find(function(s){ return s.key==='gemini_model'; });
     if (ms2 && ms2.value) GEMINI_MODEL = ms2.value;
+
+    // 그룹 로드
+    var gRows  = await dbQ('groups');
+    var gmRows = await dbQ('group_members');
+    var gpRows = await dbQ('group_products');
+    groups = gRows.map(function(g){
+      return {
+        id: g.id, name: g.name,
+        catIds:    gpRows.filter(function(r){ return r.group_id===g.id; }).map(function(r){ return r.product_id; }),
+        memberIds: gmRows.filter(function(r){ return r.group_id===g.id; }).map(function(r){ return r.user_id; })
+      };
+    });
   } catch(e) {
     console.error('loadAllData:', e);
     showToast('데이터 로드 실패. 새로고침 해주세요.', 'error');
@@ -1255,6 +1318,7 @@ async function doLogin(){
     purgeHistory(); populateCatDD(); showScreen('chat');
     initSpeech();
     updateInqBadges();
+    checkUserGroupAccess();
   }
 }
 function doLogout(){
@@ -1335,6 +1399,8 @@ function goUserPreview(){
   // 사용자 화면 표시 전 준비
   purgeHistory();
   populateCatDD();
+  // 음성 기능 초기화 (관리자 미리보기 시에도 핸즈프리 작동)
+  initSpeech();
 
   // 돌아가기 버튼 삽입
   const nav=document.querySelector('#screen-chat .topnav .nav-right');
@@ -1371,7 +1437,18 @@ function saveModel(){const sel=document.querySelector('input[name="groq-model"]:
 /* ════════ DROPDOWN ════════ */
 function populateCatDD(){
   const dd=document.getElementById('dd-cat');
-  dd.innerHTML='<option value="">-- 제품군 선택 --</option>'+products.map(p=>`<option value="${p.id}">${p.icon} ${p.name}</option>`).join('');
+  // 관리자는 전체, 사용자는 그룹 권한에 따라 필터링
+  let allowedProducts = products;
+  if(currentUser && currentUser.role !== 'admin'){
+    const myGroups = groups.filter(g=>g.memberIds.includes(currentUser.id));
+    if(myGroups.length > 0){
+      const allowedIds = [...new Set(myGroups.flatMap(g=>g.catIds))];
+      allowedProducts = products.filter(p=>allowedIds.includes(p.id));
+    } else {
+      allowedProducts = []; // 그룹 미배정 시 아무것도 안 보임
+    }
+  }
+  dd.innerHTML='<option value="">-- 제품군 선택 --</option>'+allowedProducts.map(p=>`<option value="${p.id}">${p.icon} ${p.name}</option>`).join('');
   dd.classList.remove('has-val');
   const ddm=document.getElementById('dd-model');
   ddm.innerHTML='<option value="">-- 모델 선택 --</option>';
@@ -2092,8 +2169,205 @@ async function delNotice(i){
 }
 
 /* USERS */
+/* ════════ 그룹 권한 관리 ════════ */
+let editingGroupId = null;
+
+/* ── 제품군 체크박스 렌더링 ── */
+function renderGrpCatCheckboxes(selectedIds){
+  selectedIds = selectedIds || [];
+  const el = document.getElementById('grp-cat-checkboxes');
+  if(!el) return;
+  el.innerHTML = products.map(p=>
+    '<label style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:12px;">'
+    +'<input type="checkbox" value="'+p.id+'" '+(selectedIds.includes(p.id)?'checked':'')
+    +' style="accent-color:var(--accent);">'
+    +p.icon+' '+p.name+'</label>'
+  ).join('');
+}
+
+function getCheckedCatIds(){
+  return [...document.querySelectorAll('#grp-cat-checkboxes input:checked')].map(el=>el.value);
+}
+
+/* ── 그룹 생성 ── */
+async function createGroup(){
+  const name = document.getElementById('grp-name').value.trim();
+  if(!name){ showToast('그룹명을 입력하세요.','error'); return; }
+  const catIds = getCheckedCatIds();
+  if(!catIds.length){ showToast('허용할 제품군을 하나 이상 선택하세요.','error'); return; }
+
+  const gId = 'g'+Date.now();
+  const ok = await dbIns('groups',{id:gId, name});
+  if(!ok){ showToast('DB 저장 실패','error'); return; }
+
+  // 제품군 권한 저장
+  for(const pid of catIds){
+    await dbIns('group_products',{group_id:gId, product_id:pid});
+  }
+
+  groups.push({id:gId, name, catIds, memberIds:[]});
+  document.getElementById('grp-name').value='';
+  renderGrpCatCheckboxes();
+  renderGroupList();
+  showToast('✅ 그룹 "'+name+'" 생성됨','success');
+}
+
+/* ── 그룹 목록 렌더링 ── */
+function renderGroupList(){
+  const el = document.getElementById('group-list');
+  if(!el) return;
+  if(!groups.length){
+    el.innerHTML='<div style="text-align:center;color:var(--text3);padding:32px;font-size:13px;">생성된 그룹이 없습니다.<br><small>위에서 새 그룹을 만드세요.</small></div>';
+    return;
+  }
+  el.innerHTML = groups.map(g=>{
+    const cats = products.filter(p=>g.catIds.includes(p.id));
+    const members = users.filter(u=>g.memberIds.includes(u.id));
+    return '<div class="group-card">'
+      +'<div class="group-card-hdr">'
+        +'<div><div class="group-name">'+g.name+'</div>'
+        +'<div class="group-meta">회원 '+members.length+'명 · 제품군 '+cats.length+'개</div></div>'
+        +'<div style="display:flex;gap:6px;">'
+          +'<button class="btn btn-ghost btn-sm" onclick="openGrpMemberModal(''+g.id+'')">+ 회원 추가</button>'
+          +'<button class="btn btn-ghost btn-sm" onclick="openEditGroup(''+g.id+'')">✏️ 수정</button>'
+          +'<button class="btn btn-danger btn-sm" style="border-color:var(--danger);color:var(--danger);" onclick="deleteGroup(''+g.id+'')">삭제</button>'
+        +'</div>'
+      +'</div>'
+      // 허용 제품군 배지
+      +'<div class="group-cats">'
+        +(cats.length ? cats.map(p=>'<span class="badge badge-gold" style="font-size:11px;">'+p.icon+' '+p.name+'</span>').join('')
+          : '<span style="font-size:12px;color:var(--text3);">허용 제품군 없음</span>')
+      +'</div>'
+      // 회원 칩
+      +'<div class="group-members">'
+        +(members.length ? members.map(u=>
+          '<span class="member-chip">'+u.name
+          +'<button onclick="removeGroupMember(''+g.id+'',''+u.id+'')" title="제거">×</button>'
+          +'</span>'
+        ).join('')
+        : '<span style="font-size:12px;color:var(--text3);">배정된 회원 없음</span>')
+      +'</div>'
+    +'</div>';
+  }).join('');
+}
+
+/* ── 그룹 수정 ── */
+function openEditGroup(gId){
+  const g = groups.find(x=>x.id===gId);
+  if(!g) return;
+  editingGroupId = gId;
+  document.getElementById('grp-name').value = g.name;
+  renderGrpCatCheckboxes(g.catIds);
+  document.getElementById('grp-name').focus();
+  showToast('수정 후 "그룹 생성" 버튼 대신 아래 저장 버튼을 눌러주세요.');
+  // 생성 버튼을 저장 버튼으로 변경
+  const createBtn = document.querySelector('[onclick="createGroup()"]');
+  if(createBtn){ createBtn.textContent='💾 저장'; createBtn.setAttribute('onclick','saveEditGroup()'); }
+}
+
+async function saveEditGroup(){
+  const g = groups.find(x=>x.id===editingGroupId);
+  if(!g) return;
+  const name = document.getElementById('grp-name').value.trim();
+  const catIds = getCheckedCatIds();
+  if(!name){ showToast('그룹명을 입력하세요.','error'); return; }
+  if(!catIds.length){ showToast('제품군을 선택하세요.','error'); return; }
+
+  await dbUpd('groups',{id:g.id},{name});
+  // 기존 제품군 권한 삭제 후 재등록
+  await dbDel('group_products',{group_id:g.id});
+  for(const pid of catIds) await dbIns('group_products',{group_id:g.id,product_id:pid});
+
+  g.name=name; g.catIds=catIds;
+  editingGroupId=null;
+  document.getElementById('grp-name').value='';
+  renderGrpCatCheckboxes();
+  renderGroupList();
+  // 버튼 원복
+  const btn = document.querySelector('[onclick="saveEditGroup()"]');
+  if(btn){ btn.textContent='그룹 생성'; btn.setAttribute('onclick','createGroup()'); }
+  showToast('✅ 그룹 수정됨','success');
+}
+
+/* ── 그룹 삭제 ── */
+async function deleteGroup(gId){
+  const g = groups.find(x=>x.id===gId);
+  if(!g || !confirm('"'+g.name+'" 그룹을 삭제하시겠습니까?')) return;
+  await dbDel('group_products',{group_id:gId});
+  await dbDel('group_members',{group_id:gId});
+  await dbDel('groups',{id:gId});
+  groups = groups.filter(x=>x.id!==gId);
+  renderGroupList();
+  showToast('그룹 삭제됨');
+}
+
+/* ── 회원 추가 모달 ── */
+let modalGrpId = null;
+function openGrpMemberModal(gId){
+  modalGrpId = gId;
+  const g = groups.find(x=>x.id===gId);
+  document.getElementById('modal-grp-name').textContent = g ? g.name : '';
+  document.getElementById('grp-member-search').value='';
+  renderGrpMemberList();
+  document.getElementById('modal-group-member').classList.add('open');
+}
+
+function renderGrpMemberList(){
+  const g = groups.find(x=>x.id===modalGrpId);
+  if(!g) return;
+  const q = (document.getElementById('grp-member-search').value||'').toLowerCase();
+  const filtered = users.filter(u=>u.role!=='admin'&&(u.name.toLowerCase().includes(q)||u.id.toLowerCase().includes(q)));
+  const el = document.getElementById('grp-member-list');
+  if(!filtered.length){ el.innerHTML='<div style="text-align:center;color:var(--text3);padding:16px;font-size:13px;">검색 결과 없음</div>'; return; }
+  el.innerHTML = filtered.map(u=>{
+    const inGroup = g.memberIds.includes(u.id);
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg3);border-radius:var(--radius-sm);">'
+      +'<div><span style="font-size:13px;font-weight:600;">'+(u.name)+'</span>'
+      +' <span style="font-size:11px;color:var(--text3);">'+u.id+' · '+u.dept+'</span></div>'
+      +'<button class="btn btn-sm '+(inGroup?'btn-danger':'btn-primary')+'" '
+      +'style="'+(inGroup?'border-color:var(--danger);color:var(--danger);':'')+'" '
+      +'onclick="toggleGrpMember(''+u.id+'')">'
+      +(inGroup?'제거':'추가')+'</button>'
+    +'</div>';
+  }).join('');
+}
+
+async function toggleGrpMember(userId){
+  const g = groups.find(x=>x.id===modalGrpId);
+  if(!g) return;
+  const inGroup = g.memberIds.includes(userId);
+  if(inGroup){
+    await sb.from('group_members').delete().eq('group_id',g.id).eq('user_id',userId);
+    g.memberIds = g.memberIds.filter(id=>id!==userId);
+    showToast('회원 제거됨');
+  } else {
+    await dbIns('group_members',{group_id:g.id, user_id:userId});
+    g.memberIds.push(userId);
+    showToast('✅ 회원 추가됨','success');
+  }
+  renderGrpMemberList();
+  renderGroupList();
+}
+
+/* ── 그룹 미배정 사용자 접속 시 안내 ── */
+function checkUserGroupAccess(){
+  if(!currentUser || currentUser.role==='admin') return;
+  const myGroups = groups.filter(g=>g.memberIds.includes(currentUser.id));
+  if(!myGroups.length){
+    setTimeout(()=>{
+      showToast('배정된 그룹이 없습니다. 관리자에게 문의하세요.','error');
+    }, 800);
+  }
+}
+
 function switchUtab(t){
-  ['single','csv'].forEach(x=>{document.getElementById('utab-'+x+'-body').style.display=x===t?'block':'none';document.getElementById('utab-'+x).classList.toggle('active',x===t);});
+  ['single','csv','group'].forEach(x=>{
+    const body=document.getElementById('utab-'+x+'-body');
+    const btn=document.getElementById('utab-'+x);
+    if(body) body.style.display=x===t?'block':'none';
+    if(btn)  btn.classList.toggle('active',x===t);
+  });
+  if(t==='group'){ renderGrpCatCheckboxes(); renderGroupList(); }
 }
 async function addUserSingle(){
   const id=document.getElementById('u-id').value.trim();

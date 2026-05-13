@@ -887,7 +887,12 @@ E-301: 온도 초과 → 냉각수 순환 상태 확인
       </div>
       <div class="form-group" style="margin:0;">
         <label class="form-label">새 비밀번호</label>
-        <input class="form-input" id="me-pw" type="password" placeholder="변경 시에만 입력">
+        <input class="form-input" id="me-pw" type="password" placeholder="변경 시에만 입력" oninput="checkMePwMatch()">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">새 비밀번호 확인</label>
+        <input class="form-input" id="me-pw-confirm" type="password" placeholder="비밀번호 재입력" oninput="checkMePwMatch()">
+        <div id="me-pw-match-msg" style="font-size:12px;margin-top:5px;display:none;"></div>
       </div>
       <div class="form-group" style="margin:0;">
         <label class="form-label">권한</label>
@@ -2854,6 +2859,8 @@ function openMember(id){
   document.getElementById('me-id').value = u.id;
   document.getElementById('me-dept').value = u.dept;
   document.getElementById('me-pw').value = '';
+  document.getElementById('me-pw-confirm').value = '';
+  document.getElementById('me-pw-match-msg').style.display='none';
   document.getElementById('me-role').value = u.role;
   document.getElementById('me-status').value = u.status;
 
@@ -2881,6 +2888,22 @@ function openMember(id){
   document.getElementById('modal-member').classList.add('open');
 }
 
+function checkMePwMatch(){
+  const pw  = document.getElementById('me-pw').value;
+  const cfm = document.getElementById('me-pw-confirm').value;
+  const msg = document.getElementById('me-pw-match-msg');
+  if(!cfm){ msg.style.display='none'; return; }
+  if(pw===cfm){
+    msg.style.display='block';
+    msg.style.color='var(--success)';
+    msg.textContent='✅ 비밀번호가 일치합니다.';
+  } else {
+    msg.style.display='block';
+    msg.style.color='var(--danger)';
+    msg.textContent='❌ 비밀번호가 일치하지 않습니다.';
+  }
+}
+
 async function saveMember(){
   const u = users.find(x => x.id === editMemberId);
   if(!u) return;
@@ -2889,6 +2912,7 @@ async function saveMember(){
   const newId    = document.getElementById('me-id').value.trim();
   const newDept  = document.getElementById('me-dept').value.trim();
   const newPw    = document.getElementById('me-pw').value;
+  const newPwCfm = document.getElementById('me-pw-confirm').value;
   const newRole  = document.getElementById('me-role').value;
   const newStatus= document.getElementById('me-status').value;
 
@@ -2910,7 +2934,11 @@ async function saveMember(){
   u.dept   = newDept;
   u.role   = newRole;
   u.status = newStatus;
-  if(newPw) u.pw = newPw;
+  if(newPw){
+    if(newPw !== newPwCfm){ showToast('새 비밀번호가 일치하지 않습니다.','error'); return; }
+    if(newPw.length < 4){ showToast('비밀번호는 4자 이상이어야 합니다.','error'); return; }
+    u.pw = newPw;
+  }
 
   // 본인 아이디 변경 시 currentUser 동기화
   if(editMemberId === currentUser?.id){

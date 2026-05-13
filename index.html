@@ -2636,9 +2636,21 @@ function resetUserSearch(){
   uPage=1; renderUsers();
 }
 
+function sortUsers(list){
+  // 관리자 항상 맨 위, 나머지는 최근 등록순 (created_at 내림차순, 없으면 배열 역순)
+  return list.slice().sort(function(a,b){
+    if(a.role==='admin' && b.role!=='admin') return -1;
+    if(a.role!=='admin' && b.role==='admin') return 1;
+    // created_at 기준 내림차순 (최근 등록이 위)
+    const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return tb - ta;
+  });
+}
+
 function getFilteredUsers(){
-  if(_userFilterActive && _userFilterResult!==null) return _userFilterResult;
-  return users;
+  if(_userFilterActive && _userFilterResult!==null) return sortUsers(_userFilterResult);
+  return sortUsers(users);
 }
 
 function renderUsers(){

@@ -2038,8 +2038,30 @@ async function addModel(){
   renderDocTree();renderDash();
   showToast('✅ 모델 추가됨','success');
 }
-function delCat(pi){if(!confirm(`"${products[pi].name}" 제품군을 삭제하시겠습니까?`))return;products.splice(pi,1);renderDocTree();renderCatSel();renderDash();showToast('제품군 삭제됨');}
-function delModel(pi,mi){if(!confirm(`"${products[pi].models[mi].name}" 모델을 삭제하시겠습니까?`))return;products[pi].models.splice(mi,1);renderDocTree();renderDash();showToast('모델 삭제됨');}
+async function delCat(pi){
+  if(!confirm('"'+products[pi].name+'" 제품군을 삭제하시겠습니까?\n(하위 모델과 문서도 모두 삭제됩니다)')) return;
+  const p = products[pi];
+  // 하위 모델의 문서 먼저 삭제
+  for(const m of p.models){
+    for(const d of m.docs){ await dbDel('documents',{id:d.id}); }
+    await dbDel('models',{id:m.id});
+  }
+  // 제품군 삭제
+  await dbDel('products',{id:p.id});
+  products.splice(pi,1);
+  renderDocTree(); renderCatSel(); renderDash();
+  showToast('제품군 삭제됨');
+}
+async function delModel(pi,mi){
+  if(!confirm('"'+products[pi].models[mi].name+'" 모델을 삭제하시겠습니까?\n(하위 문서도 모두 삭제됩니다)')) return;
+  const m = products[pi].models[mi];
+  // 하위 문서 먼저 삭제
+  for(const d of m.docs){ await dbDel('documents',{id:d.id}); }
+  await dbDel('models',{id:m.id});
+  products[pi].models.splice(mi,1);
+  renderDocTree(); renderDash();
+  showToast('모델 삭제됨');
+}
 
 // ── 제품군 이름 수정 ──
 function editCatName(pi){

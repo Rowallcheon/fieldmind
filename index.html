@@ -2064,26 +2064,30 @@ async function delModel(pi,mi){
 }
 
 // ── 제품군 이름 수정 ──
-function editCatName(pi){
+async function editCatName(pi){
   const cur=products[pi].name;
-  const newName=prompt(`제품군 이름 수정\n현재: ${cur}`, cur);
+  const newName=prompt('제품군 이름 수정\n현재: '+cur, cur);
   if(newName===null) return;
   const trimmed=newName.trim();
   if(!trimmed){showToast('이름을 입력하세요.','error');return;}
   if(products.find((p,i)=>p.name===trimmed&&i!==pi)){showToast('이미 존재하는 제품군 이름입니다.','error');return;}
+  const ok = await dbUpd('products',{id:products[pi].id},{name:trimmed});
+  if(!ok){showToast('DB 저장 실패','error');return;}
   products[pi].name=trimmed;
   renderDocTree(); renderCatSel(); renderDash(); populateCatDD();
   showToast('✅ 제품군 이름이 수정되었습니다.','success');
 }
 
 // ── 모델 이름 수정 ──
-function editModelName(pi,mi){
+async function editModelName(pi,mi){
   const cur=products[pi].models[mi].name;
-  const newName=prompt(`모델명 수정\n제품군: ${products[pi].name}\n현재: ${cur}`, cur);
+  const newName=prompt('모델명 수정\n제품군: '+products[pi].name+'\n현재: '+cur, cur);
   if(newName===null) return;
   const trimmed=newName.trim();
   if(!trimmed){showToast('모델명을 입력하세요.','error');return;}
   if(products[pi].models.find((m,i)=>m.name===trimmed&&i!==mi)){showToast('이미 존재하는 모델명입니다.','error');return;}
+  const ok = await dbUpd('models',{id:products[pi].models[mi].id},{name:trimmed});
+  if(!ok){showToast('DB 저장 실패','error');return;}
   products[pi].models[mi].name=trimmed;
   renderDocTree(); renderDash(); populateCatDD();
   showToast('✅ 모델명이 수정되었습니다.','success');

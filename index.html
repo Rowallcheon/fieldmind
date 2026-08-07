@@ -16,8 +16,8 @@
   --font:'Noto Sans KR',sans-serif;--mono:'IBM Plex Mono',monospace;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
-.screen{display:none;min-height:100vh;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+.screen{display:none;min-height:100vh;min-height:100dvh;}
 .screen.active{display:flex;flex-direction:column;}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -3610,6 +3610,22 @@ document.getElementById('login-pw').addEventListener('keydown',e=>{if(e.key==='E
 // 페이지 로드 시 DB 데이터 미리 로드
 window.addEventListener('DOMContentLoaded', function(){
   loadAllData();
+  // iOS Safari 키보드 올라올 때 로그인 화면 밀림 방지
+  ['login-id','login-pw'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('focus', function(){
+      if(/iPhone|iPad|iPod/.test(navigator.userAgent)){
+        document.getElementById('screen-login').style.position = 'fixed';
+      }
+    });
+    el.addEventListener('blur', function(){
+      if(/iPhone|iPad|iPod/.test(navigator.userAgent)){
+        document.getElementById('screen-login').style.position = '';
+        window.scrollTo(0, 0);
+      }
+    });
+  });
   // 저장된 아이디·비번 불러오기
   const savedId = localStorage.getItem('saved_id');
   const savedPw = localStorage.getItem('saved_pw');

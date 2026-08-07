@@ -1173,6 +1173,26 @@ async function loadAllData() {
     var ms2 = settings.find(function(s){ return s.key==='gemini_model'; });
     if (ms2 && ms2.value) GEMINI_MODEL = ms2.value;
 
+    // chat_logs DB에서 로드 (최근 500건)
+    try {
+      var clRows = await dbQ('chat_logs');
+      chatLogs = clRows.map(function(l){
+        return {
+          ts: l.ts,
+          time: l.ts ? fmtT(l.ts) : (l.created_at||'').slice(0,16).replace('T',' '),
+          user: l.user_name||'',
+          cat:  l.cat||'',
+          model: l.model_name||'',
+          q:    l.question||'',
+          ref:  l.ref_doc||'—',
+          ok:   l.is_ok !== false
+        };
+      }).sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    } catch(cle){
+      console.warn('chat_logs 로드 실패:', cle);
+      chatLogs = [];
+    }
+
     // 그룹 로드 (테이블 없어도 오류 없이 진행)
     try {
       var gRows  = await dbQ('groups');
@@ -1494,7 +1514,25 @@ function goUserPreview(){
   showScreen('chat');
 }
 
-async function showPanel(n){document.querySelectorAll('.a-panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+n).classList.add('active');document.getElementById('sb-'+n).classList.add('active');if(window.innerWidth<=640)document.getElementById('admin-sidebar').classList.remove('open');}
+async function showPanel(n){
+  // 로그 패널 열 때 DB에서 최신 데이터 재로드
+  if(n==='logs'){
+    try {
+      var clRows = await dbQ('chat_logs');
+      chatLogs = clRows.map(function(l){
+        return {
+          ts: l.ts,
+          time: l.ts ? fmtT(l.ts) : (l.created_at||'').slice(0,16).replace('T',' '),
+          user: l.user_name||'',
+          cat:  l.cat||'',
+          model: l.model_name||'',
+          q:    l.question||'',
+          ref:  l.ref_doc||'—',
+          ok:   l.is_ok !== false
+        };
+      }).sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    } catch(e){ console.warn('chat_logs 재로드 실패:', e); }
+  }document.querySelectorAll('.a-panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+n).classList.add('active');document.getElementById('sb-'+n).classList.add('active');if(window.innerWidth<=640)document.getElementById('admin-sidebar').classList.remove('open');}
 async function toggleSB(){document.getElementById('admin-sidebar').classList.toggle('open');}
 
 /* ════════ API KEY ════════ */

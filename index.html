@@ -494,7 +494,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
             <div class="form-group" style="flex:1;margin:0;"><label class="form-label">Gemini API Key</label><input class="form-input" id="groq-key-input" type="password" placeholder="AIza..."></div>
             <button class="btn btn-primary" style="height:42px;flex-shrink:0;" onclick="saveGroqKey()">저장</button>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;" id="groq-key-status"><span style="color:var(--text3);">● 키 미입력 (데모 모드)</span></div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;" id="groq-key-status"><span style="color:var(--text3);">● 확인 중...</span></div>
         </div>
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
           <div style="font-size:13px;font-weight:700;margin-bottom:12px;">⚙️ 모델 선택</div>
@@ -1103,7 +1103,7 @@ async function dbUps(table, row, col) {
 }
 
 let GEMINI_API_KEY = '';
-let GEMINI_MODEL  = 'gemini-2.5-flash-lite';
+let GEMINI_MODEL  = 'gemini-2.5-flash-lite-preview-06-17';
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
 const HISTORY_TTL  = 7 * 24 * 60 * 60 * 1000;
 
@@ -1160,24 +1160,38 @@ async function loadAllData() {
     });
     var settings = await dbQ('app_settings');
     var ks = settings.find(function(s){ return s.key==='gemini_api_key'; });
-    if (ks && ks.value) GEMINI_API_KEY = ks.value;
+    if (ks && ks.value) {
+      GEMINI_API_KEY = ks.value;
+      // API 키 상태 표시 업데이트
+      var statusEl = document.getElementById('groq-key-status');
+      if(statusEl) statusEl.innerHTML = '<span style="color:var(--success);">✅ API 키 적용 중 · 챗봇 활성화</span>'
+        + '<span style="font-size:11px;color:var(--text3);margin-left:8px;">(저장된 키: '+ks.value.slice(0,8)+'••••••••)</span>';
+    } else {
+      var statusEl = document.getElementById('groq-key-status');
+      if(statusEl) statusEl.innerHTML = '<span style="color:var(--danger);">● 키 미입력 (데모 모드)</span>';
+    }
     var ms2 = settings.find(function(s){ return s.key==='gemini_model'; });
     if (ms2 && ms2.value) GEMINI_MODEL = ms2.value;
 
-    // 그룹 로드
-    var gRows  = await dbQ('groups');
-    var gmRows = await dbQ('group_members');
-    var gpRows = await dbQ('group_products');
-    groups = gRows.map(function(g){
-      return {
-        id: g.id, name: g.name,
-        catIds:    gpRows.filter(function(r){ return r.group_id===g.id; }).map(function(r){ return r.product_id; }),
-        memberIds: gmRows.filter(function(r){ return r.group_id===g.id; }).map(function(r){ return r.user_id; })
-      };
-    });
+    // 그룹 로드 (테이블 없어도 오류 없이 진행)
+    try {
+      var gRows  = await dbQ('groups');
+      var gmRows = await dbQ('group_members');
+      var gpRows = await dbQ('group_products');
+      groups = gRows.map(function(g){
+        return {
+          id: g.id, name: g.name,
+          catIds:    gpRows.filter(function(r){ return r.group_id===g.id; }).map(function(r){ return r.product_id; }),
+          memberIds: gmRows.filter(function(r){ return r.group_id===g.id; }).map(function(r){ return r.user_id; })
+        };
+      });
+    } catch(ge) {
+      console.warn('그룹 테이블 로드 실패 (테이블 미생성 가능성):', ge);
+      groups = [];
+    }
   } catch(e) {
     console.error('loadAllData:', e);
-    showToast('데이터 로드 실패. 새로고침 해주세요.', 'error');
+    // 치명적 오류여도 로딩 화면은 반드시 제거
   }
   showLoadingOverlay(false);
 }
@@ -1489,7 +1503,8 @@ async function saveGroqKey(){
   if(!key.startsWith('AIza')){showToast('올바른 Gemini API 키 형식이 아닙니다. (AIza로 시작)','error');return;}
   GEMINI_API_KEY=key;
   await dbUps('app_settings',{key:'gemini_api_key',value:key},'key');
-  document.getElementById('groq-key-status').innerHTML='<span style="color:var(--success);">● Gemini API 키 저장됨 · 챗봇 활성화</span>';
+  document.getElementById('groq-key-status').innerHTML='<span style="color:var(--success);">✅ API 키 적용 중 · 챗봇 활성화</span>'
+    + '<span style="font-size:11px;color:var(--text3);margin-left:8px;">(저장된 키: '+key.slice(0,8)+'••••••••)</span>';
   showToast('✅ Gemini API 키가 저장되었습니다.','success');
 }
 function saveModel(){const sel=document.querySelector('input[name="groq-model"]:checked');if(sel){GEMINI_MODEL=sel.value;showToast('✅ 모델 변경: '+sel.value,'success');}}
@@ -1597,12 +1612,13 @@ async function sendMsg(){
   if(handsfreeMode) updateHFBanner('thinking');
   chatHistory.push({role:'user',content:text,cat:selProduct.name,model:selModel.name,time:Date.now()});
 
-  // 실제 문서 텍스트를 컨텍스트로 구성
+  // 실제 문서 텍스트를 컨텍스트로 구성 (전체 문서 포함)
   let docCtx = '';
   if(selModel.docs.length > 0){
-    docCtx = selModel.docs.map(d=>
-      `=== [${d.cat}] ${d.title} ===\n${d.content}`
-    ).join('\n\n');
+    // 모든 문서를 순서대로 전부 포함 (잘림 없음)
+    docCtx = selModel.docs.map((d, idx)=>
+      `=== 문서 ${idx+1}/${selModel.docs.length} [${d.cat}] ${d.title} ===\n${d.content}`
+    ).join('\n\n---\n\n');
   } else {
     docCtx = '(등록된 문서 없음 — 관리자가 문서를 아직 입력하지 않았습니다)';
   }
@@ -1653,7 +1669,7 @@ ${docCtx}`;
       body:JSON.stringify({
         system_instruction:{parts:[{text:systemPrompt}]},
         contents: geminiContents.length>0 ? geminiContents : [{role:'user',parts:[{text:'안녕하세요'}]}],
-        generationConfig:{temperature:0.4,maxOutputTokens:1024}
+        generationConfig:{temperature:0.4,maxOutputTokens:4096}
       })
     });
     if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e?.error?.message||'오류 '+res.status);}
@@ -1668,8 +1684,10 @@ ${docCtx}`;
     const logTs=Date.now();
     const logRow={ts:logTs,time:fmtT(logTs),user:currentUser.name,cat:selProduct.name,model:selModel.name,q:text,ref:refDocs?refDocs[0].title:'—',ok:true};
     chatLogs.unshift(logRow);
-    // 관리자 로그
-    dbIns('chat_logs',{ts:logTs,user_name:logRow.user,cat:logRow.cat,model_name:logRow.model,question:logRow.q,ref_doc:logRow.ref,is_ok:true});
+    // 관리자 로그 (await로 저장 확인)
+    try {
+      await dbIns('chat_logs',{ts:logTs,user_name:logRow.user,cat:logRow.cat,model_name:logRow.model,question:logRow.q,ref_doc:logRow.ref,is_ok:true});
+    } catch(le){ console.warn('chat_logs 저장 실패:', le); }
     // 사용자 개인 대화이력 저장 (최대 20건)
     if(currentUser){
       await dbIns('user_chat_logs',{user_id:currentUser.id,ts:logTs,cat:selProduct.name,model_name:selModel.name,question:text,answer:reply,ref_doc:refDocs?refDocs[0].title:'—'});
@@ -1688,7 +1706,11 @@ ${docCtx}`;
     removeTyping(tid);
     const msg=e.message.includes('401')?'❌ API 키가 올바르지 않습니다.':e.message.includes('429')?'⚠️ 요청 한도 초과. 잠시 후 다시 시도해 주세요.':'⚠️ 오류: '+e.message;
     appendMsg('bot',msg,null);
-    chatLogs.unshift({ts:Date.now(),time:fmtT(Date.now()),user:currentUser?.name||'?',cat:selProduct.name,model:selModel.name,q:text,ref:'—',ok:false});
+    const failTs=Date.now();
+    chatLogs.unshift({ts:failTs,time:fmtT(failTs),user:currentUser?.name||'?',cat:selProduct.name,model:selModel.name,q:text,ref:'—',ok:false});
+    try {
+      await dbIns('chat_logs',{ts:failTs,user_name:currentUser?.name||'?',cat:selProduct.name,model_name:selModel.name,question:text,ref_doc:'—',is_ok:false});
+    } catch(le){ console.warn('chat_logs 오류 저장 실패:', le); }
     if(handsfreeMode) setTimeout(()=>startListeningHF(),1000);
   }
 }

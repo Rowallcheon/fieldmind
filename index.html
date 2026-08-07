@@ -3610,22 +3610,72 @@ document.getElementById('login-pw').addEventListener('keydown',e=>{if(e.key==='E
 // 페이지 로드 시 DB 데이터 미리 로드
 window.addEventListener('DOMContentLoaded', function(){
   loadAllData();
-  // iOS Safari 키보드 올라올 때 로그인 화면 밀림 방지
-  ['login-id','login-pw'].forEach(function(id){
-    var el = document.getElementById(id);
-    if(!el) return;
-    el.addEventListener('focus', function(){
-      if(/iPhone|iPad|iPod/.test(navigator.userAgent)){
-        document.getElementById('screen-login').style.position = 'fixed';
+  // iOS Safari 탭키/터치 모두 대응 - 화면 밀림 방지
+  var isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  if(isIOS){
+    var loginScreen = document.getElementById('screen-login');
+
+    function lockLoginScreen(){
+      if(loginScreen){
+        loginScreen.style.position = 'fixed';
+        loginScreen.style.top = '0';
+        loginScreen.style.left = '0';
+        loginScreen.style.width = '100%';
+        loginScreen.style.height = '100%';
+        loginScreen.style.overflow = 'auto';
       }
-    });
-    el.addEventListener('blur', function(){
-      if(/iPhone|iPad|iPod/.test(navigator.userAgent)){
-        document.getElementById('screen-login').style.position = '';
+    }
+
+    function unlockLoginScreen(){
+      if(loginScreen){
+        loginScreen.style.position = '';
+        loginScreen.style.top = '';
+        loginScreen.style.left = '';
+        loginScreen.style.width = '';
+        loginScreen.style.height = '';
+        loginScreen.style.overflow = '';
         window.scrollTo(0, 0);
       }
+    }
+
+    // 탭 키로 이동할 때도 스크롤 방지
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Tab'){
+        var active = document.activeElement;
+        if(active && (active.id === 'login-id' || active.id === 'login-pw')){
+          e.preventDefault(); // 탭 기본 동작(스크롤 유발) 차단
+          // 다음 입력창으로 수동 이동
+          if(active.id === 'login-id'){
+            document.getElementById('login-pw').focus();
+          } else {
+            document.getElementById('login-id').focus();
+          }
+        }
+      }
+      if(e.key === 'Enter'){
+        var active2 = document.activeElement;
+        if(active2 && (active2.id === 'login-id' || active2.id === 'login-pw')){
+          doLogin();
+        }
+      }
     });
-  });
+
+    ['login-id','login-pw'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      el.addEventListener('focus', function(){ lockLoginScreen(); });
+      el.addEventListener('blur', function(){
+        // 다른 로그인 입력창으로 이동 시엔 unlock 안 함
+        setTimeout(function(){
+          var next = document.activeElement;
+          if(next && (next.id === 'login-id' || next.id === 'login-pw' || next.className.indexOf('login-btn') > -1)){
+            return;
+          }
+          unlockLoginScreen();
+        }, 100);
+      });
+    });
+  }
   // 저장된 아이디·비번 불러오기
   const savedId = localStorage.getItem('saved_id');
   const savedPw = localStorage.getItem('saved_pw');

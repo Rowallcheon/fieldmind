@@ -708,7 +708,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
             <thead>
               <tr>
                 <th style="width:36px;"><input type="checkbox" id="u-check-all" onchange="toggleCheckAll(this)" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;"></th>
-                <th>이름</th><th>아이디</th><th>소속</th><th>그룹</th><th>권한</th><th>상태</th><th>마지막 로그인</th><th>작업</th>
+                <th>이름</th><th>아이디</th><th>소속</th><th>그룹</th><th>권한</th><th>상태</th><th style="cursor:pointer;user-select:none;" onclick="toggleLastLoginSort()">마지막 로그인 <span id="ll-sort-icon" style="color:var(--text3);">↕</span></th><th>작업</th>
               </tr>
             </thead>
             <tbody id="u-tbody"></tbody>
@@ -2744,6 +2744,8 @@ let checkedIds=new Set();
 
 let _userFilterActive = false;
 let _userFilterResult = null;
+let _sortField = null; // null = 기본(관리자 상단+최근등록순), 'last_login' = 마지막 로그인 기준
+let _sortDir = 'asc';  // asc = 오래된순(미접속자 먼저), desc = 최근순
 
 function searchUsers(){
   _userFilterActive = true;
@@ -2770,6 +2772,9 @@ function searchUsers(){
 
 function resetUserSearch(){
   _userFilterActive=false; _userFilterResult=null;
+  _sortField=null; _sortDir='asc';
+  const icon=document.getElementById('ll-sort-icon');
+  if(icon) icon.textContent='↕';
   document.getElementById('u-search').value='';
   document.getElementById('sf-name').checked=true;
   document.getElementById('sf-id').checked=true;
@@ -2780,7 +2785,16 @@ function resetUserSearch(){
 }
 
 function sortUsers(list){
-  // 관리자 항상 맨 위, 나머지는 최근 등록순 (created_at 내림차순, 없으면 배열 역순)
+  // 마지막 로그인 기준 정렬 (헤더 클릭 시 활성화) — 관리자 고정 없이 전체를 기준대로 정렬
+  if(_sortField==='last_login'){
+    return list.slice().sort(function(a,b){
+      // 한 번도 로그인 안 한 경우(null)는 "가장 오래됨"으로 취급 → 미접속자가 오름차순 맨 위로 옴
+      const ta = a.last_login ? new Date(a.last_login).getTime() : -1;
+      const tb = b.last_login ? new Date(b.last_login).getTime() : -1;
+      return _sortDir==='asc' ? ta-tb : tb-ta;
+    });
+  }
+  // 기본 정렬: 관리자 항상 맨 위, 나머지는 최근 등록순 (created_at 내림차순, 없으면 배열 역순)
   return list.slice().sort(function(a,b){
     if(a.role==='admin' && b.role!=='admin') return -1;
     if(a.role!=='admin' && b.role==='admin') return 1;
@@ -2789,6 +2803,19 @@ function sortUsers(list){
     const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
     return tb - ta;
   });
+}
+
+/* ── 마지막 로그인 컬럼 헤더 클릭 시 정렬 토글 ── */
+function toggleLastLoginSort(){
+  if(_sortField!=='last_login'){
+    _sortField='last_login'; _sortDir='asc'; // 처음 클릭: 오래된(미접속) 순으로 정렬
+  } else {
+    _sortDir = _sortDir==='asc' ? 'desc' : 'asc'; // 다시 클릭: 방향 반전
+  }
+  const icon=document.getElementById('ll-sort-icon');
+  if(icon) icon.textContent = _sortDir==='asc' ? '▲ 오래된순' : '▼ 최근순';
+  uPage=1;
+  renderUsers();
 }
 
 function getFilteredUsers(){

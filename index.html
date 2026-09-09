@@ -581,6 +581,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
             <div class="form-group" style="margin:0;"><label class="form-label">초기 비밀번호</label><input class="form-input" id="u-pw" type="password" placeholder="비밀번호"></div>
             <div class="form-group" style="margin:0;"><label class="form-label">권한</label><select class="form-input" id="u-role" style="background:var(--bg);"><option value="user">사용자</option><option value="admin">관리자</option></select></div>
           </div>
+          <div class="form-group" style="margin-top:12px;margin-bottom:0;">
+            <label class="form-label">그룹 배정 <span style="font-size:10px;color:var(--text3);font-weight:400;">(선택, 복수 가능)</span></label>
+            <div id="u-group-checkboxes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;"></div>
+          </div>
           <div style="display:flex;justify-content:flex-end;margin-top:14px;"><button class="btn btn-primary" onclick="addUserSingle()">등록</button></div>
         </div>
         <div id="utab-csv-body" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;">
@@ -704,7 +708,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
             <thead>
               <tr>
                 <th style="width:36px;"><input type="checkbox" id="u-check-all" onchange="toggleCheckAll(this)" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;"></th>
-                <th>이름</th><th>아이디</th><th>소속</th><th>그룹</th><th>권한</th><th>상태</th><th>작업</th>
+                <th>이름</th><th>아이디</th><th>소속</th><th>그룹</th><th>권한</th><th>상태</th><th>마지막 로그인</th><th>작업</th>
               </tr>
             </thead>
             <tbody id="u-tbody"></tbody>
@@ -914,6 +918,7 @@ E-301: 온도 초과 → 냉각수 순환 상태 확인
     <div style="margin-top:16px;padding:12px 14px;background:var(--bg3);border-radius:var(--radius-sm);display:flex;gap:20px;flex-wrap:wrap;">
       <div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px;">권한</div><div id="me-role-badge" style="font-size:12px;"></div></div>
       <div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px;">상태</div><div id="me-status-badge" style="font-size:12px;"></div></div>
+      <div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px;">마지막 로그인</div><div id="me-last-login" style="font-size:12px;color:var(--text2);"></div></div>
     </div>
 
     <div class="modal-actions" style="justify-content:space-between;">
@@ -1394,6 +1399,10 @@ async function doLogin(){
   if(!u){err.style.display='block';err.textContent='아이디 또는 비밀번호가 올바르지 않습니다.';return;}
   if(u.status==='inactive'){err.style.display='block';err.textContent='비활성화된 계정입니다.';return;}
   currentUser=u;
+  // 마지막 로그인 시각 기록 (실패해도 로그인 자체엔 영향 없도록 별도 처리)
+  const _loginTs = new Date().toISOString();
+  u.last_login = _loginTs;
+  dbUpd('users',{id:u.id},{last_login:_loginTs}).catch(function(e){ console.warn('last_login 업데이트 실패 (last_login 컬럼이 없을 수 있음):', e); });
   // 로그인 시 20건 초과 대화이력 자동 삭제
   sb.from('user_chat_logs').select('id,ts').eq('user_id',u.id).order('ts',{ascending:false}).then(res=>{
     const all = res.data||[];
@@ -2355,6 +2364,7 @@ async function createGroup(){
   document.getElementById('grp-name').value='';
   renderGrpCatCheckboxes();
   renderGroupList();
+  renderUserGroupCheckboxes();
   showToast('✅ 그룹 "'+name+'" 생성됨','success');
 }
 
@@ -2463,6 +2473,7 @@ async function saveEditGroup(){
   document.getElementById('grp-name').value='';
   renderGrpCatCheckboxes();
   renderGroupList();
+  renderUserGroupCheckboxes();
   // 버튼 원복
   const btn = document.querySelector('[onclick="saveEditGroup()"]');
   if(btn){ btn.textContent='그룹 생성'; btn.setAttribute('onclick','createGroup()'); }
@@ -2478,6 +2489,7 @@ async function deleteGroup(gId){
   await dbDel('groups',{id:gId});
   groups = groups.filter(x=>x.id!==gId);
   renderGroupList();
+  renderUserGroupCheckboxes();
   showToast('그룹 삭제됨');
 }
 
@@ -2552,7 +2564,24 @@ function switchUtab(t){
     if(btn)  btn.classList.toggle('active',x===t);
   });
   if(t==='group'){ renderGrpCatCheckboxes(); renderGroupList(); }
+  if(t==='single'){ renderUserGroupCheckboxes(); }
 }
+
+/* ── 개별 등록 폼: 그룹 체크박스 렌더링 ── */
+function renderUserGroupCheckboxes(){
+  const el = document.getElementById('u-group-checkboxes');
+  if(!el) return;
+  if(!groups.length){
+    el.innerHTML = '<span style="font-size:12px;color:var(--text3);">생성된 그룹이 없습니다. (그룹 권한 관리 탭에서 먼저 만드세요)</span>';
+    return;
+  }
+  el.innerHTML = groups.map(g=>
+    '<label style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:12px;">'
+    +'<input type="checkbox" class="u-grp-chk" value="'+g.id+'" style="accent-color:var(--accent);">'
+    +g.name+'</label>'
+  ).join('');
+}
+
 async function addUserSingle(){
   const id=document.getElementById('u-id').value.trim();
   const name=document.getElementById('u-name').value.trim();
@@ -2564,8 +2593,23 @@ async function addUserSingle(){
   const ok = await dbIns('users',{id,pw,name,dept,role,status:'active'});
   if(!ok){showToast('DB 저장 실패','error');return;}
   users.push({id,pw,name,dept,role,status:'active'});
+
+  // 선택된 그룹에 바로 배정
+  const checkedGroupIds = [...document.querySelectorAll('.u-grp-chk:checked')].map(el=>el.value);
+  let grpCount = 0;
+  for(const gid of checkedGroupIds){
+    const g = groups.find(x=>x.id===gid);
+    if(g){
+      const gok = await dbIns('group_members',{group_id:gid, user_id:id});
+      if(gok){ g.memberIds.push(id); grpCount++; }
+    }
+  }
+
   ['u-id','u-name','u-dept','u-pw'].forEach(f=>document.getElementById(f).value='');
-  renderUsers(); renderDash(); showToast('✅ 회원 등록됨','success');
+  document.querySelectorAll('.u-grp-chk').forEach(el=>el.checked=false);
+  renderUsers(); renderDash();
+  if(document.getElementById('utab-group-body').style.display!=='none') renderGroupList();
+  showToast('✅ 회원 등록됨'+(grpCount>0?' · 그룹 '+grpCount+'개 배정':''),'success');
 }
 let csvPendingList=[];
 
@@ -2752,7 +2796,21 @@ function getFilteredUsers(){
   return sortUsers(users);
 }
 
+/* ── 마지막 로그인 시각을 상대적 표현으로 변환 ── */
+function fmtLastLogin(iso){
+  if(!iso) return '<span style="color:var(--text3);">미접속</span>';
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const days = Math.floor(diffMs/86400000);
+  if(days<=0) return '오늘';
+  if(days===1) return '어제';
+  if(days<30) return days+'일 전';
+  const months = Math.floor(days/30);
+  if(months<12) return months+'개월 전';
+  return Math.floor(months/12)+'년 전';
+}
+
 function renderUsers(){
+  renderUserGroupCheckboxes();
   const list=getFilteredUsers();
   const total=list.length;
   const totalPages=Math.max(1,Math.ceil(total/U_PER_PAGE));
@@ -2781,6 +2839,7 @@ function renderUsers(){
     <td>${groupBadges}</td>
     <td><span class="badge ${u.role==='admin'?'badge-gold':'badge-blue'}">${u.role==='admin'?'관리자':'사용자'}</span></td>
     <td><span class="badge ${u.status==='active'?'badge-green':'badge-red'}">${u.status==='active'?'활성':'비활성'}</span></td>
+    <td style="font-size:12px;white-space:nowrap;">${fmtLastLogin(u.last_login)}</td>
     <td style="display:flex;gap:6px;flex-wrap:wrap;">
       <button class="btn btn-ghost btn-sm" onclick="toggleStatus('${u.id}')">${u.status==='active'?'비활성':'활성화'}</button>
       ${u.id!==currentUser?.id?`<button class="btn btn-danger btn-sm" onclick="openDel('${u.id}','${u.name}')">삭제</button>`:''}
@@ -2978,6 +3037,8 @@ function openMember(id){
   // 배지
   document.getElementById('me-role-badge').innerHTML = `<span class="badge ${u.role==='admin'?'badge-gold':'badge-blue'}">${u.role==='admin'?'관리자':'사용자'}</span>`;
   document.getElementById('me-status-badge').innerHTML = `<span class="badge ${u.status==='active'?'badge-green':'badge-red'}">${u.status==='active'?'활성':'비활성'}</span>`;
+  const lastLoginEl = document.getElementById('me-last-login');
+  if(lastLoginEl) lastLoginEl.innerHTML = fmtLastLogin(u.last_login);
 
   // 본인이면 삭제 버튼 숨김
   const delBtn = document.getElementById('modal-member-del-btn');

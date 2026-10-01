@@ -498,7 +498,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="admin-sidebar" id="admin-sidebar">
       <div class="sb-sec">메인</div>
       <button class="sb-btn active" id="sb-dashboard" onclick="showPanel('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>대시보드</button>
-      <div class="sb-sec">설정</div>
+      <div class="sb-sec" id="sb-sec-settings">설정</div>
       <button class="sb-btn" id="sb-apikey" onclick="showPanel('apikey')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>API 키 설정</button>
       <div class="sb-sec">콘텐츠</div>
       <button class="sb-btn" id="sb-docs" onclick="showPanel('docs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>문서 관리</button>
@@ -520,7 +520,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <div style="background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <span style="font-size:20px;">⚡</span>
           <div><div style="font-size:13px;font-weight:700;color:var(--info);">Gemini 2.0 Flash — Google AI 엔진 사용 중</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">분당 100만 토큰 · 50명 동시 사용 가능 · 한국어 우수</div></div>
-          <button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="showPanel('apikey')">키 설정 →</button>
+          <button class="btn btn-ghost btn-sm" id="dash-key-btn" style="margin-left:auto;" onclick="showPanel('apikey')">키 설정 →</button>
         </div>
         <div class="stat-grid">
           <div class="stat-card"><div class="stat-lbl">전체 회원</div><div class="stat-val" style="color:var(--info);" id="d-users">0</div><div class="stat-sub" id="d-users-sub"></div></div>
@@ -1578,6 +1578,7 @@ function goUserPreview(){
 }
 
 async function showPanel(n){
+  if(n==='apikey' && !isSuperAdmin()){ showToast('API 설정은 최고 관리자(admin)만 사용할 수 있습니다.','error'); return; }
   // 로그 패널 열 때 DB에서 최신 데이터 재로드
   if(n==='logs'){
     try {
@@ -1600,6 +1601,7 @@ async function toggleSB(){document.getElementById('admin-sidebar').classList.tog
 
 /* ════════ API KEY ════════ */
 async function saveGroqKey(){
+  if(!isSuperAdmin()){ showToast('API 설정은 최고 관리자(admin)만 변경할 수 있습니다.','error'); return; }
   const key=document.getElementById('groq-key-input').value.trim();
   if(!key.startsWith('AIza')){showToast('올바른 Gemini API 키 형식이 아닙니다. (AIza로 시작)','error');return;}
   GEMINI_API_KEY=key;
@@ -1608,7 +1610,7 @@ async function saveGroqKey(){
     + '<span style="font-size:11px;color:var(--text3);margin-left:8px;">(저장된 키: '+key.slice(0,8)+'••••••••)</span>';
   showToast('✅ Gemini API 키가 저장되었습니다.','success');
 }
-function saveModel(){const sel=document.querySelector('input[name="groq-model"]:checked');if(sel){GEMINI_MODEL=sel.value;showToast('✅ 모델 변경: '+sel.value,'success');}}
+function saveModel(){if(!isSuperAdmin()){showToast('API 설정은 최고 관리자(admin)만 변경할 수 있습니다.','error');return;}const sel=document.querySelector('input[name="groq-model"]:checked');if(sel){GEMINI_MODEL=sel.value;showToast('✅ 모델 변경: '+sel.value,'success');}}
 
 /* ════════ DROPDOWN ════════ */
 function populateCatDD(){
@@ -1952,7 +1954,15 @@ function fmtT(ms){if(!ms)return'';const d=new Date(ms);return d.getHours().toStr
 function renderNoticesUser(){document.getElementById('notice-list-user').innerHTML=notices.map(n=>`<div class="notice-card"><div class="notice-title">${n.title}</div><div class="notice-body">${n.body}</div><div class="notice-meta">${n.date}</div></div>`).join('');}
 
 /* ════════ ADMIN ════════ */
-function renderAdmin(){renderDash();renderDocTree();renderAdminNotices();renderUsers();renderLogs();renderCatSel();renderAdminInquiries();updateInqBadges();}
+/* 최고 관리자(admin 계정)만 API 키/모델 설정 가능 */
+function isSuperAdmin(){ return !!currentUser && currentUser.id==='admin'; }
+function applyAdminRoleUI(){
+  const ok = isSuperAdmin();
+  ['sb-apikey','sb-sec-settings','dash-key-btn'].forEach(function(id){
+    const e=document.getElementById(id); if(e) e.style.display = ok ? '' : 'none';
+  });
+}
+function renderAdmin(){applyAdminRoleUI();renderDash();renderDocTree();renderAdminNotices();renderUsers();renderLogs();renderCatSel();renderAdminInquiries();updateInqBadges();}
 
 function renderDash(){
   const totalM=products.reduce((a,p)=>a+p.models.length,0);
@@ -2995,9 +3005,12 @@ function resetUserSearch(){
 }
 
 function sortUsers(list){
-  // 마지막 로그인 기준 정렬 (헤더 클릭 시 활성화) — 관리자 고정 없이 전체를 기준대로 정렬
+  // admin 계정(최고 관리자)은 어떤 정렬에서도 항상 맨 위
+  const isTop = function(u){ return u.id==='admin'; };
+  // 마지막 로그인 기준 정렬 (헤더 클릭 시 활성화) — admin 외에는 전체를 기준대로 정렬
   if(_sortField==='last_login'){
     return list.slice().sort(function(a,b){
+      if(isTop(a)!==isTop(b)) return isTop(a) ? -1 : 1;
       // 한 번도 로그인 안 한 경우(null)는 "가장 오래됨"으로 취급 → 미접속자가 오름차순 맨 위로 옴
       const ta = a.last_login ? new Date(a.last_login).getTime() : -1;
       const tb = b.last_login ? new Date(b.last_login).getTime() : -1;
@@ -3006,6 +3019,7 @@ function sortUsers(list){
   }
   // 기본 정렬: 관리자 항상 맨 위, 나머지는 최근 등록순 (created_at 내림차순, 없으면 배열 역순)
   return list.slice().sort(function(a,b){
+    if(isTop(a)!==isTop(b)) return isTop(a) ? -1 : 1;
     if(a.role==='admin' && b.role!=='admin') return -1;
     if(a.role!=='admin' && b.role==='admin') return 1;
     // created_at 기준 내림차순 (최근 등록이 위)

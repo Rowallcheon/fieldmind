@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%232d5f8f'/%3E%3Cpath d='M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z' fill='%23fff'/%3E%3Cpath d='M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z' fill='%23ffd54a'/%3E%3C/svg%3E">
 <title>CUCKOO ProGuide — 현장 기술 지원</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap');
@@ -24,7 +25,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 ::-webkit-scrollbar-thumb{background:#c8cdd4;border-radius:2px;}
 .topnav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;flex-shrink:0;}
 .nav-logo{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:900;letter-spacing:-.3px;}
-.nav-logo-icon{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.nav-logo-icon{width:30px;height:30px;background:var(--accent);border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;font-size:15px;}
 .nav-logo span{color:var(--accent);}
 .nav-right{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow:hidden;}
 .nav-badge{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600;}
@@ -76,10 +77,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 #screen-login::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(45,95,143,.08) 0%,transparent 70%);top:-200px;left:50%;transform:translateX(-50%);pointer-events:none;}
 .login-card{width:100%;max-width:400px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:36px 32px;position:relative;z-index:1;}
 .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
-.login-logo-icon{width:42px;height:42px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.login-logo-icon{width:46px;height:46px;background:var(--accent);border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px;}
 .login-logo-text{font-size:24px;font-weight:900;letter-spacing:-.5px;}
 .login-logo-text span{color:var(--accent);}
-.login-sub{font-size:13px;color:var(--text3);margin-bottom:28px;margin-left:52px;}
+.login-sub{font-size:13px;color:var(--text3);margin-bottom:28px;margin-left:56px;}
 .login-btn{width:100%;padding:13px;background:var(--accent);border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;font-family:var(--font);color:#fff;cursor:pointer;margin-top:6px;transition:opacity .2s,transform .1s;}
 .login-btn:active{transform:scale(.98);}
 .login-error{font-size:12px;color:var(--danger);margin-top:8px;display:none;}
@@ -305,6 +306,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .msg{gap:7px;align-items:flex-start;}
 .msg-date{align-self:center;font-size:11px;color:#fff;background:rgba(22,39,58,.25);border-radius:20px;padding:3px 12px;margin:2px 0 4px;}
 .msg-av{border-radius:12px !important;}
+.msg-av svg{display:block;}
 .msg.bot .msg-av{background:#2d5f8f;border:none;color:#fff;font-weight:900;}
 .msg-col{display:flex;flex-direction:column;gap:3px;min-width:0;max-width:calc(100% - 44px);}
 .msg-name{font-size:12px;color:#3b536b;margin-left:2px;}
@@ -324,7 +326,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <!-- LOGIN -->
 <div id="screen-login" class="screen active">
   <div class="login-card">
-    <div class="login-logo"><div class="login-logo-icon">🏗️</div><div class="login-logo-text">CUCKOO <span>ProGuide</span></div></div>
+    <div class="login-logo"><div class="login-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div><div class="login-logo-text">CUCKOO <span>ProGuide</span></div></div>
     <div class="login-sub">CUCKOO ProGuide</div>
     <div class="form-group"><label class="form-label">아이디</label><input class="form-input" id="login-id" type="text" placeholder="아이디 입력" autocomplete="username"></div>
     <div class="form-group"><label class="form-label">비밀번호</label><input class="form-input" id="login-pw" type="password" placeholder="비밀번호 입력" autocomplete="current-password"></div>
@@ -340,7 +342,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <!-- CHAT -->
 <div id="screen-chat" class="screen">
   <div class="topnav">
-    <div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span></div>
+    <div class="nav-logo"><div class="nav-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div>CUCKOO <span>ProGuide</span></div>
     <div class="nav-right">
       <span class="nav-badge badge-user">사용자</span>
       <div class="nav-avatar" id="chat-avatar">U</div>
@@ -398,14 +400,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 <!-- HISTORY -->
 <div id="screen-history" class="screen">
-  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
+  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div>CUCKOO <span>ProGuide</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
   <div class="hist-list" id="hist-list"></div>
   <div class="bnav"><button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn active" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
 </div>
 
 <!-- NOTICE -->
 <div id="screen-notice" class="screen">
-  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
+  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div>CUCKOO <span>ProGuide</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
   <div style="padding:16px;flex:1;overflow-y:auto;max-width:720px;width:100%;margin:0 auto;">
     <div style="font-size:16px;font-weight:700;margin-bottom:14px;">📢 공지사항</div>
     <div id="notice-list-user"></div>
@@ -414,7 +416,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 </div>
 <!-- MYPAGE -->
 <div id="screen-mypage" class="screen">
-  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
+  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div>CUCKOO <span>ProGuide</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
   <div style="padding:16px;flex:1;overflow-y:auto;max-width:560px;width:100%;margin:0 auto;">
 
     <!-- 프로필 -->
@@ -466,7 +468,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="topnav">
     <div style="display:flex;align-items:center;gap:8px;">
       <button class="nav-btn" id="admin-menu-btn" onclick="toggleSB()" style="display:none;">☰</button>
-      <div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span><span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:4px;">관리자</span></div>
+      <div class="nav-logo"><div class="nav-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div>CUCKOO <span>ProGuide</span><span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:4px;">관리자</span></div>
     </div>
     <div class="nav-right">
       <span class="nav-badge badge-admin">관리자</span>
@@ -1823,6 +1825,7 @@ function mdToHtml(text){
     .replace(/\n/g,'<br>');
 }
 
+function starIcon(){ return '<svg viewBox="0 0 64 64" width="72%" height="72%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg>'; }
 function appendMsg(role,text,srcDocs){
   const body=document.getElementById('chat-body');
   if(!body.querySelector('.msg')&&!body.querySelector('.msg-date')){
@@ -1842,7 +1845,7 @@ function appendMsg(role,text,srcDocs){
   const time='<span class="msg-time">'+new Date().toLocaleTimeString('ko-KR',{hour:'numeric',minute:'2-digit'})+'</span>';
   const bubble='<div class="msg-bubble">'+rendered+src+speakBtn+'</div>';
   div.innerHTML = role==='bot'
-    ? '<div class="msg-av">AI</div><div class="msg-col"><span class="msg-name">ProGuide</span><div class="msg-line">'+bubble+time+'</div></div>'
+    ? '<div class="msg-av">'+starIcon()+'</div><div class="msg-col"><span class="msg-name">ProGuide</span><div class="msg-line">'+bubble+time+'</div></div>'
     : '<div class="msg-col"><div class="msg-line">'+time+bubble+'</div></div>';
   body.appendChild(div); body.scrollTop=body.scrollHeight;
 }
@@ -1850,7 +1853,7 @@ function appendTyping(){
   const body=document.getElementById('chat-body');
   const id='t'+Date.now(); const div=document.createElement('div');
   div.className='msg bot'; div.id=id;
-  div.innerHTML=`<div class="msg-av">AI</div><div class="msg-col"><span class="msg-name">ProGuide</span><div class="msg-line"><div class="msg-bubble"><div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div></div>`;
+  div.innerHTML=`<div class="msg-av">${starIcon()}</div><div class="msg-col"><span class="msg-name">ProGuide</span><div class="msg-line"><div class="msg-bubble"><div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div></div>`;
   body.appendChild(div); body.scrollTop=body.scrollHeight; return id;
 }
 function removeTyping(id){document.getElementById(id)?.remove();}

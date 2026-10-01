@@ -335,6 +335,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dl-doc input{width:16px;height:16px;accent-color:var(--accent);flex:none;cursor:pointer;}
 .dl-doc .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dl-doc .n{font-size:11px;color:var(--text3);flex:none;}
+.dl-all{font-weight:700;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:2px;}
 .dl-empty{font-size:12px;color:var(--text3);padding:6px 0;}
 </style>
 </head>
@@ -2093,16 +2094,40 @@ function renderDocTree(){
         const em = document.createElement('div'); em.className='dl-empty'; em.textContent='등록된 문서가 없습니다.';
         docsBox.appendChild(em);
       }
+      /* 모델 전체 선택 체크박스 */
+      let allCb = null;
+      const docCbs = [];
+      const syncAll = function(){
+        if(!allCb) return;
+        const n = docCbs.filter(function(c){ return c.checked; }).length;
+        allCb.checked = (n===docCbs.length && n>0);
+        allCb.indeterminate = (n>0 && n<docCbs.length);
+      };
+      if(m.docs.length>0){
+        const allLab = document.createElement('label'); allLab.className='dl-doc dl-all';
+        allCb = document.createElement('input'); allCb.type='checkbox';
+        allCb.onchange = function(){
+          m.docs.forEach(function(d){ if(allCb.checked) _dlSel.add(dlKey(d)); else _dlSel.delete(dlKey(d)); });
+          docCbs.forEach(function(c){ c.checked = allCb.checked; });
+          allCb.indeterminate = false;
+          updateDlBar();
+        };
+        const allTx = document.createElement('span'); allTx.className='t'; allTx.textContent='이 모델 문서 전체 선택 ('+m.docs.length+'건)';
+        allLab.appendChild(allCb); allLab.appendChild(allTx);
+        docsBox.appendChild(allLab);
+      }
       m.docs.forEach(function(d){
         const lab = document.createElement('label'); lab.className='dl-doc';
         const cb = document.createElement('input'); cb.type='checkbox'; cb.checked = _dlSel.has(dlKey(d));
-        cb.onchange = function(){ if(cb.checked) _dlSel.add(dlKey(d)); else _dlSel.delete(dlKey(d)); updateDlBar(); };
+        docCbs.push(cb);
+        cb.onchange = function(){ if(cb.checked) _dlSel.add(dlKey(d)); else _dlSel.delete(dlKey(d)); syncAll(); updateDlBar(); };
         const bd = document.createElement('span'); bd.className='badge badge-gray'; bd.style.fontSize='10px'; bd.textContent=d.cat||'';
         const tt = document.createElement('span'); tt.className='t'; tt.textContent=d.title;
         const nn = document.createElement('span'); nn.className='n'; nn.textContent=(d.content||'').length+'자';
         lab.appendChild(cb); lab.appendChild(bd); lab.appendChild(tt); lab.appendChild(nn);
         docsBox.appendChild(lab);
       });
+      syncAll();
       if(!_sortMode){
         const bt = document.createElement('button'); bt.className='btn btn-ghost btn-sm';
         bt.textContent = '📄 문서 '+m.docs.length+'건';

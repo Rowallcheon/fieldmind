@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%232d5f8f'/%3E%3Cpath d='M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z' fill='%23fff'/%3E%3Cpath d='M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z' fill='%23ffd54a'/%3E%3C/svg%3E">
 <title>CUCKOO ProGuide — 현장 기술 지원</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Noto+Sans+KR:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap');
 :root{
   --bg:#f6f8fa;--bg2:#ffffff;--bg3:#f0f2f5;--bg4:#e2e5ea;
   --border:#d0d7de;--border2:#b6bdc5;
   --text:#1a1f27;--text2:#57606a;--text3:#8c959f;
-  --accent:#f0a500;--accent-dim:rgba(240,165,0,.1);
+  --accent:#2d5f8f;--accent-dim:rgba(45,95,143,.1);
   --danger:#f85149;--success:#3fb950;--info:#58a6ff;--warn:#d29922;
   --radius:10px;--radius-sm:6px;
   --font:'Noto Sans KR',sans-serif;--mono:'IBM Plex Mono',monospace;
@@ -24,11 +25,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 ::-webkit-scrollbar-thumb{background:#c8cdd4;border-radius:2px;}
 .topnav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;flex-shrink:0;}
 .nav-logo{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:900;letter-spacing:-.3px;}
-.nav-logo-icon{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.nav-logo-icon{width:30px;height:30px;background:var(--accent);border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;font-size:15px;}
 .nav-logo span{color:var(--accent);}
 .nav-right{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow:hidden;}
 .nav-badge{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600;}
-.badge-admin{background:rgba(240,165,0,.2);color:var(--accent);}
+.badge-admin{background:rgba(45,95,143,.2);color:var(--accent);}
 .badge-user{background:rgba(88,166,255,.15);color:var(--info);}
 .nav-btn{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 12px;font-size:13px;color:var(--text2);cursor:pointer;font-family:var(--font);transition:color .2s,border-color .2s;white-space:nowrap;}
 .nav-btn:hover{color:var(--text);border-color:var(--border2);}
@@ -48,11 +49,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .badge-green{background:rgba(63,185,80,.15);color:var(--success);}
 .badge-red{background:rgba(248,81,73,.15);color:var(--danger);}
 .badge-blue{background:rgba(88,166,255,.15);color:var(--info);}
-.badge-gold{background:rgba(240,165,0,.15);color:var(--accent);}
+.badge-gold{background:rgba(45,95,143,.15);color:var(--accent);}
 .badge-gray{background:var(--bg3);color:var(--text3);}
 .btn{padding:8px 16px;font-size:13px;font-weight:600;font-family:var(--font);border-radius:var(--radius-sm);border:none;cursor:pointer;transition:opacity .2s,transform .1s;}
 .btn:active{transform:scale(.97);}
-.btn-primary{background:var(--accent);color:#000;}
+.btn-primary{background:var(--accent);color:#fff;}
 .btn-primary:hover{opacity:.88;}
 .btn-ghost{background:var(--bg3);border:1px solid var(--border);color:var(--text2);}
 .btn-ghost:hover{border-color:var(--border2);color:var(--text);}
@@ -73,14 +74,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 /* LOGIN */
 #screen-login{align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden;}
-#screen-login::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(240,165,0,.08) 0%,transparent 70%);top:-200px;left:50%;transform:translateX(-50%);pointer-events:none;}
+#screen-login::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(45,95,143,.08) 0%,transparent 70%);top:-200px;left:50%;transform:translateX(-50%);pointer-events:none;}
 .login-card{width:100%;max-width:400px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:36px 32px;position:relative;z-index:1;}
-.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
-.login-logo-icon{width:42px;height:42px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;}
-.login-logo-text{font-size:24px;font-weight:900;letter-spacing:-.5px;}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
+.login-logo-icon{width:46px;height:46px;background:var(--accent);border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.login-logo-text{font-size:21px;white-space:nowrap;font-weight:900;letter-spacing:-.5px;}
 .login-logo-text span{color:var(--accent);}
-.login-sub{font-size:13px;color:var(--text3);margin-bottom:28px;margin-left:52px;}
-.login-btn{width:100%;padding:13px;background:var(--accent);border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;font-family:var(--font);color:#000;cursor:pointer;margin-top:6px;transition:opacity .2s,transform .1s;}
+.login-btn{width:100%;padding:13px;background:var(--accent);border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;font-family:var(--font);color:#fff;cursor:pointer;margin-top:6px;transition:opacity .2s,transform .1s;}
 .login-btn:active{transform:scale(.98);}
 .login-error{font-size:12px;color:var(--danger);margin-top:8px;display:none;}
 .login-hint{margin-top:18px;padding:12px 14px;background:var(--bg3);border-radius:var(--radius-sm);border-left:3px solid var(--accent);}
@@ -96,7 +96,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sel-wrap select:focus{border-color:var(--accent);}
 .sel-wrap select.has-val{border-color:var(--accent);color:var(--accent);}
 .sel-arrow-icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text3);font-size:11px;}
-.sel-confirm-btn{background:var(--accent);border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;font-family:var(--font);color:#000;cursor:pointer;opacity:.35;transition:opacity .2s;white-space:nowrap;flex-shrink:0;}
+.sel-confirm-btn{background:var(--accent);border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;font-family:var(--font);color:#fff;cursor:pointer;opacity:.35;transition:opacity .2s;white-space:nowrap;flex-shrink:0;}
 .sel-confirm-btn.ready{opacity:1;}
 .groq-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.25);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--info);margin-left:auto;}
 .ctx-banner{background:var(--bg3);border-bottom:1px solid var(--border);padding:7px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0;}
@@ -123,7 +123,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .msg.user .msg-av{background:var(--bg3);border:1px solid var(--border2);}
 .msg-bubble{max-width:calc(100% - 44px);padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.7;}
 .msg.bot .msg-bubble{background:#ffffff;border:1px solid var(--border);border-top-left-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
-.msg.user .msg-bubble{background:#f0a500;color:#000;font-weight:500;border-top-right-radius:4px;}
+
 .msg-src{margin-top:10px;padding:8px 10px;background:var(--bg3);border-radius:var(--radius-sm);border-left:3px solid var(--accent);}
 .msg-src-title{font-size:10px;font-weight:700;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;}
 .msg-src-item{font-size:12px;color:var(--text2);margin-top:2px;}
@@ -270,7 +270,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .doc-card-body.expanded{max-height:none;}
 
 /* 문서 입력 모달 */
-.doc-input-guide{background:rgba(240,165,0,.07);border:1px solid rgba(240,165,0,.2);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.7;}
+.doc-input-guide{background:rgba(45,95,143,.07);border:1px solid rgba(45,95,143,.2);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.7;}
 .doc-input-guide strong{color:var(--accent);}
 .cat-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
 .ctab{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text3);font-family:var(--font);transition:all .2s;}
@@ -288,6 +288,42 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .admin-main{padding:14px;}
   .stat-grid{grid-template-columns:repeat(2,1fr);}
 }
+
+/* ════════ 메신저형 챗봇 디자인 (스카이 + 노랑) ════════ */
+#screen-chat,#screen-login{background:#b8cfe3;}
+#screen-chat .chat-body{gap:10px;padding:14px 12px;}
+#screen-chat .select-bar,#screen-chat .ctx-banner{background:#e9f0f7;border-bottom:1px solid #a9c2d8;}
+#screen-chat .chat-prompt,#screen-chat .chat-welcome{color:#16273a;}
+#screen-chat .chat-prompt p,#screen-chat .chat-welcome p{color:#3b536b !important;}
+#screen-chat .quick-btn{background:rgba(255,255,255,.8);border-color:#fff;color:#2d5f8f;}
+#screen-chat .chat-foot{background:#fff;border-top:none;}
+#screen-chat .chat-inp{background:#eef2f6;border-color:transparent;border-radius:20px;}
+#screen-chat .chat-inp:focus{background:#fff;border-color:var(--accent);}
+#screen-chat .send-btn{background:#ffd54a;border-radius:50%;}
+#screen-chat .send-btn svg{stroke:#2a2300;}
+#screen-chat .mic-btn{background:#eef2f6;border:none;border-radius:50%;}
+.msg{gap:7px;align-items:flex-start;}
+.msg-date{align-self:center;font-size:11px;color:#fff;background:rgba(22,39,58,.25);border-radius:20px;padding:3px 12px;margin:2px 0 4px;}
+.msg-av{border-radius:12px !important;}
+.msg-av svg{display:block;}
+.msg.bot .msg-av{background:#2d5f8f;border:none;color:#fff;font-weight:900;}
+.msg-col{display:flex;flex-direction:column;gap:3px;min-width:0;max-width:calc(100% - 44px);}
+.msg-name{font-size:12px;color:#3b536b;margin-left:2px;}
+.msg-line{display:flex;align-items:flex-end;gap:5px;min-width:0;}
+.msg.user{justify-content:flex-end;}
+.msg-time{font-size:10px;color:#45607a;white-space:nowrap;padding-bottom:1px;flex:none;}
+.msg-bubble{max-width:100%;min-width:0;padding:9px 12px;border-radius:16px;font-size:14px;line-height:1.65;word-break:keep-all;overflow-wrap:anywhere;}
+.msg.bot .msg-bubble{background:#fff;border:none;border-top-left-radius:4px;box-shadow:0 1px 1px rgba(0,0,0,.07);color:#16273a;}
+.msg.user .msg-bubble{background:#ffd54a;color:#2a2300;font-weight:500;border-top-right-radius:4px;}
+.msg-src{background:#eef4fa;border-left:none;border-radius:10px;padding:7px 10px;}
+.msg-src-title{color:#2d5f8f;}
+.tts-speak-btn{border-color:#c9d6e3;}
+
+/* 로고 글자: 소문자 + 별 점, ProGuide는 노랑 계열 */
+.wm5{font-family:'Fredoka','Noto Sans KR',sans-serif;font-weight:700;letter-spacing:.01em;color:#16273a;font-size:1.12em;line-height:1;white-space:nowrap;}
+.wm5 em{font-style:normal;color:#f0a000;}
+.wm5 .wm5-dot{font-style:normal;position:relative;display:inline-block;}
+.wm5 .wm5-dot::after{content:'';position:absolute;left:50%;top:-.06em;width:.4em;height:.4em;transform:translateX(-50%);background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 2C35 22 42 29 62 32C42 35 35 42 32 62C29 42 22 35 2 32C22 29 29 22 32 2z' fill='%23ffb800'/%3E%3C/svg%3E") center/contain no-repeat;}
 </style>
 </head>
 <body>
@@ -295,8 +331,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <!-- LOGIN -->
 <div id="screen-login" class="screen active">
   <div class="login-card">
-    <div class="login-logo"><div class="login-logo-icon">🏗️</div><div class="login-logo-text">CUCKOO <span>ProGuide</span></div></div>
-    <div class="login-sub">CUCKOO ProGuide</div>
+    <div class="login-logo"><div class="login-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div><div class="login-logo-text"><b class="wm5" aria-label="CUCKOO ProGuide">cuckoo <em>progu<i class="wm5-dot">ı</i>de</em></b></div></div>
     <div class="form-group"><label class="form-label">아이디</label><input class="form-input" id="login-id" type="text" placeholder="아이디 입력" autocomplete="username"></div>
     <div class="form-group"><label class="form-label">비밀번호</label><input class="form-input" id="login-pw" type="password" placeholder="비밀번호 입력" autocomplete="current-password"></div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
@@ -311,7 +346,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <!-- CHAT -->
 <div id="screen-chat" class="screen">
   <div class="topnav">
-    <div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span></div>
+    <div class="nav-logo"><div class="nav-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div><b class="wm5" aria-label="CUCKOO ProGuide">cuckoo <em>progu<i class="wm5-dot">ı</i>de</em></b></div>
     <div class="nav-right">
       <span class="nav-badge badge-user">사용자</span>
       <div class="nav-avatar" id="chat-avatar">U</div>
@@ -351,7 +386,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"
           oninput="autoResize(this)"></textarea>
         <button class="send-btn" id="send-btn" onclick="sendMsg()" disabled>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
         </button>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap;gap:4px;">
@@ -369,14 +404,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 <!-- HISTORY -->
 <div id="screen-history" class="screen">
-  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
+  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div><b class="wm5" aria-label="CUCKOO ProGuide">cuckoo <em>progu<i class="wm5-dot">ı</i>de</em></b></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
   <div class="hist-list" id="hist-list"></div>
   <div class="bnav"><button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn active" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
 </div>
 
 <!-- NOTICE -->
 <div id="screen-notice" class="screen">
-  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
+  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div><b class="wm5" aria-label="CUCKOO ProGuide">cuckoo <em>progu<i class="wm5-dot">ı</i>de</em></b></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
   <div style="padding:16px;flex:1;overflow-y:auto;max-width:720px;width:100%;margin:0 auto;">
     <div style="font-size:16px;font-weight:700;margin-bottom:14px;">📢 공지사항</div>
     <div id="notice-list-user"></div>
@@ -385,7 +420,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 </div>
 <!-- MYPAGE -->
 <div id="screen-mypage" class="screen">
-  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
+  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div><b class="wm5" aria-label="CUCKOO ProGuide">cuckoo <em>progu<i class="wm5-dot">ı</i>de</em></b></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
   <div style="padding:16px;flex:1;overflow-y:auto;max-width:560px;width:100%;margin:0 auto;">
 
     <!-- 프로필 -->
@@ -437,11 +472,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="topnav">
     <div style="display:flex;align-items:center;gap:8px;">
       <button class="nav-btn" id="admin-menu-btn" onclick="toggleSB()" style="display:none;">☰</button>
-      <div class="nav-logo"><div class="nav-logo-icon">🏗️</div>CUCKOO <span>ProGuide</span><span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:4px;">관리자</span></div>
+      <div class="nav-logo"><div class="nav-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div><b class="wm5" aria-label="CUCKOO ProGuide">cuckoo <em>progu<i class="wm5-dot">ı</i>de</em></b><span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:4px;">관리자</span></div>
     </div>
     <div class="nav-right">
       <span class="nav-badge badge-admin">관리자</span>
-      <div class="nav-avatar" id="admin-avatar" style="background:rgba(240,165,0,.2);border-color:var(--accent);color:var(--accent);">A</div>
+      <div class="nav-avatar" id="admin-avatar" style="background:rgba(45,95,143,.2);border-color:var(--accent);color:var(--accent);">A</div>
       <span id="admin-uname" style="font-size:13px;color:var(--text2);"></span>
       <button class="nav-btn" onclick="doLogout()">로그아웃</button>
     </div>
@@ -519,7 +554,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <div class="panel-title"><div class="p-icon">📁</div>문서 관리</div>
 
         <!-- 안내 박스 -->
-        <div style="background:rgba(240,165,0,.07);border:1px solid rgba(240,165,0,.25);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;">
+        <div style="background:rgba(45,95,143,.07);border:1px solid rgba(45,95,143,.25);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;">
           <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px;">📋 문서 등록 방법</div>
           <div style="font-size:13px;color:var(--text2);line-height:1.8;">
             ① 제품군/모델을 먼저 추가하세요<br>
@@ -547,7 +582,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <div class="sec-title">제품군 · 모델 트리</div>
           <button class="sort-mode-btn" id="sort-mode-btn" onclick="toggleSortMode()">⇅ 순서 변경</button>
         </div>
-        <div id="sort-mode-guide" style="display:none;background:rgba(240,165,0,.08);border:1px solid rgba(240,165,0,.25);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--accent);">
+        <div id="sort-mode-guide" style="display:none;background:rgba(45,95,143,.08);border:1px solid rgba(45,95,143,.25);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--accent);">
           ☰ 핸들을 드래그해서 순서를 변경하세요. 변경 후 자동 저장됩니다.
         </div>
         <div class="doc-tree" id="doc-tree"></div>
@@ -1013,7 +1048,7 @@ E-301: 온도 초과 → 냉각수 순환 상태 확인
       <!-- 질문 -->
       <div style="margin-bottom:14px;">
         <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;">질문</div>
-        <div style="background:var(--accent-dim);border:1px solid rgba(240,165,0,.2);border-radius:var(--radius-sm);padding:12px;font-size:13px;line-height:1.7;" id="hist-detail-question"></div>
+        <div style="background:var(--accent-dim);border:1px solid rgba(45,95,143,.2);border-radius:var(--radius-sm);padding:12px;font-size:13px;line-height:1.7;" id="hist-detail-question"></div>
       </div>
       <!-- 답변 -->
       <div>
@@ -1126,7 +1161,7 @@ function showLoadingOverlay(show) {
     el = document.createElement('div');
     el.id = 'db-loading';
     el.style.cssText = 'position:fixed;inset:0;background:rgba(13,17,23,.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;';
-    el.innerHTML = '<div style="width:38px;height:38px;border:3px solid #30363d;border-top-color:#f0a500;border-radius:50%;animation:dbspin .8s linear infinite;"></div><div style="font-size:14px;color:#8b949e;">데이터 불러오는 중...</div><style>@keyframes dbspin{to{transform:rotate(360deg)}}</style>';
+    el.innerHTML = '<div style="width:38px;height:38px;border:3px solid #30363d;border-top-color:#2d5f8f;border-radius:50%;animation:dbspin .8s linear infinite;"></div><div style="font-size:14px;color:#8b949e;">데이터 불러오는 중...</div><style>@keyframes dbspin{to{transform:rotate(360deg)}}</style>';
     document.body.appendChild(el);
   }
   el.style.display = show ? 'flex' : 'none';
@@ -1788,14 +1823,21 @@ function mdToHtml(text){
     .replace(/^(\d+)\.\s+(.+)$/gm, '<span style="display:block;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:var(--accent);font-weight:700;">$1.</span>$2</span>')
     // ` 인라인 코드
     .replace(/`([^`]+)`/g, '<code style="background:var(--bg3);padding:1px 5px;border-radius:4px;font-family:var(--mono);font-size:12px;">$1</code>')
+    // 목록 항목(블록) 뒤 줄바꿈은 이미 줄이 나뉘므로 제거
+    .replace(/<\/span>\n/g,'</span>')
     // 줄바꿈
     .replace(/\n/g,'<br>');
 }
 
+function starIcon(){ return '<svg viewBox="0 0 64 64" width="72%" height="72%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg>'; }
 function appendMsg(role,text,srcDocs){
   const body=document.getElementById('chat-body');
+  if(!body.querySelector('.msg')&&!body.querySelector('.msg-date')){
+    const dt=document.createElement('div'); dt.className='msg-date';
+    dt.textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+    body.appendChild(dt);
+  }
   const div=document.createElement('div'); div.className='msg '+role;
-  const av=role==='bot'?'<div class="msg-av">AI</div>':'<div class="msg-av">👷</div>';
   let src='';
   if(srcDocs&&srcDocs.length>0)
     src='<div class="msg-src"><div class="msg-src-title">참조 문서</div>'+srcDocs.map(d=>'<div class="msg-src-item">📄 ['+d.cat+'] '+d.title+'</div>').join('')+'</div>';
@@ -1804,14 +1846,18 @@ function appendMsg(role,text,srcDocs){
   const plainText=text.replace(/[#*`>_~\[\]]/g,'').replace(/\n+/g,' ');
   if(role==='bot') speakBtn='<button class="tts-speak-btn" onclick="speakText(this.dataset.text)" data-text="'+plainText.replace(/"/g,'&quot;')+'">🔊 읽기</button>';
   const rendered = role==='bot' ? mdToHtml(text) : text.replace(/\n/g,'<br>');
-  div.innerHTML=av+'<div class="msg-bubble">'+rendered+src+speakBtn+'</div>';
+  const time='<span class="msg-time">'+new Date().toLocaleTimeString('ko-KR',{hour:'numeric',minute:'2-digit'})+'</span>';
+  const bubble='<div class="msg-bubble">'+rendered+src+speakBtn+'</div>';
+  div.innerHTML = role==='bot'
+    ? '<div class="msg-av">'+starIcon()+'</div><div class="msg-col"><span class="msg-name">ProGuide</span><div class="msg-line">'+bubble+time+'</div></div>'
+    : '<div class="msg-col"><div class="msg-line">'+time+bubble+'</div></div>';
   body.appendChild(div); body.scrollTop=body.scrollHeight;
 }
 function appendTyping(){
   const body=document.getElementById('chat-body');
   const id='t'+Date.now(); const div=document.createElement('div');
   div.className='msg bot'; div.id=id;
-  div.innerHTML=`<div class="msg-av">AI</div><div class="msg-bubble"><div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`;
+  div.innerHTML=`<div class="msg-av">${starIcon()}</div><div class="msg-col"><span class="msg-name">ProGuide</span><div class="msg-line"><div class="msg-bubble"><div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div></div>`;
   body.appendChild(div); body.scrollTop=body.scrollHeight; return id;
 }
 function removeTyping(id){document.getElementById(id)?.remove();}
@@ -2865,7 +2911,7 @@ function renderUsers(){
     const groupBadges=userGroups.length
       ? userGroups.map(g=>'<span class="badge" style="background:#eef2ff;color:#4c6ef5;font-size:10px;border:1px solid #c5d0e6;">'+g.name+'</span>').join(' ')
       : '<span style="font-size:11px;color:var(--text3);">-</span>';
-    return `<tr style="${checkedIds.has(u.id)?'background:rgba(240,165,0,.06);':''}">
+    return `<tr style="${checkedIds.has(u.id)?'background:rgba(45,95,143,.06);':''}">
     <td style="text-align:center;">
       ${u.id!==currentUser?.id
         ?`<input type="checkbox" value="${u.id}" ${checkedIds.has(u.id)?'checked':''} onchange="onCheckRow(this)" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;">`

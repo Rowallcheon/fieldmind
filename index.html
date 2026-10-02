@@ -37,7 +37,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .nav-right{gap:4px;}
   .nav-btn{padding:5px 8px;font-size:12px;}
   .nav-badge{display:none;}
-  #chat-uname{display:none;}
+  #chat-uname,#admin-uname{display:none;}
 }
 .nav-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent-dim);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);}
 .form-group{margin-bottom:14px;}
@@ -371,6 +371,91 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .eb-fill.eb-low{background:linear-gradient(90deg,#d93025,#ff7a6e);}
 .eb-track::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(10% - 2px),var(--bg2) calc(10% - 2px),var(--bg2) 10%);pointer-events:none;}
 .eb-foot{font-size:11px;color:var(--text3);margin-top:5px;}
+
+/* ════════ 원본 자료실 (사용자) ════════ */
+.lib-main{flex:1;overflow-y:auto;max-width:760px;width:100%;margin:0 auto;padding:14px 16px 24px;}
+.lib-search input{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);font-size:14px;font-family:var(--font);color:var(--text);outline:none;}
+.lib-search input:focus{border-color:var(--accent);}
+.lib-crumb{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:12px 2px 10px;font-size:13px;color:var(--text3);}
+.lib-crumb button{background:none;border:0;padding:3px 2px;font:inherit;color:var(--accent);cursor:pointer;font-weight:600;}
+.lib-crumb button:disabled{color:var(--text);cursor:default;}
+.lib-crumb .sep{color:var(--text3);}
+.lib-up{display:inline-flex;align-items:center;gap:4px;margin:0 0 10px;padding:6px 12px;border:1px solid var(--border);border-radius:20px;background:var(--bg2);font-size:12px;color:var(--text2);cursor:pointer;font-family:var(--font);}
+.lib-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+@media(min-width:560px){.lib-grid{grid-template-columns:repeat(3,1fr);}}
+.lib-card{display:flex;flex-direction:column;gap:6px;text-align:left;padding:16px 14px;border:1px solid var(--border);border-radius:14px;background:var(--bg2);cursor:pointer;font-family:var(--font);color:var(--text);min-width:0;}
+.lib-card:active{background:var(--bg3);}
+.lib-card .ic{font-size:26px;line-height:1;}
+.lib-card .nm{font-size:14px;font-weight:700;overflow-wrap:anywhere;}
+.lib-card .ct{font-size:11px;color:var(--text3);}
+.lib-sec{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin:16px 2px 8px;}
+.lib-list{display:flex;flex-direction:column;gap:8px;}
+.lib-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);cursor:pointer;font-family:var(--font);color:var(--text);min-width:0;}
+.lib-row:active{background:var(--bg3);}
+.lib-row .ic{font-size:22px;flex:none;}
+.lib-row .tx{flex:1;min-width:0;}
+.lib-row .tt{font-size:14px;font-weight:600;overflow-wrap:anywhere;}
+.lib-row .mt{font-size:11px;color:var(--text3);margin-top:2px;overflow-wrap:anywhere;}
+.lib-row .go{color:var(--text3);flex:none;}
+.lib-vbadge{display:inline-block;font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:1px 6px;margin-left:6px;vertical-align:middle;}
+.lib-empty{text-align:center;color:var(--text3);font-size:13px;padding:36px 12px;line-height:1.7;}
+.lib-msg{text-align:center;padding:40px 16px;font-size:14px;color:var(--text2);line-height:1.7;}
+.lib-msg button{margin-top:12px;}
+
+/* 뷰어: 다운로드·인쇄·복사를 막은 읽기 전용 화면 */
+.lib-viewer{position:fixed;inset:0;z-index:600;background:#20262d;display:flex;flex-direction:column;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+.lib-viewer[hidden]{display:none;}
+.lv-bar{display:flex;align-items:center;gap:8px;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top));background:#12161b;color:#fff;flex-wrap:wrap;}
+.lv-bar button{background:rgba(255,255,255,.12);border:0;color:#fff;border-radius:8px;min-width:36px;height:36px;padding:0 10px;font-size:14px;font-family:var(--font);cursor:pointer;}
+.lv-bar button:disabled{opacity:.35;cursor:default;}
+.lv-title{order:5;flex:1 1 100%;min-width:0;font-size:12px;font-weight:600;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lv-bar{justify-content:space-between;}
+.lv-grp{display:flex;align-items:center;gap:4px;}
+.lv-grp span{min-width:56px;text-align:center;font-size:12px;font-variant-numeric:tabular-nums;}
+.lv-stage{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px 8px calc(16px + env(safe-area-inset-bottom));touch-action:pan-x pan-y;position:relative;}
+.lv-page{margin:0 auto;width:max-content;max-width:none;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.5);}
+.lv-page canvas{display:block;pointer-events:none;-webkit-user-drag:none;}
+.lv-msg{position:absolute;left:0;right:0;top:40%;text-align:center;color:#cfd6dd;font-size:14px;padding:0 24px;line-height:1.7;}
+@media print{
+  html.lib-open body > *{display:none !important;}
+  html.lib-open body::after{content:'이 자료는 인쇄할 수 없습니다.';display:block;padding:48px;font-size:22px;color:#000;}
+}
+
+/* ════════ 원본 자료실 (관리자) ════════ */
+.la-tabs{display:flex;gap:6px;margin:0 0 14px;flex-wrap:wrap;}
+.la-tabs button{padding:8px 16px;border:1px solid var(--border);border-radius:20px;background:var(--bg2);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);}
+.la-tabs button.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.la-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+.la-bar .sp{flex:1;}
+.la-note{font-size:12px;color:var(--text3);line-height:1.6;margin:0 0 12px;}
+.la-cat{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);margin-bottom:8px;overflow:hidden;}
+.la-cat .la-cat{margin:6px 10px 8px;}
+.la-head{display:flex;align-items:center;gap:8px;padding:10px 12px;flex-wrap:wrap;background:var(--bg3);}
+.la-head .nm{font-weight:700;font-size:14px;flex:1;min-width:120px;overflow-wrap:anywhere;cursor:pointer;}
+.la-head .lv{font-size:10px;font-weight:700;color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:1px 6px;}
+.la-acts{display:flex;gap:4px;flex-wrap:wrap;}
+.la-acts .btn{padding:4px 8px;font-size:11px;}
+.la-body{padding:4px 0 2px;}
+.la-doc{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--border);flex-wrap:wrap;}
+.la-doc .tx{flex:1;min-width:150px;}
+.la-doc .tt{font-size:13px;font-weight:600;overflow-wrap:anywhere;}
+.la-doc .mt{font-size:11px;color:var(--text3);margin-top:2px;}
+.la-doc.old{background:var(--bg3);padding-left:28px;}
+.la-vis{display:inline-block;font-size:10px;font-weight:700;border-radius:8px;padding:1px 7px;margin-left:6px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);}
+.la-vis.all{color:#1f8a3a;border-color:#bfe3c9;background:#eaf7ee;}
+.la-vis.restricted{color:#b87500;border-color:#f0d9a8;background:#fff6e0;}
+.la-empty{padding:12px;font-size:12px;color:var(--text3);}
+.la-table{width:100%;border-collapse:collapse;font-size:12px;}
+.la-table th,.la-table td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;overflow-wrap:anywhere;}
+.la-table th{color:var(--text3);font-weight:700;font-size:11px;}
+.la-pick{max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;margin:6px 0 12px;}
+.la-pick label{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;cursor:pointer;}
+.la-pick input{width:16px;height:16px;accent-color:var(--accent);flex:none;}
+.la-radio{display:flex;flex-direction:column;gap:6px;margin:6px 0 12px;}
+.la-radio label{display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;line-height:1.5;}
+.la-radio input{margin-top:3px;accent-color:var(--accent);}
+.la-prog{height:8px;border-radius:4px;background:var(--bg3);overflow:hidden;margin-top:10px;display:none;}
+.la-prog div{height:100%;width:0;background:var(--accent);transition:width .2s;}
 </style>
 </head>
 <body>
@@ -446,14 +531,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <div class="chat-hint-txt" id="chat-hint-txt"></div>
     </div>
   </div>
-  <div class="bnav"><button class="bnav-btn active" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
+  <div class="bnav"><button class="bnav-btn active" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn" onclick="switchTab('library')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>자료실</button><button class="bnav-btn" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
 </div>
 
 <!-- HISTORY -->
 <div id="screen-history" class="screen">
   <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div><b class="wm5" aria-label="CUCKOO ProGuide">cuckoo <em>progu<i class="wm5-dot">ı</i>de</em></b></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
   <div class="hist-list" id="hist-list"></div>
-  <div class="bnav"><button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn active" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
+  <div class="bnav"><button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn active" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn" onclick="switchTab('library')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>자료실</button><button class="bnav-btn" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
 </div>
 
 <!-- NOTICE -->
@@ -463,7 +548,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div style="font-size:16px;font-weight:700;margin-bottom:14px;">📢 공지사항</div>
     <div id="notice-list-user"></div>
   </div>
-  <div class="bnav"><button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn active" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
+  <div class="bnav"><button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn active" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn" onclick="switchTab('library')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>자료실</button><button class="bnav-btn" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
 </div>
 <!-- MYPAGE -->
 <div id="screen-mypage" class="screen">
@@ -511,10 +596,31 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     </div>
 
   </div>
-  <div class="bnav"><button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn active" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
+  <div class="bnav"><button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn" onclick="switchTab('library')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>자료실</button><button class="bnav-btn active" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
 </div>
 
 <!-- ADMIN -->
+<!-- 원본 자료실 -->
+<div id="screen-library" class="screen">
+  <div class="topnav"><div class="nav-logo"><div class="nav-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div><b class="wm5" aria-label="CUCKOO ProGuide">cuckoo <em>progu<i class="wm5-dot">ı</i>de</em></b></div><div class="nav-right"><button class="nav-btn" onclick="doLogout()">로그아웃</button></div></div>
+  <div class="lib-main">
+    <div class="lib-search"><input id="lib-q" type="search" placeholder="🔍 자료 제목 검색" autocomplete="off" oninput="libOnSearch(this.value)"></div>
+    <div id="lib-crumb" class="lib-crumb"></div>
+    <div id="lib-body"></div>
+  </div>
+  <div class="bnav"><button class="bnav-btn" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn active" onclick="switchTab('library')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>자료실</button><button class="bnav-btn" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
+</div>
+<!-- 자료실 뷰어 (파일 주소를 화면에 노출하지 않고 메모리에서 렌더링) -->
+<div id="lib-viewer" class="lib-viewer" hidden role="dialog" aria-modal="true" aria-label="자료 보기">
+  <div class="lv-bar">
+    <button type="button" onclick="libCloseViewer()" aria-label="닫기">✕ 닫기</button>
+    <div class="lv-title" id="lv-title"></div>
+    <div class="lv-grp" id="lv-pager"><button type="button" id="lv-prev" onclick="libPage(-1)" aria-label="이전 페이지">‹</button><span id="lv-pageno">1 / 1</span><button type="button" id="lv-next" onclick="libPage(1)" aria-label="다음 페이지">›</button></div>
+    <div class="lv-grp"><button type="button" onclick="libZoomBy(-0.25)" aria-label="축소">－</button><span id="lv-zoom">100%</span><button type="button" onclick="libZoomBy(0.25)" aria-label="확대">＋</button></div>
+  </div>
+  <div class="lv-stage" id="lv-stage"><div class="lv-page" id="lv-pagebox" style="display:none"><canvas id="lv-canvas"></canvas></div><div class="lv-msg" id="lv-msg"></div></div>
+</div>
+
 <div id="screen-admin" class="screen">
   <div class="topnav">
     <div style="display:flex;align-items:center;gap:8px;">
@@ -536,6 +642,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <button class="sb-btn" id="sb-apikey" onclick="showPanel('apikey')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>API 키 설정</button>
       <div class="sb-sec">콘텐츠</div>
       <button class="sb-btn" id="sb-docs" onclick="showPanel('docs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>문서 관리</button>
+      <button class="sb-btn" id="sb-library" onclick="showPanel('library')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>원본 자료실</button>
       <button class="sb-btn" id="sb-notice" onclick="showPanel('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지사항</button>
       <div class="sb-sec">문의</div>
       <button class="sb-btn" id="sb-inquiries" onclick="showPanel('inquiries')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></svg>문의 관리 <span id="inq-admin-badge" style="display:none;background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;margin-left:auto;"></span></button>
@@ -568,6 +675,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         </div>
         <div class="sec-hdr"><div class="sec-title">📦 제품군별 현황</div></div>
         <div id="d-prod-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <!-- 원본 자료실 관리 -->
+      <div class="a-panel" id="panel-library">
+        <div class="panel-title"><div class="p-icon">📚</div>원본 자료실</div>
+        <div class="usage-card" id="la-usage" style="display:none;"></div>
+        <div class="la-tabs" id="la-tabs">
+          <button type="button" class="active" data-t="tree" onclick="laTab('tree')">분류 · 자료</button>
+          <button type="button" data-t="groups" onclick="laTab('groups')">자료실 그룹</button>
+          <button type="button" data-t="logs" onclick="laTab('logs')">열람 기록</button>
+        </div>
+        <div id="la-body"></div>
       </div>
 
       <!-- API 키 설정 -->
@@ -956,6 +1075,52 @@ E-301: 온도 초과 → 냉각수 순환 상태 확인
     </div>
   </div>
 </div>
+
+<!-- 자료실: 글자 입력 / 선택 / 업로드 / 공개범위 / 구성원 -->
+<div class="modal-overlay" id="modal-la-text"><div class="modal" style="max-width:420px;">
+  <div class="modal-title" id="lat-title"></div>
+  <div class="form-group"><label class="form-label" id="lat-label"></label><input class="form-input" id="lat-input" maxlength="200" autocomplete="off"></div>
+  <div class="modal-actions"><button type="button" class="btn btn-ghost" onclick="laTextDone(null)">취소</button><button type="button" class="btn btn-primary" onclick="laTextDone(document.getElementById('lat-input').value)">확인</button></div>
+</div></div>
+<div class="modal-overlay" id="modal-la-select"><div class="modal" style="max-width:420px;">
+  <div class="modal-title" id="las-title"></div>
+  <div class="form-group"><label class="form-label">옮길 위치</label><select class="form-input" id="las-select"></select></div>
+  <div class="modal-actions"><button type="button" class="btn btn-ghost" onclick="laSelectDone(null)">취소</button><button type="button" class="btn btn-primary" onclick="laSelectDone(document.getElementById('las-select').value)">확인</button></div>
+</div></div>
+<div class="modal-overlay" id="modal-la-upload"><div class="modal" style="max-width:480px;">
+  <div class="modal-title" id="lau-title">자료 올리기</div>
+  <div class="form-group"><label class="form-label">파일 (PDF, PNG, JPG, WEBP, GIF · 100MB 이하)</label><input class="form-input" id="lau-file" type="file" accept="application/pdf,image/png,image/jpeg,image/webp,image/gif,.pdf" onchange="laUploadPicked()"></div>
+  <div class="form-group"><label class="form-label">제목</label><input class="form-input" id="lau-name" maxlength="200" autocomplete="off"></div>
+  <div class="form-group" id="lau-cat-wrap"><label class="form-label">분류 위치</label><select class="form-input" id="lau-cat"></select></div>
+  <div class="form-group" id="lau-vis-wrap"><label class="form-label">공개 범위</label>
+    <div class="la-radio">
+      <label><input type="radio" name="lau-vis" value="inherit" checked> 분류의 설정을 따름</label>
+      <label><input type="radio" name="lau-vis" value="all"> 로그인한 모든 사용자</label>
+      <label><input type="radio" name="lau-vis" value="restricted"> 지정한 사람만 (올린 뒤 대상을 고릅니다)</label>
+    </div></div>
+  <div class="la-note" id="lau-note"></div>
+  <div class="la-prog" id="lau-prog"><div id="lau-bar"></div></div>
+  <div class="modal-actions"><button type="button" class="btn btn-ghost" id="lau-cancel" onclick="closeModal('modal-la-upload')">취소</button><button type="button" class="btn btn-primary" id="lau-ok" onclick="laUploadStart()">올리기</button></div>
+</div></div>
+<div class="modal-overlay" id="modal-la-access"><div class="modal" style="max-width:520px;">
+  <div class="modal-title" id="laa-title">공개 범위</div>
+  <div class="la-note" id="laa-sub"></div>
+  <div class="la-radio" id="laa-vis"></div>
+  <div id="laa-subjects" style="display:none;">
+    <div class="form-label">기존 그룹 (챗봇과 같은 그룹)</div><div class="la-pick" id="laa-base"></div>
+    <div class="form-label">자료실 전용 그룹</div><div class="la-pick" id="laa-lib"></div>
+    <div class="form-label">개인</div><input class="form-input" id="laa-q" placeholder="이름 · 아이디 · 소속 검색" oninput="laaFilter()" autocomplete="off">
+    <div class="la-pick" id="laa-users"></div>
+  </div>
+  <div class="modal-actions"><button type="button" class="btn btn-ghost" onclick="closeModal('modal-la-access')">취소</button><button type="button" class="btn btn-primary" onclick="laAccessSave()">저장</button></div>
+</div></div>
+<div class="modal-overlay" id="modal-la-members"><div class="modal" style="max-width:480px;">
+  <div class="modal-title" id="lam-title">구성원</div>
+  <input class="form-input" id="lam-q" placeholder="이름 · 아이디 · 소속 검색" oninput="lamFilter()" autocomplete="off">
+  <div style="display:flex;gap:6px;margin:8px 0 0;"><button type="button" class="btn btn-ghost btn-sm" onclick="lamAll(true)">보이는 항목 모두 선택</button><button type="button" class="btn btn-ghost btn-sm" onclick="lamAll(false)">보이는 항목 모두 해제</button><span class="la-note" id="lam-count" style="margin:6px 0 0 auto;"></span></div>
+  <div class="la-pick" id="lam-list" style="max-height:320px;"></div>
+  <div class="modal-actions"><button type="button" class="btn btn-ghost" onclick="closeModal('modal-la-members')">취소</button><button type="button" class="btn btn-primary" onclick="lamSave()">저장</button></div>
+</div></div>
 
 <!-- 모달: 회원 상세/수정 -->
 <div class="modal-overlay" id="modal-member">
@@ -1491,6 +1656,7 @@ async function doLogin(){
   if(!u){err.style.display='block';err.textContent='아이디 또는 비밀번호가 올바르지 않습니다.';return;}
   if(u.status==='inactive'){err.style.display='block';err.textContent='비활성화된 계정입니다.';return;}
   currentUser=u;
+  libLogin(id,pw);   // 자료실 토큰 자동 발급 (뒤에서 실행, 실패해도 챗봇에는 영향 없음)
   // 마지막 로그인 시각 기록 (실패해도 로그인 자체엔 영향 없도록 별도 처리)
   const _loginTs = new Date().toISOString();
   u.last_login = _loginTs;
@@ -1523,6 +1689,7 @@ function leaveAdminPreview(){
 }
 function doLogout(){
   leaveAdminPreview();
+  libReset();
   stopHandsfree();stopTTS();currentUser=null;selProduct=null;selModel=null;chatHistory=[];
   // 저장 옵션이 꺼진 경우 입력창 초기화, 켜진 경우 유지
   const remember=localStorage.getItem('remember');
@@ -1590,6 +1757,7 @@ function switchTab(t){
   else if(t==='history'){ renderHistory(); showScreen('history'); }
   else if(t==='notice'){ renderNoticesUser(); showScreen('notice'); }
   else if(t==='mypage'){ renderMypage(); showScreen('mypage'); }
+  else if(t==='library'){ renderLibrary(); showScreen('library'); }
 }
 function goUserPreview(){
   // 관리자 → 사용자 화면으로 전환 (관리자 권한 유지, 돌아오기 버튼 포함)
@@ -1625,6 +1793,7 @@ function goUserPreview(){
 async function showPanel(n){
   if(n==='apikey' && !isSuperAdmin()){ showToast('API 설정은 최고 관리자(admin)만 사용할 수 있습니다.','error'); return; }
   if(n==='dashboard'){ renderTodayCard(); renderUsage(); }
+  if(n==='library'){ renderLibAdmin(true); }
   // 로그 패널 열 때 DB에서 최신 데이터 재로드
   if(n==='logs'){
     try {
@@ -2074,13 +2243,15 @@ async function renderUsage(){
   card.style.display='';
   const box=document.getElementById('usage-bars');
   box.innerHTML='<div class="eb-foot" style="margin-top:12px;">불러오는 중...</div>';
-  const [ask,dbBytes]=await Promise.all([fetchTodayAsk(),fetchDbBytes()]);
+  const [ask,dbBytes,lib]=await Promise.all([fetchTodayAsk(),fetchDbBytes(),fetchLibUsage()]);
   const lim=GEMINI_FREE_DAILY[GEMINI_MODEL]||1000;
   let h='';
   h+= ask===null ? energyNA('AI 질문 (오늘)','확인할 수 없습니다.')
                  : energyBar('AI 질문 (오늘)', ask+'건', lim.toLocaleString()+'건', ask/lim, '질문 기록 기준 추정');
   h+= dbBytes===null ? energyNA('데이터 저장공간','확인할 수 없습니다. (DB 사용량 조회 설정이 필요합니다)')
                      : energyBar('데이터 저장공간', fmtBytes(dbBytes), fmtBytes(DB_FREE_BYTES), dbBytes/DB_FREE_BYTES, '회원·문서·대화 기록 포함');
+  h+= lib===null ? energyNA('자료실 파일 저장공간','자료실 서버 설정이 끝나면 표시됩니다.')
+                 : energyBar('자료실 파일 저장공간', libBytes(lib.usedBytes), libBytes(lib.limitBytes), lib.usedBytes/lib.limitBytes, '자료 '+lib.docCount+'건, 이전 버전 포함');
   box.innerHTML=h;
 }
 
@@ -4033,6 +4204,519 @@ async function deleteInquiry(){
   renderAdminInquiries();
   updateInqBadges();
   showToast('문의가 삭제됨');
+}
+
+/* ════════ 원본 자료실 — 사용자 화면 (설계서: docs/원본자료실_설계서.md) ════════
+ * 로그인 직후 뒤에서 서버 함수로 자료실 토큰을 받아 화면 메모리에만 보관한다.
+ * 목록/열람 주소/권한은 모두 서버 함수(/api/library-*)가 판정하며, 이 화면은 받은 결과만 보여준다. */
+let libToken=null, libLoginP=null, libLoginMsg='';
+let libData=null, libLoadedAt=0, libPath=[], libQuery='';
+const LIB_CACHE_MS=60000;
+
+function libEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function libBytes(n){n=Number(n)||0;if(n<=0)return '0KB';return n>=1073741824?(n/1073741824).toFixed(2)+'GB':n>=1048576?(n/1048576).toFixed(n>=104857600?0:1)+'MB':Math.max(1,Math.round(n/1024))+'KB';}
+function libDate(s){return (s||'').slice(0,10);}
+
+async function libApi(name,body){
+  const res=await fetch('/api/'+name,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(libToken||'')},body:JSON.stringify(body||{})});
+  let j={};try{j=await res.json();}catch(e){}
+  if(!res.ok){
+    const err=new Error(res.status===404&&!j.error?'자료실 기능이 아직 설정되지 않았습니다. 관리자에게 문의해 주세요.':(j.error||'요청에 실패했습니다.'));
+    err.status=res.status;err.data=j;
+    if(res.status===401){libToken=null;}
+    throw err;
+  }
+  return j;
+}
+/* 챗봇 로그인 직후 자동 호출 (실패해도 챗봇 사용에는 영향 없음) */
+function libLogin(id,pw){
+  libToken=null;libLoginMsg='';
+  libLoginP=fetch('/api/library-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,pw:pw})})
+    .then(async r=>{const j=await r.json().catch(()=>({}));if(r.ok&&j.token){libToken=j.token;}else{libLoginMsg=r.status===404?'자료실 기능이 아직 설정되지 않았습니다.':(j.error||'');}})
+    .catch(()=>{libLoginMsg='자료실 서버에 연결할 수 없습니다.';});
+  return libLoginP;
+}
+function libReset(){
+  libToken=null;libLoginP=null;libLoginMsg='';libData=null;libLoadedAt=0;libPath=[];libQuery='';
+  if(typeof libCloseViewer==='function')libCloseViewer();
+  const q=document.getElementById('lib-q');if(q)q.value='';
+}
+
+/* ── 목록 ── */
+async function renderLibrary(force){
+  const body=document.getElementById('lib-body');if(!body)return;
+  if(libLoginP)await libLoginP;
+  if(!libToken){
+    body.innerHTML='<div class="lib-msg">'+libEsc(libLoginMsg||'자료실 인증이 만료되었습니다.')+'<br>다시 로그인해 주세요.<br><button class="btn btn-primary" onclick="doLogout()">로그아웃</button></div>';
+    document.getElementById('lib-crumb').innerHTML='';return;
+  }
+  if(force||!libData||Date.now()-libLoadedAt>LIB_CACHE_MS){
+    body.innerHTML='<div class="lib-msg">불러오는 중...</div>';
+    try{libData=await libApi('library-tree');libLoadedAt=Date.now();}
+    catch(e){body.innerHTML='<div class="lib-msg">'+libEsc(e.message)+'<br><button class="btn btn-ghost" onclick="renderLibrary(true)">다시 시도</button></div>';return;}
+  }
+  libDraw();
+}
+const libCat=id=>libData.categories.find(c=>c.id===id);
+const libByName=(a,b)=>String(a.name||a.title).localeCompare(String(b.name||b.title),'ko',{numeric:true});
+function libChildren(pid){return libData.categories.filter(c=>(c.parentId||null)===(pid||null)).sort((a,b)=>(a.sortOrder-b.sortOrder)||libByName(a,b));}
+function libDocsIn(cid){return libData.docs.filter(d=>d.categoryId===cid).sort(libByName);}
+function libCountDocs(cid){let n=libDocsIn(cid).length;libChildren(cid).forEach(c=>{n+=libCountDocs(c.id);});return n;}
+function libPathOf(cid){const out=[];let c=libCat(cid);while(c){out.unshift(c);c=c.parentId?libCat(c.parentId):null;}return out;}
+
+function libDraw(){
+  const body=document.getElementById('lib-body'),crumb=document.getElementById('lib-crumb');
+  if(libQuery.trim()){libDrawSearch(body,crumb);return;}
+  const cur=libPath.length?libPath[libPath.length-1]:null;
+  let ch='<button type="button" '+(cur?'':'disabled ')+'onclick="libGo(-1)">자료실</button>';
+  libPath.forEach((id,i)=>{const c=libCat(id);if(!c)return;ch+='<span class="sep">›</span><button type="button" '+(i===libPath.length-1?'disabled ':'')+'onclick="libGo('+i+')">'+libEsc(c.name)+'</button>';});
+  crumb.innerHTML=ch;
+  const subs=libChildren(cur),docs=cur?libDocsIn(cur):[];
+  let h='';
+  if(cur)h+='<button type="button" class="lib-up" onclick="libGo('+(libPath.length-2)+')">← 상위로</button>';
+  if(!cur){
+    h+=subs.length?'<div class="lib-grid">'+subs.map(c=>'<button type="button" class="lib-card" onclick="libEnter(\''+c.id+'\')"><span class="ic">📁</span><span class="nm">'+libEsc(c.name)+'</span><span class="ct">자료 '+libCountDocs(c.id)+'건</span></button>').join('')+'</div>':'';
+  }else if(subs.length){
+    h+='<div class="lib-sec">분류</div><div class="lib-list">'+subs.map(c=>'<button type="button" class="lib-row" onclick="libEnter(\''+c.id+'\')"><span class="ic">📁</span><span class="tx"><div class="tt">'+libEsc(c.name)+'</div><div class="mt">자료 '+libCountDocs(c.id)+'건'+(c.description?' · '+libEsc(c.description):'')+'</div></span><span class="go">›</span></button>').join('')+'</div>';
+  }
+  if(docs.length)h+='<div class="lib-sec">자료</div><div class="lib-list">'+docs.map(libDocRow).join('')+'</div>';
+  if(!subs.length&&!docs.length)h+='<div class="lib-empty">'+(cur?'이 분류에는 열람할 수 있는 자료가 없습니다.':'열람할 수 있는 자료가 아직 없습니다.<br>관리자가 자료를 등록하면 여기에 표시됩니다.')+'</div>';
+  body.innerHTML=h;
+}
+function libDocRow(d,showPath){
+  const path=showPath?libPathOf(d.categoryId).map(c=>libEsc(c.name)).join(' › '):'';
+  const meta=(d.fileType==='pdf'?'PDF':'이미지')+' · '+libDate(d.createdAt);
+  return '<button type="button" class="lib-row" onclick="libOpenById(\''+d.id+'\')"><span class="ic">'+(d.fileType==='pdf'?'📄':'🖼️')+'</span><span class="tx"><div class="tt">'+libEsc(d.title)+(d.version>1?'<span class="lib-vbadge">v'+d.version+'</span>':'')+'</div><div class="mt">'+(path?path+' · ':'')+meta+'</div></span><span class="go">›</span></button>';
+}
+function libDrawSearch(body,crumb){
+  const q=libQuery.trim().toLowerCase();
+  crumb.innerHTML='<span>검색 결과</span>';
+  const hits=libData.docs.filter(d=>d.title.toLowerCase().includes(q)).sort(libByName);
+  body.innerHTML=hits.length?'<div class="lib-list">'+hits.map(d=>libDocRow(d,true)).join('')+'</div>':'<div class="lib-empty">"'+libEsc(libQuery.trim())+'"와(과) 일치하는 자료가 없습니다.</div>';
+}
+function libOnSearch(v){libQuery=v;if(libData)libDraw();}
+function libEnter(id){libPath.push(id);libDraw();document.querySelector('#screen-library .lib-main').scrollTop=0;}
+function libGo(i){libPath=i<0?[]:libPath.slice(0,i+1);libDraw();document.querySelector('#screen-library .lib-main').scrollTop=0;}
+function libOpenById(id){const d=libData&&libData.docs.find(x=>x.id===id);if(d)libOpenDoc(d.id,d.title,d.fileType);}
+
+/* ── 뷰어 ── */
+const LIBV={open:false,run:0,kind:null,pdf:null,bitmap:null,page:1,pages:1,zoom:1,live:null,task:null,rendering:false,again:false};
+const LIB_PDFJS='3.11.174';
+const LIB_MAX_PIXELS=16000000; // 아이폰 캔버스 메모리 한도를 넘지 않도록 상한
+
+function libLoadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('PDF 보기 도구를 불러오지 못했습니다.'));document.head.appendChild(s);});}
+async function libLoadPdfJs(){
+  if(window.pdfjsLib&&pdfjsLib.GlobalWorkerOptions.workerSrc)return;
+  const base='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/'+LIB_PDFJS+'/';
+  if(!window.pdfjsLib)await libLoadScript(base+'pdf.min.js');
+  // 작업 스크립트는 같은 출처에서만 실행되므로 내용을 받아 임시 작업자로 만든다
+  const code=await (await fetch(base+'pdf.worker.min.js')).text();
+  pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([code],{type:'text/javascript'}));
+}
+const libV=id=>document.getElementById(id);
+function libViewerMsg(t){const m=libV('lv-msg');m.textContent=t||'';m.style.display=t?'block':'none';}
+
+async function libOpenDoc(id,title,fileType){
+  libCloseViewer();
+  const run=++LIBV.run;LIBV.open=true;LIBV.zoom=1;LIBV.page=1;LIBV.pages=1;LIBV.kind=fileType;
+  libV('lib-viewer').hidden=false;document.documentElement.classList.add('lib-open');document.body.style.overflow='hidden';
+  libV('lv-title').textContent=title||'';libV('lv-pagebox').style.display='none';libViewerMsg('불러오는 중...');
+  libV('lv-pager').style.display=fileType==='pdf'?'':'none';libUpdateBar();
+  try{
+    const r=await libApi('library-url',{docId:id});
+    let res;
+    try{res=await fetch(r.url,{cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer'});}
+    catch(e){throw new Error('파일을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');}
+    if(!res.ok)throw new Error('파일을 불러오지 못했습니다. ('+res.status+')');
+    const buf=await res.arrayBuffer();           // 주소는 여기까지만 쓰고 어디에도 남기지 않는다
+    if(run!==LIBV.run)return;
+    if(r.fileType==='pdf'){
+      await libLoadPdfJs();
+      const task=pdfjsLib.getDocument({data:new Uint8Array(buf),isEvalSupported:false});
+      const pdf=await task.promise;
+      if(run!==LIBV.run){pdf.destroy();return;}
+      LIBV.pdf=pdf;LIBV.pages=pdf.numPages;
+    }else{
+      LIBV.bitmap=await libImageBitmap(buf);
+      if(run!==LIBV.run){if(LIBV.bitmap.close)LIBV.bitmap.close();LIBV.bitmap=null;return;}
+    }
+    libViewerMsg('');libV('lv-pagebox').style.display='';
+    await libRender();
+  }catch(e){
+    if(run!==LIBV.run)return;
+    libViewerMsg(e.status===401?'인증이 만료되었습니다. 다시 로그인해 주세요.':(e.message||'자료를 열 수 없습니다.'));
+  }
+}
+async function libImageBitmap(buf){
+  const blob=new Blob([buf]);
+  if(window.createImageBitmap)return createImageBitmap(blob);
+  return new Promise((res,rej)=>{const u=URL.createObjectURL(blob),im=new Image();im.onload=()=>{URL.revokeObjectURL(u);res(im);};im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('이미지를 열 수 없습니다.'));};im.src=u;});
+}
+function libUpdateBar(){
+  libV('lv-pageno').textContent=LIBV.page+' / '+LIBV.pages;
+  libV('lv-prev').disabled=LIBV.page<=1;libV('lv-next').disabled=LIBV.page>=LIBV.pages;
+  libV('lv-zoom').textContent=Math.round(LIBV.zoom*100)+'%';
+}
+async function libRender(){
+  if(!LIBV.open)return;
+  if(LIBV.rendering){LIBV.again=true;return;}
+  LIBV.rendering=true;
+  try{
+    do{
+      LIBV.again=false;
+      const run=LIBV.run,stage=libV('lv-stage'),canvas=libV('lv-canvas');
+      const avail=Math.max(200,stage.clientWidth-16);
+      let w,h,drawFn;
+      if(LIBV.kind==='pdf'){
+        const page=await LIBV.pdf.getPage(LIBV.page);
+        if(run!==LIBV.run)return;
+        const base=page.getViewport({scale:1}),css=avail/base.width*LIBV.zoom;
+        w=base.width*css;h=base.height*css;
+        const ratio=libRatio(w,h);
+        canvas.width=Math.floor(w*ratio);canvas.height=Math.floor(h*ratio);
+        drawFn=()=>{LIBV.task=page.render({canvasContext:canvas.getContext('2d'),viewport:page.getViewport({scale:css*ratio})});return LIBV.task.promise;};
+      }else{
+        const bm=LIBV.bitmap;if(!bm)return;
+        const css=avail/bm.width*LIBV.zoom;w=bm.width*css;h=bm.height*css;
+        const ratio=libRatio(w,h);
+        canvas.width=Math.floor(w*ratio);canvas.height=Math.floor(h*ratio);
+        drawFn=()=>{const c=canvas.getContext('2d');c.imageSmoothingQuality='high';c.drawImage(bm,0,0,canvas.width,canvas.height);return Promise.resolve();};
+      }
+      canvas.style.width=Math.floor(w)+'px';canvas.style.height=Math.floor(h)+'px';
+      try{await drawFn();}catch(e){if(!(e&&e.name==='RenderingCancelledException'))throw e;}
+      libUpdateBar();
+    }while(LIBV.again&&LIBV.open);
+  }catch(e){libViewerMsg('화면을 그리지 못했습니다.');}
+  finally{LIBV.rendering=false;}
+}
+function libRatio(w,h){const dpr=Math.min(window.devicePixelRatio||1,2);return Math.max(0.25,Math.min(dpr,Math.sqrt(LIB_MAX_PIXELS/(w*h))));}
+function libPage(d){const n=LIBV.page+d;if(n<1||n>LIBV.pages)return;LIBV.page=n;libV('lv-stage').scrollTop=0;libUpdateBar();libRender();}
+function libZoomBy(d){libZoomSet(Math.round((LIBV.zoom+d)*100)/100);}
+function libZoomSet(z){LIBV.zoom=Math.max(0.5,Math.min(5,z));libUpdateBar();libRender();}
+function libCloseViewer(){
+  if(!LIBV.open&&!LIBV.pdf&&!LIBV.bitmap)return;
+  LIBV.run++;LIBV.open=false;
+  try{if(LIBV.task)LIBV.task.cancel();}catch(e){}
+  if(LIBV.pdf){try{LIBV.pdf.destroy();}catch(e){}LIBV.pdf=null;}
+  if(LIBV.bitmap){if(LIBV.bitmap.close)LIBV.bitmap.close();LIBV.bitmap=null;}
+  const c=libV('lv-canvas');if(c){c.width=1;c.height=1;}
+  const v=libV('lib-viewer');if(v)v.hidden=true;
+  document.documentElement.classList.remove('lib-open');document.body.style.overflow='';
+}
+(function libViewerGuards(){
+  const v=document.getElementById('lib-viewer');if(!v)return;
+  ['contextmenu','dragstart','selectstart','copy','cut'].forEach(ev=>v.addEventListener(ev,e=>e.preventDefault()));
+  document.addEventListener('keydown',e=>{
+    if(!LIBV.open)return;
+    const k=(e.key||'').toLowerCase();
+    if((e.ctrlKey||e.metaKey)&&(k==='s'||k==='p')){e.preventDefault();e.stopPropagation();showToast('이 자료는 저장하거나 인쇄할 수 없습니다.','error');return;}
+    if(k==='escape')libCloseViewer();
+    else if(k==='arrowright'||k==='pagedown')libPage(1);
+    else if(k==='arrowleft'||k==='pageup')libPage(-1);
+    else if(k==='+'||k==='=')libZoomBy(0.25);
+    else if(k==='-')libZoomBy(-0.25);
+  },true);
+  window.addEventListener('beforeprint',()=>{if(LIBV.open)document.documentElement.classList.add('lib-open');});
+  let t=null;window.addEventListener('resize',()=>{if(!LIBV.open)return;clearTimeout(t);t=setTimeout(libRender,200);});
+  /* 두 손가락 핀치 확대/축소 (페이지 자체 확대는 막혀 있어 직접 처리) */
+  const st=document.getElementById('lv-stage'),dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+  let pinch=null;
+  st.addEventListener('touchstart',e=>{if(e.touches.length===2){pinch={d:dist(e.touches),z:LIBV.zoom};LIBV.live=LIBV.zoom;e.preventDefault();}},{passive:false});
+  st.addEventListener('touchmove',e=>{
+    if(pinch&&e.touches.length===2){
+      e.preventDefault();
+      LIBV.live=Math.max(0.5,Math.min(5,pinch.z*dist(e.touches)/pinch.d));
+      const box=document.getElementById('lv-pagebox');box.style.transformOrigin='center top';box.style.transform='scale('+(LIBV.live/LIBV.zoom)+')';
+    }
+  },{passive:false});
+  const endPinch=e=>{
+    if(pinch&&e.touches.length<2){
+      const box=document.getElementById('lv-pagebox');box.style.transform='';
+      const z=LIBV.live;pinch=null;LIBV.live=null;
+      if(z&&Math.abs(z-LIBV.zoom)>0.02)libZoomSet(Math.round(z*100)/100);
+    }
+  };
+  st.addEventListener('touchend',endPinch);st.addEventListener('touchcancel',endPinch);
+  document.addEventListener('gesturestart',e=>{if(LIBV.open)e.preventDefault();});
+})();
+
+/* ════════ 원본 자료실 — 관리자 (설계서: docs/원본자료실_설계서.md) ════════
+ * 자료실 테이블은 브라우저에서 직접 접근할 수 없으므로 모든 관리는 서버 함수(/api/library-admin)를 거친다. */
+const LA={data:null,tab:'tree',closed:new Set(),vers:new Set(),logDoc:'',logPage:0,text:null,select:null,up:null,acc:null,mem:null};
+const LA_LV=['','대그룹','중그룹','소그룹'];
+const LA_R2_LIMIT=10*1024*1024*1024;
+const laBody=()=>document.getElementById('la-body');
+
+async function renderLibAdmin(force){
+  const body=laBody();if(!body)return;
+  if(libLoginP)await libLoginP;
+  if(!libToken){body.innerHTML='<div class="lib-msg">'+libEsc(libLoginMsg||'자료실 인증이 만료되었습니다.')+'<br>다시 로그인해 주세요.</div>';return;}
+  if(force||!LA.data){
+    body.innerHTML='<div class="lib-msg">불러오는 중...</div>';
+    try{LA.data=await libApi('library-admin',{action:'overview'});}
+    catch(e){body.innerHTML='<div class="lib-msg">'+libEsc(e.message)+'<br><button class="btn btn-ghost" onclick="renderLibAdmin(true)">다시 시도</button></div>';return;}
+  }
+  laUsageDraw();laDraw();
+}
+async function laReload(){
+  LA.data=await libApi('library-admin',{action:'overview'});
+  libData=null;                       // 사용자 화면 목록은 다음 진입 때 새로 받는다
+  laUsageDraw();laDraw();
+}
+async function laAct(action,payload,okMsg){
+  try{
+    const r=await libApi('library-admin',Object.assign({action:action},payload||{}));
+    if(okMsg)showToast(okMsg,'success');
+    await laReload();return r;
+  }catch(e){showToast(e.message,'error');return null;}
+}
+function laTab(t){
+  LA.tab=t;
+  document.querySelectorAll('#la-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.t===t));
+  if(LA.data)laDraw();
+}
+function laDraw(){
+  if(!LA.data)return;
+  if(LA.tab==='groups')laDrawGroups();else if(LA.tab==='logs')laDrawLogs();else laDrawTree();
+}
+function laUsageDraw(){
+  const c=document.getElementById('la-usage');if(!c)return;
+  if(!isSuperAdmin()||!LA.data){c.style.display='none';return;}
+  const u=LA.data.usage;c.style.display='';
+  c.innerHTML='<div class="sec-hdr" style="margin-bottom:0;"><div class="sec-title">🔋 자료실 파일 저장공간 <span class="eb-tag">admin 전용</span></div></div>'
+    +energyBar('무료 저장공간 (R2 10GB)',libBytes(u.usedBytes),libBytes(u.limitBytes||LA_R2_LIMIT),(u.usedBytes||0)/(u.limitBytes||LA_R2_LIMIT),'자료 '+u.docCount+'건, 이전 버전 포함');
+}
+
+/* ── 공통 보조 ── */
+const laKids=pid=>LA.data.categories.filter(c=>(c.parent_id||null)===(pid||null)).sort((a,b)=>(a.sort_order-b.sort_order)||String(a.name).localeCompare(String(b.name),'ko'));
+const laCat=id=>LA.data.categories.find(c=>c.id===id);
+const laDoc=id=>LA.data.docs.find(d=>d.id===id);
+function laPathLabel(id){const out=[];let c=laCat(id);while(c){out.unshift(c.name);c=c.parent_id?laCat(c.parent_id):null;}return out.join(' › ');}
+function laCatOptions(){const out=[];(function walk(pid){laKids(pid).forEach(c=>{out.push({value:c.id,label:laPathLabel(c.id)});walk(c.id);});})(null);return out;}
+const laPermCount=(type,id)=>LA.data.permissions.filter(p=>p.target_type===type&&(type==='category'?p.category_id:p.doc_id)===id).length;
+function laVis(item,type){
+  if(item.visibility==='all')return '<span class="la-vis all">전체 공개</span>';
+  if(item.visibility==='restricted')return '<span class="la-vis restricted">지정한 사람만 ('+laPermCount(type,item.id)+')</span>';
+  return '<span class="la-vis">'+(type==='category'?(item.level===1?'전체 공개(기본)':'상위 설정 따름'):'분류 설정 따름')+'</span>';
+}
+function laAskText(title,label,value){
+  return new Promise(res=>{LA.text=res;document.getElementById('lat-title').textContent=title;document.getElementById('lat-label').textContent=label;const i=document.getElementById('lat-input');i.value=value||'';document.getElementById('modal-la-text').classList.add('open');setTimeout(()=>i.focus(),50);});
+}
+function laTextDone(v){document.getElementById('modal-la-text').classList.remove('open');const r=LA.text;LA.text=null;if(r)r(v==null?null:String(v).trim()||null);}
+function laAskSelect(title,options,current){
+  return new Promise(res=>{LA.select=res;document.getElementById('las-title').textContent=title;const s=document.getElementById('las-select');s.innerHTML=options.map(o=>'<option value="'+libEsc(o.value)+'"'+(o.value===current?' selected':'')+'>'+libEsc(o.label)+'</option>').join('');document.getElementById('modal-la-select').classList.add('open');});
+}
+function laSelectDone(v){document.getElementById('modal-la-select').classList.remove('open');const r=LA.select;LA.select=null;if(r)r(v||null);}
+
+/* ── 분류 · 자료 ── */
+function laOldChain(doc){const out=[];let p=doc.previous_doc_id?laDoc(doc.previous_doc_id):null;const seen=new Set();while(p&&!seen.has(p.id)){seen.add(p.id);out.push(p);p=p.previous_doc_id?laDoc(p.previous_doc_id):null;}return out;}
+function laDrawTree(){
+  const top=laKids(null);
+  const reachable=new Set();LA.data.docs.filter(d=>d.is_latest).forEach(d=>laOldChain(d).forEach(o=>reachable.add(o.id)));
+  LA.orphans=LA.data.docs.filter(d=>!d.is_latest&&!reachable.has(d.id));
+  let h='<div class="la-bar"><button type="button" class="btn btn-primary btn-sm" onclick="laCatAdd(null)">＋ 대그룹 추가</button><button type="button" class="btn btn-ghost btn-sm" onclick="laUploadOpen(null)">⬆ 자료 올리기</button><span class="sp"></span><button type="button" class="btn btn-ghost btn-sm" onclick="renderLibAdmin(true)">새로고침</button></div>'
+    +'<p class="la-note">분류는 대그룹 › 중그룹 › 소그룹 3단계까지 만들 수 있고, 자료는 어느 단계에든 올릴 수 있습니다. 🔒 공개 범위를 정하지 않으면 상위 분류의 설정을 따르고, 대그룹의 기본값은 전체 공개입니다.</p>';
+  h+=top.length?top.map(laCatHtml).join(''):'<div class="lib-empty">아직 분류가 없습니다.<br>「＋ 대그룹 추가」로 첫 분류를 만들어 주세요.</div>';
+  document.getElementById('la-body').innerHTML=h;
+}
+function laDocRow(d,old){
+  const olds=old?[]:laOldChain(d);
+  let h='<div class="la-doc'+(old?' old':'')+'"><div class="tx"><div class="tt">'+(d.file_type==='pdf'?'📄 ':'🖼️ ')+libEsc(d.title)+'<span class="lib-vbadge">v'+d.version+'</span>'+(old?'<span class="la-vis">이전 버전</span>':laVis(d,'doc'))+'</div>'
+    +'<div class="mt">'+(d.file_type==='pdf'?'PDF':'이미지')+' · '+libBytes(d.file_size)+' · '+libDate(d.created_at)+(d.uploader?' · '+libEsc(d.uploader):'')+'</div></div><div class="la-acts">'
+    +'<button type="button" class="btn btn-ghost" onclick="laDocOpen(\''+d.id+'\')">열기</button>';
+  if(!old)h+='<button type="button" class="btn btn-ghost" onclick="laAccess(\'doc\',\''+d.id+'\')">🔒 공개범위</button><button type="button" class="btn btn-ghost" onclick="laDocRename(\''+d.id+'\')">제목</button><button type="button" class="btn btn-ghost" onclick="laDocMove(\''+d.id+'\')">이동</button><button type="button" class="btn btn-ghost" onclick="laUploadOpen(null,\''+d.id+'\')">🔄 새 버전</button>'+(olds.length?'<button type="button" class="btn btn-ghost" onclick="laToggleVers(\''+d.id+'\')">이전 버전 '+olds.length+'개 '+(LA.vers.has(d.id)?'▴':'▾')+'</button>':'');
+  h+='<button type="button" class="btn btn-danger" onclick="laDocDel(\''+d.id+'\')">삭제</button></div></div>';
+  if(!old&&LA.vers.has(d.id))h+=olds.map(o=>laDocRow(o,true)).join('');
+  return h;
+}
+function laCatHtml(c){
+  const kids=laKids(c.id),open=!LA.closed.has(c.id);
+  const docs=LA.data.docs.filter(d=>d.category_id===c.id&&d.is_latest).sort((a,b)=>String(a.title).localeCompare(String(b.title),'ko',{numeric:true}));
+  const orph=(LA.orphans||[]).filter(d=>d.category_id===c.id);
+  const n=docs.length+orph.length+kids.length;
+  let h='<div class="la-cat"><div class="la-head"><span class="lv">'+LA_LV[c.level]+'</span><span class="nm" onclick="laToggle(\''+c.id+'\')">'+(open?'▾ ':'▸ ')+libEsc(c.name)+'</span>'+laVis(c,'category')
+    +'<span class="la-acts">'+(c.level<3?'<button type="button" class="btn btn-ghost" onclick="laCatAdd(\''+c.id+'\')">＋ 하위</button>':'')
+    +'<button type="button" class="btn btn-ghost" onclick="laUploadOpen(\''+c.id+'\')">⬆ 자료</button><button type="button" class="btn btn-ghost" onclick="laAccess(\'category\',\''+c.id+'\')">🔒 공개범위</button><button type="button" class="btn btn-ghost" onclick="laCatRename(\''+c.id+'\')">이름</button>'
+    +'<button type="button" class="btn btn-ghost" onclick="laCatMove(\''+c.id+'\',-1)" aria-label="위로">▲</button><button type="button" class="btn btn-ghost" onclick="laCatMove(\''+c.id+'\',1)" aria-label="아래로">▼</button><button type="button" class="btn btn-danger" onclick="laCatDel(\''+c.id+'\')">삭제</button></span></div>';
+  if(open){
+    h+='<div class="la-body">'+docs.map(d=>laDocRow(d,false)).join('')+orph.map(d=>laDocRow(d,true)).join('')+kids.map(laCatHtml).join('')+(n?'':'<div class="la-empty">비어 있습니다.</div>')+'</div>';
+  }
+  return h+'</div>';
+}
+function laToggle(id){if(LA.closed.has(id))LA.closed.delete(id);else LA.closed.add(id);laDraw();}
+function laToggleVers(id){if(LA.vers.has(id))LA.vers.delete(id);else LA.vers.add(id);laDraw();}
+async function laCatAdd(parentId){
+  const name=await laAskText(parentId?'하위 분류 추가':'대그룹 추가','분류 이름','');
+  if(name)await laAct('category.create',{name:name,parentId:parentId},'분류를 만들었습니다.');
+}
+async function laCatRename(id){
+  const c=laCat(id);const name=await laAskText('분류 이름 수정','분류 이름',c.name);
+  if(name&&name!==c.name)await laAct('category.update',{id:id,name:name},'이름을 바꿨습니다.');
+}
+async function laCatMove(id,dir){
+  const c=laCat(id),sibs=laKids(c.parent_id||null),i=sibs.findIndex(x=>x.id===id),j=i+dir;
+  if(j<0||j>=sibs.length)return;
+  const ids=sibs.map(x=>x.id);[ids[i],ids[j]]=[ids[j],ids[i]];
+  await laAct('category.reorder',{parentId:c.parent_id||null,ids:ids});
+}
+async function laCatDel(id){
+  const c=laCat(id);
+  const kids=LA.data.categories.filter(x=>x.parent_id===id).length,docs=LA.data.docs.filter(d=>d.category_id===id).length;
+  if(kids||docs){showToast('"'+c.name+'"에는 하위 분류 '+kids+'개, 자료 '+docs+'건이 있어 삭제할 수 없습니다. 먼저 비우거나 다른 곳으로 옮겨 주세요.','error');return;}
+  if(!confirm('"'+c.name+'" 분류를 삭제할까요?'))return;
+  await laAct('category.delete',{id:id},'분류를 삭제했습니다.');
+}
+function laDocOpen(id){const d=laDoc(id);if(d)libOpenDoc(d.id,d.title+(d.is_latest?'':' (이전 버전 v'+d.version+')'),d.file_type);}
+async function laDocRename(id){
+  const d=laDoc(id);const t=await laAskText('자료 제목 수정','자료 제목',d.title);
+  if(t&&t!==d.title)await laAct('doc.update',{id:id,title:t},'제목을 바꿨습니다.');
+}
+async function laDocMove(id){
+  const d=laDoc(id);const to=await laAskSelect('자료 이동',laCatOptions(),d.category_id);
+  if(to&&to!==d.category_id)await laAct('doc.update',{id:id,categoryId:to},'자료를 옮겼습니다.');
+}
+async function laDocDel(id){
+  const d=laDoc(id);
+  if(!confirm('"'+d.title+'"'+(d.is_latest?'':' (이전 버전)')+'을(를) 삭제할까요?\n저장된 원본 파일도 함께 삭제되며 되돌릴 수 없습니다.'))return;
+  let all=false;
+  if(d.is_latest&&d.previous_doc_id){
+    all=confirm('이전 버전도 모두 삭제할까요?\n\n[확인] 이전 버전까지 모두 삭제\n[취소] 이 버전만 삭제 (바로 이전 버전이 다시 최신이 됩니다)');
+  }
+  const r=await laAct('doc.delete',{id:id,allVersions:all},'자료를 삭제했습니다.');
+  if(r&&r.orphanedKeys&&r.orphanedKeys.length)showToast('자료는 지웠지만 저장소 파일 '+r.orphanedKeys.length+'개를 지우지 못했습니다. 관리자에게 알려 주세요.','error');
+}
+
+/* ── 업로드 / 새 버전 ── */
+function laUploadOpen(catId,replaceId){
+  const rep=replaceId?laDoc(replaceId):null;LA.up={replace:rep};
+  const sel=document.getElementById('lau-cat'),opts=laCatOptions();
+  if(!rep&&!opts.length){showToast('먼저 대그룹을 하나 만들어 주세요.','error');return;}
+  sel.innerHTML=opts.map(o=>'<option value="'+libEsc(o.value)+'"'+(o.value===catId?' selected':'')+'>'+libEsc(o.label)+'</option>').join('');
+  document.getElementById('lau-title').textContent=rep?'새 버전으로 교체':'자료 올리기';
+  document.getElementById('lau-file').value='';document.getElementById('lau-name').value=rep?rep.title:'';
+  document.getElementById('lau-cat-wrap').style.display=rep?'none':'';document.getElementById('lau-vis-wrap').style.display=rep?'none':'';
+  document.querySelectorAll('input[name="lau-vis"]').forEach(r=>{r.checked=r.value==='inherit';});
+  document.getElementById('lau-note').textContent=rep?'"'+rep.title+'"의 새 버전(v'+(rep.version+1)+')으로 올립니다. 기존본은 사용자에게 숨겨지고 관리자만 볼 수 있으며, 공개 범위와 허용 대상은 그대로 이어집니다.':'';
+  document.getElementById('lau-prog').style.display='none';document.getElementById('lau-bar').style.width='0';
+  document.getElementById('lau-ok').disabled=false;document.getElementById('lau-cancel').disabled=false;
+  document.getElementById('modal-la-upload').classList.add('open');
+}
+function laUploadPicked(){
+  const f=document.getElementById('lau-file').files[0],n=document.getElementById('lau-name');
+  if(f&&!n.value.trim())n.value=f.name.replace(/\.[^.]+$/,'');
+}
+function laPut(url,file,contentType,onProgress){
+  return new Promise((resolve,reject)=>{
+    const x=new XMLHttpRequest();x.open('PUT',url);x.setRequestHeader('Content-Type',contentType);
+    x.upload.onprogress=e=>{if(e.lengthComputable)onProgress(e.loaded/e.total);};
+    x.onload=()=>x.status>=200&&x.status<300?resolve():reject(new Error('업로드에 실패했습니다. ('+x.status+')'));
+    x.onerror=()=>reject(new Error('업로드에 실패했습니다. 네트워크와 저장소(R2)의 접속 허용(CORS) 설정을 확인해 주세요.'));
+    x.send(file);
+  });
+}
+async function laUploadStart(){
+  const f=document.getElementById('lau-file').files[0],title=document.getElementById('lau-name').value.trim(),rep=LA.up&&LA.up.replace;
+  if(!f){showToast('파일을 선택해 주세요.','error');return;}
+  if(!title){showToast('제목을 입력해 주세요.','error');return;}
+  if(f.size>100*1024*1024){showToast('파일은 100MB 이하만 올릴 수 있습니다.','error');return;}
+  const ok=document.getElementById('lau-ok'),cancel=document.getElementById('lau-cancel'),prog=document.getElementById('lau-prog'),bar=document.getElementById('lau-bar');
+  ok.disabled=true;cancel.disabled=true;prog.style.display='block';bar.style.width='2%';
+  try{
+    const u=await libApi('library-upload-url',{fileName:f.name,size:f.size});
+    await laPut(u.uploadUrl,f,u.contentType,p=>{bar.style.width=Math.max(2,Math.round(p*96))+'%';});
+    bar.style.width='98%';
+    const body={action:'doc.register',r2Key:u.r2Key,title:title};
+    let vis='inherit';
+    if(rep)body.replaceDocId=rep.id;
+    else{body.categoryId=document.getElementById('lau-cat').value;vis=(document.querySelector('input[name="lau-vis"]:checked')||{}).value||'inherit';body.visibility=vis;}
+    const r=await libApi('library-admin',body);
+    bar.style.width='100%';closeModal('modal-la-upload');
+    showToast(rep?'새 버전을 올렸습니다.':'자료를 올렸습니다.','success');
+    await laReload();
+    if(!rep&&vis==='restricted')laAccess('doc',r.doc.id);
+  }catch(e){showToast(e.message,'error');ok.disabled=false;cancel.disabled=false;prog.style.display='none';}
+}
+
+/* ── 공개 범위 + 허용 대상 ── */
+function laAccess(type,id){
+  const item=type==='category'?laCat(id):laDoc(id);if(!item)return;
+  const perms=LA.data.permissions.filter(p=>p.target_type===type&&(type==='category'?p.category_id:p.doc_id)===id);
+  const has=new Set(perms.map(p=>p.subject_type+':'+(p.subject_type==='group'?p.group_id:p.subject_type==='library_group'?p.library_group_id:p.user_id)));
+  LA.acc={type:type,id:id};
+  document.getElementById('laa-title').textContent=(type==='category'?'분류':'자료')+' 공개 범위';
+  document.getElementById('laa-sub').textContent=(type==='category'?laPathLabel(id):item.title)+(type==='category'&&item.level===1?'':'');
+  const inheritLbl=type==='category'?(item.level===1?'기본값 (전체 공개)':'상위 분류의 설정을 따름'):'분류의 설정을 따름';
+  document.getElementById('laa-vis').innerHTML=[['inherit',inheritLbl],['all','로그인한 모든 사용자에게 공개'],['restricted','아래에서 지정한 사람만 (관리자는 항상 볼 수 있음)']]
+    .map(o=>'<label><input type="radio" name="laa-v" value="'+o[0]+'"'+(item.visibility===o[0]?' checked':'')+' onchange="laaToggle()"> '+o[1]+'</label>').join('');
+  const row=(t,i,label)=>'<label data-q="'+libEsc(label.toLowerCase())+'"><input type="checkbox" data-t="'+t+'" data-i="'+libEsc(i)+'"'+(has.has(t+':'+i)?' checked':'')+'> '+libEsc(label)+'</label>';
+  document.getElementById('laa-base').innerHTML=LA.data.baseGroups.length?LA.data.baseGroups.map(g=>row('group',g.id,g.name)).join(''):'<div class="la-empty">기존 그룹이 없습니다.</div>';
+  document.getElementById('laa-lib').innerHTML=LA.data.groups.length?LA.data.groups.map(g=>row('library_group',g.id,g.name)).join(''):'<div class="la-empty">자료실 전용 그룹이 없습니다. 「자료실 그룹」 탭에서 만들 수 있습니다.</div>';
+  document.getElementById('laa-users').innerHTML=LA.data.users.map(u=>row('user',u.id,u.name+' ('+u.id+')'+(u.dept?' · '+u.dept:''))).join('');
+  document.getElementById('laa-q').value='';laaToggle();
+  document.getElementById('modal-la-access').classList.add('open');
+}
+function laaToggle(){const v=(document.querySelector('input[name="laa-v"]:checked')||{}).value;document.getElementById('laa-subjects').style.display=v==='restricted'?'':'none';}
+function laaFilter(){const q=document.getElementById('laa-q').value.trim().toLowerCase();document.querySelectorAll('#laa-users label').forEach(l=>{l.style.display=!q||l.dataset.q.includes(q)?'':'none';});}
+async function laAccessSave(){
+  const a=LA.acc;if(!a)return;
+  const v=(document.querySelector('input[name="laa-v"]:checked')||{}).value||'inherit';
+  const subjects=[...document.querySelectorAll('#laa-subjects input:checked')].map(i=>({type:i.dataset.t,id:i.dataset.i}));
+  if(v==='restricted'&&!subjects.length&&!confirm('허용 대상이 한 명도 지정되지 않았습니다.\n이 상태로 저장하면 관리자를 제외한 아무도 볼 수 없습니다. 저장할까요?'))return;
+  const r=await laAct('access.set',{targetType:a.type,targetId:a.id,visibility:v,subjects:v==='restricted'?subjects:undefined},'공개 범위를 저장했습니다.');
+  if(r)closeModal('modal-la-access');
+}
+
+/* ── 자료실 전용 그룹 ── */
+function laDrawGroups(){
+  const cnt={};LA.data.members.forEach(m=>{cnt[m.group_id]=(cnt[m.group_id]||0)+1;});
+  let h='<div class="la-bar"><button type="button" class="btn btn-primary btn-sm" onclick="laGroupAdd()">＋ 그룹 만들기</button></div>'
+    +'<p class="la-note">자료실 전용 그룹은 챗봇의 제품군 권한과 무관합니다. 기존 그룹(설치법인·스토어·지국 등)은 「🔒 공개범위」에서 그대로 선택할 수 있습니다.</p>';
+  h+=LA.data.groups.length?'<div class="la-cat">'+LA.data.groups.map(g=>'<div class="la-doc"><div class="tx"><div class="tt">👥 '+libEsc(g.name)+'</div><div class="mt">구성원 '+(cnt[g.id]||0)+'명'+(g.description?' · '+libEsc(g.description):'')+'</div></div><div class="la-acts"><button type="button" class="btn btn-ghost" onclick="laMembers(\''+g.id+'\')">구성원</button><button type="button" class="btn btn-ghost" onclick="laGroupRename(\''+g.id+'\')">이름</button><button type="button" class="btn btn-danger" onclick="laGroupDel(\''+g.id+'\')">삭제</button></div></div>').join('')+'</div>':'<div class="lib-empty">아직 자료실 전용 그룹이 없습니다.</div>';
+  document.getElementById('la-body').innerHTML=h;
+}
+async function laGroupAdd(){const n=await laAskText('자료실 그룹 만들기','그룹 이름','');if(n)await laAct('group.create',{name:n},'그룹을 만들었습니다.');}
+async function laGroupRename(id){const g=LA.data.groups.find(x=>x.id===id);const n=await laAskText('그룹 이름 수정','그룹 이름',g.name);if(n&&n!==g.name)await laAct('group.update',{id:id,name:n},'이름을 바꿨습니다.');}
+async function laGroupDel(id){
+  const g=LA.data.groups.find(x=>x.id===id),used=LA.data.permissions.filter(p=>p.library_group_id===id).length;
+  if(!confirm('"'+g.name+'" 그룹을 삭제할까요?'+(used?'\n이 그룹을 허용 대상으로 지정한 항목 '+used+'곳에서 지정이 함께 사라집니다.':'')))return;
+  await laAct('group.delete',{id:id},'그룹을 삭제했습니다.');
+}
+function laMembers(gid){
+  const g=LA.data.groups.find(x=>x.id===gid);LA.mem={id:gid};
+  const have=new Set(LA.data.members.filter(m=>m.group_id===gid).map(m=>m.user_id));
+  document.getElementById('lam-title').textContent='구성원 · '+g.name;
+  document.getElementById('lam-list').innerHTML=LA.data.users.map(u=>{const t=u.name+' ('+u.id+')'+(u.dept?' · '+u.dept:'');return '<label data-q="'+libEsc(t.toLowerCase())+'"><input type="checkbox" data-u="'+libEsc(u.id)+'"'+(have.has(u.id)?' checked':'')+' onchange="lamCount()"> '+libEsc(t)+'</label>';}).join('');
+  document.getElementById('lam-q').value='';lamCount();
+  document.getElementById('modal-la-members').classList.add('open');
+}
+function lamFilter(){const q=document.getElementById('lam-q').value.trim().toLowerCase();document.querySelectorAll('#lam-list label').forEach(l=>{l.style.display=!q||l.dataset.q.includes(q)?'':'none';});}
+function lamAll(on){document.querySelectorAll('#lam-list label').forEach(l=>{if(l.style.display!=='none')l.querySelector('input').checked=on;});lamCount();}
+function lamCount(){document.getElementById('lam-count').textContent='선택 '+document.querySelectorAll('#lam-list input:checked').length+'명';}
+async function lamSave(){
+  if(!LA.mem)return;
+  const ids=[...document.querySelectorAll('#lam-list input:checked')].map(i=>i.dataset.u);
+  const r=await laAct('group.setMembers',{groupId:LA.mem.id,userIds:ids},'구성원을 저장했습니다.');
+  if(r)closeModal('modal-la-members');
+}
+
+/* ── 열람 기록 ── */
+async function laDrawLogs(){
+  const body=document.getElementById('la-body'),PAGE=50;
+  const docs=LA.data.docs.slice().sort((a,b)=>String(a.title).localeCompare(String(b.title),'ko',{numeric:true}));
+  body.innerHTML='<div class="la-bar"><select class="form-input" style="max-width:320px;" onchange="LA.logDoc=this.value;LA.logPage=0;laDrawLogs()"><option value="">모든 자료</option>'+docs.map(d=>'<option value="'+d.id+'"'+(d.id===LA.logDoc?' selected':'')+'>'+libEsc(d.title)+(d.is_latest?'':' (이전 버전 v'+d.version+')')+'</option>').join('')+'</select></div><div id="la-logs"><div class="lib-msg">불러오는 중...</div></div>';
+  try{
+    const r=await libApi('library-admin',{action:'logs',docId:LA.logDoc||undefined,limit:PAGE,offset:LA.logPage*PAGE});
+    const pages=Math.max(1,Math.ceil(r.total/PAGE));
+    document.getElementById('la-logs').innerHTML=r.logs.length
+      ?'<div style="overflow-x:auto;"><table class="la-table"><thead><tr><th>열람 시각</th><th>사용자</th><th>자료</th></tr></thead><tbody>'+r.logs.map(l=>'<tr><td>'+libEsc(new Date(l.viewed_at).toLocaleString('ko-KR',{hour12:false}))+'</td><td>'+libEsc(l.user_name||'')+(l.user_id?' ('+libEsc(l.user_id)+')':' (삭제된 사용자)')+'</td><td>'+libEsc(l.doc_title||'')+(l.doc_id?'':' (삭제된 자료)')+'</td></tr>').join('')+'</tbody></table></div>'
+        +'<div class="la-bar" style="margin-top:12px;justify-content:center;"><button type="button" class="btn btn-ghost btn-sm" '+(LA.logPage<=0?'disabled ':'')+'onclick="LA.logPage--;laDrawLogs()">‹ 이전</button><span class="la-note" style="margin:0;">'+(LA.logPage+1)+' / '+pages+' · 총 '+r.total+'건</span><button type="button" class="btn btn-ghost btn-sm" '+(LA.logPage>=pages-1?'disabled ':'')+'onclick="LA.logPage++;laDrawLogs()">다음 ›</button></div>'
+      :'<div class="lib-empty">열람 기록이 없습니다.</div>';
+  }catch(e){document.getElementById('la-logs').innerHTML='<div class="lib-msg">'+libEsc(e.message)+'</div>';}
+}
+
+/* ── 대시보드 에너지바용 ── */
+async function fetchLibUsage(){
+  try{if(libLoginP)await libLoginP;if(!libToken)return null;return await libApi('library-admin',{action:'usage'});}catch(e){return null;}
 }
 
 /* UTILS */

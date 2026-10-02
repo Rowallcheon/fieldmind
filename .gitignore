@@ -1,0 +1,4 @@
+node_modules/
+tests/library/out/
+tests/library/sample.pdf
+tests/library/sample.png

@@ -1,0 +1,6 @@
+{
+  "name": "proguide-library-tests",
+  "private": true,
+  "description": "원본 자료실 통합 테스트 도구 (배포되지 않음)",
+  "dependencies": { "pdfjs-dist": "3.11.174", "pg": "^8" }
+}

@@ -59,6 +59,12 @@ const actions = {
     return { categories, docs, groups, members, permissions, users, baseGroups, usage: { usedBytes, limitBytes: R2_FREE_BYTES, docCount: docs.length } };
   },
 
+  /* 파일 저장공간 사용량만 가볍게 조회 (대시보드 에너지바용) */
+  async usage({ db }) {
+    const rows = await db.selectAll('library_docs', { select: 'file_size', order: 'id' });
+    return { usedBytes: rows.reduce((a, d) => a + Number(d.file_size || 0), 0), limitBytes: R2_FREE_BYTES, docCount: rows.length };
+  },
+
   /* ── 분류 ── */
   async 'category.create'({ db, body }) {
     const name = str(body.name, 100, '분류 이름');

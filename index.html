@@ -141,6 +141,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .send-btn:active{transform:scale(.95);}
 .send-btn:disabled{opacity:.3;cursor:not-allowed;}
 .chat-hint-txt{font-size:11px;color:var(--text3);margin-top:6px;text-align:center;}
+.chat-hint-txt:empty{display:none;}
 
 /* ── 마이페이지 ── */
 #screen-mypage{background:var(--bg);}
@@ -337,6 +338,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dl-doc .n{font-size:11px;color:var(--text3);flex:none;}
 .dl-all{font-weight:700;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:2px;}
 .dl-empty{font-size:12px;color:var(--text3);padding:6px 0;}
+
+/* 관리자 미리보기: 상단 바를 단순화(사용자용 배지/아바타/문의 버튼 숨김) */
+.topnav{gap:10px;}
+.nav-logo{flex-shrink:0;}
+.nav-right{min-width:0;}
+.nav-avatar{flex:none;}
+@media(max-width:420px){ #screen-chat .nav-avatar{display:none;} }
+@media(max-width:380px){
+  .topnav{padding:0 10px;gap:6px;}
+  .nav-logo{font-size:14px;gap:6px;}
+  .nav-logo-icon{width:26px;height:26px;}
+  .nav-btn{padding:5px 7px;}
+}
+@media(max-width:340px){ .nav-logo .wm5{display:none;} }
+#screen-chat.admin-preview .nav-badge,
+#screen-chat.admin-preview .nav-avatar,
+#screen-chat.admin-preview #inq-nav-btn{display:none;}
 </style>
 </head>
 <body>
@@ -385,7 +403,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <!-- 핸즈프리 배너 -->
   <div class="hf-banner" id="hf-banner" style="max-width:720px;width:100%;margin:8px auto 0;padding:11px 16px;">
     <div class="hf-dot" id="hf-dot"></div>
-    <div><div class="hf-txt" id="hf-txt">🚗 핸즈프리 모드 활성화</div><div class="hf-sub" id="hf-sub">말씀하세요...</div></div>
+    <div><div class="hf-txt" id="hf-txt">🎙️ AI와 대화 중</div><div class="hf-sub" id="hf-sub">말씀하세요...</div></div>
     <button class="hf-close" onclick="stopHandsfree()">종료</button>
   </div>
   <div class="chat-body" id="chat-body">
@@ -405,11 +423,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap;gap:4px;">
         <div class="voice-status-bar" id="voice-status"></div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <button id="tts-toggle-btn" onclick="toggleTTS()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;color:var(--text3);cursor:pointer;font-family:var(--font);">🔊 읽기 OFF</button>
-          <button id="hf-toggle-btn" onclick="toggleHandsfree()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;color:var(--text3);cursor:pointer;font-family:var(--font);" disabled>🚗 핸즈프리</button>
+          <button id="tts-toggle-btn" onclick="toggleTTS()" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--text3);cursor:pointer;font-family:var(--font);">🔇 읽기 모드</button>
+          <button id="hf-toggle-btn" onclick="toggleHandsfree()" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--text3);cursor:pointer;font-family:var(--font);" disabled>🎙️ AI와 대화하기</button>
         </div>
       </div>
-      <div class="chat-hint-txt" id="chat-hint-txt">🌀 Gemini 2.5 Flash-Lite — Google AI 엔진</div>
+      <div class="chat-hint-txt" id="chat-hint-txt"></div>
     </div>
   </div>
   <div class="bnav"><button class="bnav-btn active" onclick="switchTab('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>챗봇</button><button class="bnav-btn" onclick="switchTab('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>대화이력</button><button class="bnav-btn" onclick="switchTab('notice')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>공지</button><button class="bnav-btn" onclick="switchTab('mypage')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이페이지</button></div>
@@ -1355,8 +1373,8 @@ function toggleMic(){
 function toggleTTS(){
   ttsEnabled=!ttsEnabled;
   const btn=document.getElementById('tts-toggle-btn');
-  if(ttsEnabled){btn.textContent='🔊 읽기 ON';btn.style.borderColor='var(--info)';btn.style.color='var(--info)';showToast('🔊 AI 답변 자동 읽기 켜짐','success');}
-  else{btn.textContent='🔊 읽기 OFF';btn.style.borderColor='var(--border)';btn.style.color='var(--text3)';stopTTS();showToast('🔇 읽기 꺼짐');}
+  if(ttsEnabled){btn.textContent='🔊 읽기 모드';btn.style.borderColor='var(--info)';btn.style.color='var(--info)';showToast('🔊 읽기 모드 켜짐 · AI 답변을 소리로 읽어줍니다','success');}
+  else{btn.textContent='🔇 읽기 모드';btn.style.borderColor='var(--border)';btn.style.color='var(--text3)';stopTTS();showToast('🔇 읽기 모드 꺼짐');}
 }
 function speakText(text){
   if(!window.speechSynthesis)return;
@@ -1404,14 +1422,14 @@ function speakText(text){
 function stopTTS(){if(window.speechSynthesis)window.speechSynthesis.cancel();isBotSpeaking=false;currentUtterance=null;}
 function toggleHandsfree(){
   if(handsfreeMode){stopHandsfree();return;}
-  if(!recognition){showToast('Chrome 브라우저에서만 핸즈프리 모드 가능합니다.','error');return;}
+  if(!recognition){showToast('이 브라우저에서는 AI와 대화하기를 사용할 수 없습니다. (Chrome/Safari 권장)','error');return;}
   handsfreeMode=true; ttsEnabled=true;
   const tBtn=document.getElementById('tts-toggle-btn');
-  tBtn.textContent='🔊 읽기 ON';tBtn.style.borderColor='var(--info)';tBtn.style.color='var(--info)';
+  tBtn.textContent='🔊 읽기 모드';tBtn.style.borderColor='var(--info)';tBtn.style.color='var(--info)';
   const hBtn=document.getElementById('hf-toggle-btn');
-  hBtn.textContent='🚗 핸즈프리 ON';hBtn.style.borderColor='var(--danger)';hBtn.style.color='var(--danger)';
+  hBtn.textContent='⏹ 대화 종료';hBtn.style.borderColor='var(--danger)';hBtn.style.color='var(--danger)';
   document.getElementById('hf-banner').classList.add('active');
-  showToast('🚗 핸즈프리 모드 시작!','success');
+  showToast('🎙️ AI와 대화를 시작합니다. 말씀하세요!','success');
   startListeningHF();
 }
 function stopHandsfree(){
@@ -1420,7 +1438,7 @@ function stopHandsfree(){
   stopTTS();
   document.getElementById('hf-banner').classList.remove('active');
   const hBtn=document.getElementById('hf-toggle-btn');
-  hBtn.textContent='🚗 핸즈프리';hBtn.style.borderColor='var(--border)';hBtn.style.color='var(--text3)';
+  hBtn.textContent='🎙️ AI와 대화하기';hBtn.style.borderColor='var(--border)';hBtn.style.color='var(--text3)';
   setVoiceStatus('');
 }
 function startListeningHF(){
@@ -1478,7 +1496,13 @@ async function doLogin(){
     checkUserGroupAccess();
   }
 }
+/* 관리자 미리보기 상태 해제 (돌아가기 버튼 제거) */
+function leaveAdminPreview(){
+  document.getElementById('back-to-admin-btn')?.remove();
+  document.getElementById('screen-chat')?.classList.remove('admin-preview');
+}
 function doLogout(){
+  leaveAdminPreview();
   stopHandsfree();stopTTS();currentUser=null;selProduct=null;selModel=null;chatHistory=[];
   // 저장 옵션이 꺼진 경우 입력창 초기화, 켜진 경우 유지
   const remember=localStorage.getItem('remember');
@@ -1566,14 +1590,15 @@ function goUserPreview(){
     backBtn.id='back-to-admin-btn';
     backBtn.className='nav-btn';
     backBtn.style.cssText='border-color:var(--accent);color:var(--accent);font-weight:700;';
-    backBtn.textContent='← 관리자로';
+    backBtn.textContent='← 관리자';
     backBtn.onclick=()=>{
       showScreen('admin');
-      document.getElementById('back-to-admin-btn').remove();
+      leaveAdminPreview();
       showPanel('dashboard');
     };
     nav.prepend(backBtn);
   }
+  document.getElementById('screen-chat').classList.add('admin-preview');
   showScreen('chat');
 }
 
@@ -1680,7 +1705,7 @@ function resetChatState(){
   document.getElementById('send-btn').disabled=true;
   document.getElementById('mic-btn').disabled=true;
   document.getElementById('hf-toggle-btn').disabled=true;
-  document.getElementById('chat-hint-txt').textContent='🌀 Gemini 2.5 Flash-Lite — Google AI 엔진';
+  document.getElementById('chat-hint-txt').textContent='';
   document.getElementById('chat-body').innerHTML=`<div class="chat-prompt"><div class="chat-prompt-icon">⬆️</div><h2>제품군과 모델을 먼저 선택하세요</h2><p style="font-size:13px;color:var(--text2);margin-top:6px;">위 드롭다운에서 선택 후 <strong style="color:var(--accent);">적용</strong>을 누르면 챗봇이 활성화됩니다.</p></div>`;
 }
 function renderWelcome(){

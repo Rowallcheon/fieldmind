@@ -355,6 +355,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 #screen-chat.admin-preview .nav-badge,
 #screen-chat.admin-preview .nav-avatar,
 #screen-chat.admin-preview #inq-nav-btn{display:none;}
+
+/* 무료 사용량 에너지바 */
+.usage-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px 16px;margin-bottom:18px;}
+.eb-tag{font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-dim);border-radius:10px;padding:2px 7px;margin-left:6px;vertical-align:middle;}
+.eb-row{margin-top:14px;}
+.eb-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;font-size:13px;}
+.eb-lbl{font-weight:700;}
+.eb-remain{font-weight:700;font-variant-numeric:tabular-nums;}
+.eb-remain.eb-ok{color:#1f8a3a;} .eb-remain.eb-warn{color:#b87500;} .eb-remain.eb-low{color:#d93025;}
+.eb-track{position:relative;height:18px;border-radius:9px;background:var(--bg3);border:1px solid var(--border);overflow:hidden;}
+.eb-fill{height:100%;transition:width .4s;}
+.eb-fill.eb-ok{background:linear-gradient(90deg,#2fb344,#74dc7a);}
+.eb-fill.eb-warn{background:linear-gradient(90deg,#f0a000,#ffd24d);}
+.eb-fill.eb-low{background:linear-gradient(90deg,#d93025,#ff7a6e);}
+.eb-track::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(10% - 2px),var(--bg2) calc(10% - 2px),var(--bg2) 10%);pointer-events:none;}
+.eb-foot{font-size:11px;color:var(--text3);margin-top:5px;}
 </style>
 </head>
 <body>
@@ -544,7 +560,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <div class="stat-card"><div class="stat-lbl">전체 회원</div><div class="stat-val" style="color:var(--info);" id="d-users">0</div><div class="stat-sub" id="d-users-sub"></div></div>
           <div class="stat-card"><div class="stat-lbl">제품군 / 모델</div><div class="stat-val" style="color:var(--accent);" id="d-cats">0</div><div class="stat-sub" id="d-models-sub"></div></div>
           <div class="stat-card"><div class="stat-lbl">등록 문서</div><div class="stat-val" style="color:var(--success);" id="d-docs">0</div><div class="stat-sub">텍스트 직접 입력</div></div>
-          <div class="stat-card"><div class="stat-lbl">오늘 질문</div><div class="stat-val" style="color:var(--warn);">0</div><div class="stat-sub">일 한도 14,400건</div></div>
+          <div class="stat-card"><div class="stat-lbl">오늘 질문</div><div class="stat-val" style="color:var(--warn);" id="d-today">-</div><div class="stat-sub" id="d-today-sub"></div></div>
+        </div>
+        <div class="usage-card" id="usage-card" style="display:none;">
+          <div class="sec-hdr" style="margin-bottom:0;"><div class="sec-title">🔋 무료 사용량 <span class="eb-tag">admin 전용</span></div><button class="btn btn-ghost btn-sm" onclick="renderUsage()">새로고침</button></div>
+          <div id="usage-bars"></div>
         </div>
         <div class="sec-hdr"><div class="sec-title">📦 제품군별 현황</div></div>
         <div id="d-prod-list" style="display:flex;flex-direction:column;gap:8px;"></div>
@@ -1604,6 +1624,7 @@ function goUserPreview(){
 
 async function showPanel(n){
   if(n==='apikey' && !isSuperAdmin()){ showToast('API 설정은 최고 관리자(admin)만 사용할 수 있습니다.','error'); return; }
+  if(n==='dashboard'){ renderTodayCard(); renderUsage(); }
   // 로그 패널 열 때 DB에서 최신 데이터 재로드
   if(n==='logs'){
     try {
@@ -2009,6 +2030,58 @@ function renderDash(){
       <div class="prog-wrap"><div class="prog-bar" style="width:${pct}%;"></div></div>
     </div>`;
   }).join('');
+  renderTodayCard(); renderUsage();
+}
+
+
+/* ════════ 무료 사용량 에너지바 (admin 전용) ════════ */
+const GEMINI_FREE_DAILY = {'gemini-2.5-flash-lite':1000,'gemini-2.5-flash':250};  // 무료 한도(건/일), 대시보드 안내 기준
+const DB_FREE_BYTES = 500*1024*1024;                                              // Supabase 무료 DB 500MB
+async function fetchTodayAsk(){
+  try{
+    const start=new Date(); start.setHours(0,0,0,0);
+    const r=await sb.from('chat_logs').select('id',{count:'exact',head:true}).gte('ts',start.getTime()).eq('is_ok',true);
+    return r.error ? null : (r.count||0);
+  }catch(e){ return null; }
+}
+async function fetchDbBytes(){
+  try{
+    const r=await sb.rpc('get_db_usage');
+    return (r.error||!r.data||r.data.db_bytes==null) ? null : Number(r.data.db_bytes);
+  }catch(e){ return null; }
+}
+function fmtBytes(b){ return b>=1073741824 ? (b/1073741824).toFixed(2)+'GB' : (b/1048576).toFixed(b>=104857600?0:1)+'MB'; }
+function energyBar(label,usedTxt,limitTxt,usedRatio,note){
+  const remain=Math.max(0,Math.min(1,1-usedRatio)), pct=Math.round(remain*100);
+  const lv=remain>0.5?'ok':(remain>0.2?'warn':'low');
+  return '<div class="eb-row"><div class="eb-head"><span class="eb-lbl">'+label+'</span><span class="eb-remain eb-'+lv+'">남음 '+pct+'%</span></div>'
+    +'<div class="eb-track" role="img" aria-label="'+label+' 남은 용량 '+pct+'%"><div class="eb-fill eb-'+lv+'" style="width:'+pct+'%"></div></div>'
+    +'<div class="eb-foot">'+usedTxt+' 사용 / '+limitTxt+(note?' · '+note:'')+'</div></div>';
+}
+function energyNA(label,msg){
+  return '<div class="eb-row"><div class="eb-head"><span class="eb-lbl">'+label+'</span></div><div class="eb-foot">'+msg+'</div></div>';
+}
+async function renderTodayCard(){
+  const v=document.getElementById('d-today'), sub=document.getElementById('d-today-sub');
+  if(!v) return;
+  const n=await fetchTodayAsk(), lim=GEMINI_FREE_DAILY[GEMINI_MODEL]||1000;
+  v.textContent = n===null ? '-' : n;
+  sub.textContent = '무료 일 한도 '+lim.toLocaleString()+'건';
+}
+async function renderUsage(){
+  const card=document.getElementById('usage-card'); if(!card) return;
+  if(!isSuperAdmin()){ card.style.display='none'; return; }
+  card.style.display='';
+  const box=document.getElementById('usage-bars');
+  box.innerHTML='<div class="eb-foot" style="margin-top:12px;">불러오는 중...</div>';
+  const [ask,dbBytes]=await Promise.all([fetchTodayAsk(),fetchDbBytes()]);
+  const lim=GEMINI_FREE_DAILY[GEMINI_MODEL]||1000;
+  let h='';
+  h+= ask===null ? energyNA('AI 질문 (오늘)','확인할 수 없습니다.')
+                 : energyBar('AI 질문 (오늘)', ask+'건', lim.toLocaleString()+'건', ask/lim, '질문 기록 기준 추정');
+  h+= dbBytes===null ? energyNA('데이터 저장공간','확인할 수 없습니다. (DB 사용량 조회 설정이 필요합니다)')
+                     : energyBar('데이터 저장공간', fmtBytes(dbBytes), fmtBytes(DB_FREE_BYTES), dbBytes/DB_FREE_BYTES, '회원·문서·대화 기록 포함');
+  box.innerHTML=h;
 }
 
 /* DOC TREE */

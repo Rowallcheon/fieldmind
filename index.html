@@ -338,6 +338,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dl-doc .n{font-size:11px;color:var(--text3);flex:none;}
 .dl-all{font-weight:700;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:2px;}
 .dl-empty{font-size:12px;color:var(--text3);padding:6px 0;}
+
+/* 관리자 미리보기: 상단 바를 단순화(사용자용 배지/아바타/문의 버튼 숨김) */
+.topnav{gap:10px;}
+.nav-logo{flex-shrink:0;}
+.nav-right{min-width:0;}
+.nav-avatar{flex:none;}
+@media(max-width:420px){ #screen-chat .nav-avatar{display:none;} }
+@media(max-width:380px){
+  .topnav{padding:0 10px;gap:6px;}
+  .nav-logo{font-size:14px;gap:6px;}
+  .nav-logo-icon{width:26px;height:26px;}
+  .nav-btn{padding:5px 7px;}
+}
+@media(max-width:340px){ .nav-logo .wm5{display:none;} }
+#screen-chat.admin-preview .nav-badge,
+#screen-chat.admin-preview .nav-avatar,
+#screen-chat.admin-preview #inq-nav-btn{display:none;}
 </style>
 </head>
 <body>
@@ -1479,7 +1496,13 @@ async function doLogin(){
     checkUserGroupAccess();
   }
 }
+/* 관리자 미리보기 상태 해제 (돌아가기 버튼 제거) */
+function leaveAdminPreview(){
+  document.getElementById('back-to-admin-btn')?.remove();
+  document.getElementById('screen-chat')?.classList.remove('admin-preview');
+}
 function doLogout(){
+  leaveAdminPreview();
   stopHandsfree();stopTTS();currentUser=null;selProduct=null;selModel=null;chatHistory=[];
   // 저장 옵션이 꺼진 경우 입력창 초기화, 켜진 경우 유지
   const remember=localStorage.getItem('remember');
@@ -1567,14 +1590,15 @@ function goUserPreview(){
     backBtn.id='back-to-admin-btn';
     backBtn.className='nav-btn';
     backBtn.style.cssText='border-color:var(--accent);color:var(--accent);font-weight:700;';
-    backBtn.textContent='← 관리자로';
+    backBtn.textContent='← 관리자';
     backBtn.onclick=()=>{
       showScreen('admin');
-      document.getElementById('back-to-admin-btn').remove();
+      leaveAdminPreview();
       showPanel('dashboard');
     };
     nav.prepend(backBtn);
   }
+  document.getElementById('screen-chat').classList.add('admin-preview');
   showScreen('chat');
 }
 

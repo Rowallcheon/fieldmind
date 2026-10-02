@@ -345,7 +345,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <div id="screen-login" class="screen active">
   <div class="login-card">
     <div class="login-logo"><div class="login-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div><div class="login-logo-text"><b class="wm5" aria-label="CUCKOO ProGuide">cuckoo <em>progu<i class="wm5-dot">ı</i>de</em></b></div></div>
-    <div class="form-group"><label class="form-label">아이디</label><input class="form-input" id="login-id" type="text" placeholder="아이디 입력" autocomplete="username"></div>
+    <div class="form-group"><label class="form-label">아이디</label><input class="form-input" id="login-id" type="text" placeholder="아이디 입력" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
     <div class="form-group"><label class="form-label">비밀번호</label><input class="form-input" id="login-pw" type="password" placeholder="비밀번호 입력" autocomplete="current-password"></div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
       <input type="checkbox" id="remember-me" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;">
@@ -3371,7 +3371,9 @@ async function saveMember(){
     document.getElementById('admin-avatar').textContent = newName[0];
   }
 
-  const ok=await dbUpd('users',{id:editMemberId},{name:newName,id:newId,dept:newDept,role:newRole,status:newStatus});
+  const changes={name:newName,id:newId,dept:newDept,role:newRole,status:newStatus};
+  if(newPw) changes.pw=newPw;   // 비밀번호도 DB에 저장해야 다른 기기에서 로그인됨
+  const ok=await dbUpd('users',{id:editMemberId},changes);
   if(!ok){showToast('DB 업데이트 실패','error');return;}
   editMemberId = null;
   closeModal('modal-member');

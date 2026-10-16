@@ -127,6 +127,28 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .msg-src{margin-top:10px;padding:8px 10px;background:var(--bg3);border-radius:var(--radius-sm);border-left:3px solid var(--accent);}
 .msg-src-title{font-size:10px;font-weight:700;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;}
 .msg-src-item{font-size:12px;color:var(--text2);margin-top:2px;}
+
+/* ── 문서 사진 (챗봇 답변 사진, 관리자 입력창, 확대 보기) ── */
+.chat-img{display:block;max-width:100%;width:min(100%,360px);height:auto;margin:8px 0 6px;border-radius:10px;border:1px solid var(--border);background:#f3f6fa;cursor:zoom-in;}
+#img-lb{display:none;position:fixed;inset:0;z-index:900;background:rgba(10,18,28,.92);overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y pinch-zoom;}
+#img-lb.open{display:block;}
+#img-lb img{display:block;margin:56px auto 24px;max-width:none;width:min(1000px,100%);height:auto;}
+#img-lb .lb-x{position:fixed;top:10px;right:12px;z-index:2;background:rgba(255,255,255,.16);color:#fff;border:0;border-radius:20px;padding:9px 16px;font-size:14px;font-family:inherit;cursor:pointer;}
+#img-lb .lb-cap{position:fixed;left:14px;right:96px;top:14px;z-index:2;color:#dfe8f2;font-size:13px;line-height:1.4;max-height:40px;overflow:hidden;}
+.chat-img-miss{display:block;margin:8px 0 6px;padding:14px 12px;border:1px dashed var(--border);border-radius:10px;font-size:12px;color:var(--text3);background:#f6f8fb;}
+.dimg-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 8px;}
+.dimg-bar select{font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-family:inherit;}
+.dimg-hint{font-size:11px;color:var(--text3);}
+.de{border:1px solid var(--border);border-radius:var(--radius-sm);background:#fff;padding:8px;display:flex;flex-direction:column;gap:6px;}
+.de:focus-within{border-color:var(--accent);}
+.de-text{width:100%;border:0;outline:0;resize:none;background:transparent;font-family:var(--font);font-size:13px;line-height:1.7;color:var(--text);padding:4px 6px;overflow:hidden;min-height:48px;}
+.de-img{background:#f3f7fb;border:1px solid var(--border);border-radius:10px;padding:8px;}
+.de-imgbox{position:relative;display:inline-block;max-width:100%;}
+.de-imgbox img{display:block;max-width:min(100%,420px);max-height:300px;border-radius:8px;background:#e6edf5;cursor:zoom-in;min-width:80px;min-height:48px;}
+.de-imgbox .x{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:13px;line-height:26px;padding:0;cursor:pointer;}
+.de-cap{display:block;width:100%;margin-top:7px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;font-family:var(--font);background:#fff;color:var(--text);outline:0;}
+.de-cap:focus{border-color:var(--accent);}
+.de-cap.empty{border-color:#e57373;background:#fff8f8;}
 .typing{display:flex;gap:4px;align-items:center;padding:4px 0;}
 .typing-dot{width:7px;height:7px;border-radius:50%;background:var(--info);opacity:.5;animation:tbd 1.2s infinite;}
 .typing-dot:nth-child(2){animation-delay:.2s;}
@@ -1043,20 +1065,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <!-- 내용 입력 -->
     <div class="form-group">
       <label class="form-label">문서 내용 (PDF에서 복사 후 붙여넣기)</label>
-      <textarea class="form-input" id="doc-input-content" rows="12"
-        placeholder="여기에 문서 내용을 붙여넣으세요.
-
-예시:
-■ 에러코드 목록
-E-101: 압력 과부하 → 즉시 운전 중단 후 안전밸브 점검
-E-204: 압력 센서 이상 → 기술팀 연락 (내선 2041)
-E-301: 온도 초과 → 냉각수 순환 상태 확인
-
-■ 정기 점검 항목 (월 1회)
-1. 오일 수위 확인
-2. 벨트 장력 점검
-3. 필터 청소 또는 교체"
-        style="resize:vertical;min-height:240px;font-size:13px;line-height:1.7;"></textarea>
+      <div class="dimg-bar">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('doc-img-file').click()">🖼️ 사진 넣기</button>
+        <input type="file" id="doc-img-file" accept="image/*" multiple style="display:none" onchange="docImgPick(this)">
+        <select id="doc-img-size" aria-label="사진 크기">
+          <option value="700">작게 (700px · 가장 절약)</option>
+          <option value="1000" selected>보통 (1000px · 권장)</option>
+          <option value="1600">선명 (1600px · 글자 많은 화면)</option>
+        </select>
+        <span class="dimg-hint">글 쓰는 위치에 사진이 들어갑니다 · 캡처를 복사해 붙여넣기(Ctrl+V)해도 됩니다</span>
+      </div>
+      <textarea id="doc-input-content" style="display:none" aria-hidden="true" tabindex="-1"></textarea>
+      <div id="doc-editor" class="de"></div>
       <div style="font-size:11px;color:var(--text3);margin-top:5px;display:flex;justify-content:space-between;">
         <span>입력된 글자 수: <span id="char-count">0</span>자</span>
         <span>권장: 500자 이상</span>
@@ -1329,6 +1349,7 @@ E-301: 온도 초과 → 냉각수 순환 상태 확인
 
 <div class="toast" id="toast"></div>
 
+<div id="img-lb" onclick="closeImgLb()" aria-hidden="true"><div class="lb-cap" id="img-lb-cap"></div><button type="button" class="lb-x" onclick="closeImgLb()">닫기 ✕</button><img id="img-lb-img" alt=""></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ════════ CONFIG ════════ */
@@ -1565,7 +1586,7 @@ function speakText(text){
   if(!window.speechSynthesis)return;
   stopTTS();
   // 마크다운 기호 제거 + 읽기 자연스럽게 보정
-  const clean=text
+  const clean=stripImgMarkers(text)
     .replace(/\*\*(.+?)\*\*/g,'$1')   // **볼드** → 텍스트만
     .replace(/\*(.+?)\*/g,'$1')          // *이탤릭* → 텍스트만
     .replace(/^#{1,3}\s+/gm,'')           // # 헤더 제거
@@ -1962,6 +1983,7 @@ async function sendMsg(){
 8. 다른 모델에 대한 질문이면 해당 모델 선택을 안내하세요.
 9. 답변의 맨 마지막 줄에, 답변을 작성하면서 내용을 참고한 문서를 하나도 빠뜨리지 말고 전부 번호로 아래 형식에 출력하세요(대표 문서 1개만 쓰지 말 것). 질문과 무관한 문서는 넣지 마세요. 근거로 쓴 문서가 없으면 [[참조: 없음]]으로 쓰세요. 이 줄은 시스템이 처리하므로 다른 설명을 덧붙이지 마세요.
    형식: [[참조: 1, 3]]   (문서 번호는 "=== 문서 N/전체 ===" 의 N)
+10. 문서 내용에 [[그림:파일명|설명]] 표시가 있으면 그 자리에 화면 캡처 사진이 들어 있다는 뜻입니다(사진 자체는 볼 수 없으니 설명 글을 근거로 판단하세요). 답변에서 어떤 단계나 화면을 설명할 때 그와 관련된 사진이 있으면, 그 설명 바로 다음 줄에 [[그림:파일명]] 만 그대로 출력하세요. 파일명은 한 글자도 바꾸지 말고, 설명은 덧붙이지 마세요. 질문과 관계없는 사진은 넣지 말고, 사진은 한 번의 답변에 최대 6장까지만 넣으세요. 사진 표시는 답변 본문에만 쓰고 [[참조: ...]] 줄에는 쓰지 마세요.
 
 [${selModel.name} 등록 문서 내용]
 ${docCtx}`;
@@ -2044,9 +2066,245 @@ ${docCtx}`;
   }
 }
 
+
+/* ════════ 문서 사진 (Supabase 비공개 저장소 'doc-images') ════════
+   문서 글 속에 [[그림:파일명|설명]] 형태로 자리표를 둡니다. AI는 설명 글만 읽고,
+   답변에 [[그림:파일명]]을 넣으면 화면에서 사진으로 바뀝니다.
+   저장소는 비공개라서, 로그인한 사용자에게만 서버 함수(/api/doc-image-url)가 5분짜리 임시 주소를 줍니다. */
+const DOC_IMG_BUCKET='doc-images';
+const DOC_IMG_RE=/\[\[그림:([a-z0-9]{8,24}\.(?:webp|jpg))(?:\|([^\]\n]*))?\]\]/g;
+const DOC_IMG_PLACEHOLDER='설명 입력';
+const docImgCache=new Map();          // 파일명 → {url, exp}
+async function docImgResolve(names){   // 파일명 목록 → {파일명: 임시 주소|null}
+  const now=Date.now(), out={}, need=[];
+  names.forEach(n=>{ const c=docImgCache.get(n); if(c&&c.exp>now) out[n]=c.url; else if(!need.includes(n)) need.push(n); });
+  for(let i=0;i<need.length;i+=20){
+    const part=need.slice(i,i+20);
+    try{
+      if(libLoginP) await libLoginP;
+      const r=await libApi('doc-image-url',{names:part});
+      part.forEach(n=>{ const u=(r.urls||{})[n]||null; out[n]=u; if(u) docImgCache.set(n,{url:u,exp:now+((r.expiresIn||300)-45)*1000}); });
+    }catch(e){ part.forEach(n=>{ out[n]=null; }); docImgFail.lastError=e; }
+  }
+  return out;
+}
+async function hydrateDocImgs(root){   // root 안의 사진 자리(img[data-doc-img])에 임시 주소를 채움
+  const imgs=Array.from((root||document).querySelectorAll('img[data-doc-img]:not([src])'));
+  if(!imgs.length) return;
+  const map=await docImgResolve(imgs.map(i=>i.dataset.docImg));
+  imgs.forEach(i=>{ const u=map[i.dataset.docImg]; if(u) i.src=u; else docImgFail(i); });
+}
+function docImgFail(img){              // 사진을 못 불러왔을 때: 깨진 그림 대신 안내
+  if(!img||!img.parentNode) return;
+  if(img.dataset.retried!=='1' && img.dataset.docImg && img.getAttribute('src')){   // 만료된 주소일 수 있으니 한 번만 새로 받아서 재시도
+    img.dataset.retried='1'; docImgCache.delete(img.dataset.docImg); img.removeAttribute('src'); hydrateDocImgs(img.parentNode); return;
+  }
+  const sp=document.createElement('span'); sp.className='chat-img-miss';
+  sp.textContent='🖼️ 사진을 불러올 수 없습니다'+((docImgFail.lastError&&docImgFail.lastError.status===401)?' (다시 로그인해 주세요)':'');
+  img.replaceWith(sp);
+}
+function docImgList(text){            // 글 속 사진 자리표 목록 [{name, cap, raw}]
+  const out=[]; let m; const re=new RegExp(DOC_IMG_RE.source,'g');
+  while((m=re.exec(text||''))){ out.push({name:m[1],cap:(m[2]||'').trim(),raw:m[0]}); }
+  return out;
+}
+function docTextPlain(text){          // 목록·미리보기용: 자리표를 🖼️로
+  return (text||'').replace(DOC_IMG_RE,'🖼️');
+}
+// 형식이 틀리거나 끊긴 [[그림:...]] 까지 모두 제거 (음성 읽기·남은 글자 정리용)
+function stripImgMarkers(text){ return (text||'').replace(/\[\[\s*그림\s*[:：][^\]]*\]\]/g,'').replace(/\[\[\s*그림[^\]]*$/,''); }
+
+async function openImgLb(name,cap){
+  const lb=document.getElementById('img-lb'); if(!lb||!/^[a-z0-9]{8,24}\.(webp|jpg)$/.test(name||'')) return;
+  const im=document.getElementById('img-lb-img');
+  im.removeAttribute('src'); document.getElementById('img-lb-cap').textContent=cap||'';
+  lb.classList.add('open'); lb.scrollTop=0; lb.setAttribute('aria-hidden','false');
+  const u=(await docImgResolve([name]))[name];
+  if(!lb.classList.contains('open')) return;            // 그 사이 닫았으면 중단
+  if(u) im.src=u; else { document.getElementById('img-lb-cap').textContent='사진을 불러올 수 없습니다.'; }
+}
+function closeImgLb(){
+  const lb=document.getElementById('img-lb'); if(!lb) return;
+  lb.classList.remove('open'); lb.setAttribute('aria-hidden','true');
+  document.getElementById('img-lb-img').removeAttribute('src');
+}
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeImgLb(); });
+
+/* 사진 줄이기: 가로 maxW 이하로 줄이고 WebP(안 되는 브라우저는 JPEG)로 저장 */
+let _webpOk=null;
+function canWebp(){
+  if(_webpOk===null){
+    try{ _webpOk=document.createElement('canvas').toDataURL('image/webp').indexOf('data:image/webp')===0; }catch(e){ _webpOk=false; }
+  }
+  return _webpOk;
+}
+async function compressImage(file,maxW,quality){
+  let bmp;
+  try{ bmp=await createImageBitmap(file); }
+  catch(e){ throw new Error('이 사진 형식은 읽을 수 없습니다. (PNG, JPG, WebP 사용)'); }
+  const sc=Math.min(1,maxW/bmp.width);
+  const w=Math.max(1,Math.round(bmp.width*sc)), h=Math.max(1,Math.round(bmp.height*sc));
+  const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  const cx=cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,w,h); cx.drawImage(bmp,0,0,w,h);
+  if(bmp.close) bmp.close();
+  const type=canWebp()?'image/webp':'image/jpeg', ext=canWebp()?'webp':'jpg';
+  const blob=await new Promise(r=>cv.toBlob(r,type,quality));
+  if(!blob) throw new Error('사진을 줄이지 못했습니다.');
+  return {blob,ext,w,h};
+}
+/* ── 문서 입력 편집기: 글 칸과 사진 칸이 번갈아 나옵니다 ──
+   저장 형식은 그대로(글 + [[그림:파일명|설명]]). 화면에는 코드 대신 사진 미리보기와 설명 칸만 보입니다.
+   숨겨진 #doc-input-content 에 항상 저장 형식의 글이 들어 있어, 저장·AI 전달 코드는 이 값을 읽습니다. */
+const DOC_EDITOR_PLACEHOLDER='여기에 문서 내용을 붙여넣으세요.\n\n예시:\n■ 에러코드 목록\nE-101: 압력 과부하 → 즉시 운전 중단 후 안전밸브 점검\nE-204: 압력 센서 이상 → 기술팀 연락 (내선 2041)\n\n■ 정기 점검 항목 (월 1회)\n1. 오일 수위 확인\n2. 벨트 장력 점검\n\n사진은 위의 [사진 넣기] 버튼으로, 글 쓰던 위치에 넣을 수 있습니다.';
+const DE={segs:[{t:'text',v:''}],focusIdx:0,pos:0,touched:false};   // segs: {t:'text',v} | {t:'img',name,cap}
+const docLocalPreview={};                                          // 방금 올린 사진은 내 파일로 바로 미리보기
+function deSanCap(x){ return String(x||'').replace(/[\[\]|\r\n]/g,' ').replace(/\s+/g,' ').trim(); }
+function deSerialize(){
+  const parts=[];
+  DE.segs.forEach(s=>{
+    if(s.t==='img') parts.push('[[그림:'+s.name+'|'+deSanCap(s.cap)+']]');
+    else{ const v=s.v.replace(/^\n+|\n+$/g,''); if(v.trim()!=='') parts.push(v); }
+  });
+  return parts.join('\n');
+}
+function deParse(text){
+  const segs=[], re=new RegExp(DOC_IMG_RE.source,'g'); let last=0,m; text=text||'';
+  const push=v=>segs.push({t:'text',v:v});
+  while((m=re.exec(text))){
+    push(text.slice(last,m.index).replace(/^\n/,'').replace(/\n$/,''));
+    const cap=(m[2]||'').trim();
+    segs.push({t:'img',name:m[1],cap:cap===DOC_IMG_PLACEHOLDER?'':cap});
+    last=m.index+m[0].length;
+  }
+  push(text.slice(last).replace(/^\n/,''));
+  return segs;
+}
+function deSync(){
+  document.getElementById('doc-input-content').value=deSerialize();
+  document.getElementById('char-count').textContent=DE.segs.reduce((a,x)=>a+(x.t==='text'?x.v.length:0),0);
+}
+function setDocContent(text){ DE.segs=deParse(text); DE.focusIdx=0; DE.pos=0; DE.touched=false; deRender(); deSync(); }
+function deGrow(ta){ ta.style.height='auto'; ta.style.height=Math.max(ta.scrollHeight,+ta.dataset.min||0)+'px'; }
+function deRender(focus){
+  const box=document.getElementById('doc-editor'); if(!box) return;
+  const only=DE.segs.length===1;
+  box.innerHTML='';
+  DE.segs.forEach((sg,i)=>{
+    if(sg.t==='text'){
+      const ta=document.createElement('textarea'); ta.className='de-text'; ta.value=sg.v; ta.rows=1;
+      ta.dataset.i=i; ta.dataset.min=only?240:40;
+      if(only) ta.placeholder=DOC_EDITOR_PLACEHOLDER;
+      const mark=()=>{ DE.focusIdx=i; DE.pos=ta.selectionStart; DE.touched=true; };
+      ta.addEventListener('input',()=>{ sg.v=ta.value; mark(); deGrow(ta); deSync(); });
+      ['focus','click','keyup','select'].forEach(ev=>ta.addEventListener(ev,mark));
+      box.appendChild(ta);
+    }else{
+      const d=document.createElement('div'); d.className='de-img';
+      const ib=document.createElement('div'); ib.className='de-imgbox';
+      const im=document.createElement('img'); im.alt='문서 사진';
+      im.addEventListener('click',()=>openImgLb(sg.name,sg.cap));
+      if(docLocalPreview[sg.name]) im.src=docLocalPreview[sg.name];
+      else{ im.dataset.docImg=sg.name; im.setAttribute('onerror','docImgFail(this)'); }
+      const x=document.createElement('button'); x.type='button'; x.className='x'; x.title='이 사진 빼기'; x.textContent='✕';
+      x.addEventListener('click',()=>deRemoveImg(i));
+      ib.appendChild(im); ib.appendChild(x);
+      const cap=document.createElement('input'); cap.type='text'; cap.className='de-cap'+(sg.cap?'':' empty'); cap.maxLength=120;
+      cap.placeholder='사진 설명 (예: 결재 메뉴 위치 — 화면 상단 가운데)';
+      cap.value=sg.cap; cap.dataset.i=i;
+      cap.addEventListener('input',()=>{ sg.cap=cap.value; cap.classList.toggle('empty',!cap.value.trim()); deSync(); });
+      d.appendChild(ib); d.appendChild(cap); box.appendChild(d);
+    }
+  });
+  box.querySelectorAll('.de-text').forEach(deGrow);
+  hydrateDocImgs(box);
+  if(focus){
+    if(focus.cap!=null){ const c=box.querySelector('.de-cap[data-i="'+focus.cap+'"]'); if(c){ c.focus(); c.scrollIntoView({block:'nearest'}); } }
+    else if(focus.i!=null){ const t=box.querySelector('.de-text[data-i="'+focus.i+'"]'); if(t){ t.focus(); t.setSelectionRange(focus.pos||0,focus.pos||0); } }
+  }
+}
+function deMerge(){                    // 사진을 뺀 뒤 서로 붙게 된 글 칸을 하나로 합침
+  const out=[];
+  DE.segs.forEach(sg=>{
+    const prev=out[out.length-1];
+    if(sg.t==='text'&&prev&&prev.t==='text') prev.v=(prev.v&&sg.v)?prev.v+'\n'+sg.v:(prev.v||sg.v);
+    else out.push(sg);
+  });
+  if(!out.length||out[0].t!=='text') out.unshift({t:'text',v:''});
+  if(out[out.length-1].t!=='text') out.push({t:'text',v:''});
+  DE.segs=out;
+}
+function deRemoveImg(i){
+  DE.segs.splice(i,1); deMerge(); DE.focusIdx=Math.min(DE.focusIdx,DE.segs.length-1); DE.touched=false;
+  deRender(); deSync();
+}
+function deInsertImage(name,cap){      // 마지막으로 커서가 있던 위치(없으면 맨 끝)에 사진 칸을 끼워 넣음
+  let i=DE.touched?DE.focusIdx:DE.segs.length-1;
+  if(!DE.segs[i]||DE.segs[i].t!=='text') i=DE.segs.length-1;
+  if(DE.segs[i].t!=='text'){ DE.segs.push({t:'text',v:''}); i=DE.segs.length-1; }
+  const v=DE.segs[i].v, pos=DE.touched?Math.min(DE.pos,v.length):v.length;
+  DE.segs.splice(i,1,{t:'text',v:v.slice(0,pos).replace(/\n$/,'')},{t:'img',name:name,cap:cap||''},{t:'text',v:v.slice(pos).replace(/^\n/,'')});
+  DE.focusIdx=i+2; DE.pos=0; DE.touched=true;
+  deRender({cap:i+1}); deSync();
+}
+
+let _docImgBusy=false;
+async function docImgUpload(files){
+  const list=Array.from(files||[]).filter(f=>/^image\//.test(f.type));
+  if(!list.length){ showToast('사진 파일만 넣을 수 있습니다.','error'); return; }
+  if(_docImgBusy){ showToast('사진을 올리는 중입니다. 잠시 후 다시 해주세요.'); return; }
+  _docImgBusy=true;
+  const maxW=parseInt(document.getElementById('doc-img-size').value,10)||1000;
+  let done=0, saved=0;
+  try{
+    for(const f of list){
+      showToast('사진 올리는 중... ('+(done+1)+'/'+list.length+')');
+      try{
+        if(f.size>25*1024*1024) throw new Error('사진 한 장은 25MB 이하여야 합니다.');
+        const c=await compressImage(f,maxW,0.72);
+        if(c.blob.size>1.9*1024*1024) throw new Error('줄여도 너무 큽니다. 크기를 "작게"로 바꿔 보세요.');
+        if(libLoginP) await libLoginP;
+        const t=await libApi('doc-image-upload-url',{ext:c.ext,size:c.blob.size});   // 이름·임시 업로드 토큰은 서버(관리자 확인)가 발급
+        const r=await sb.storage.from(t.bucket).uploadToSignedUrl(t.path,t.token,c.blob,{contentType:t.contentType,cacheControl:'3600'});
+        if(r.error) throw new Error('올리기 실패: '+r.error.message);
+        docLocalPreview[t.name]=URL.createObjectURL(c.blob);
+        deInsertImage(t.name,'');
+        saved++;
+      }catch(e){ showToast('⚠️ '+(f.name||'사진')+': '+e.message,'error'); }
+      done++;
+    }
+  } finally { _docImgBusy=false; }
+  if(saved) showToast('✅ 사진 '+saved+'장을 넣었습니다. 사진 아래 칸에 설명을 적어 주세요.','success');
+}
+function docImgPick(inp){ const f=inp.files; docImgUpload(f).then(()=>{ inp.value=''; }); }
+function docImgCaptionsOk(text){      // 설명이 비었으면 저장 전에 한 번 확인
+  const bad=docImgList(text).filter(it=>!it.cap||it.cap===DOC_IMG_PLACEHOLDER).length;
+  return bad===0 || confirm('사진 '+bad+'장에 설명이 없습니다.\n\nAI는 사진을 직접 보지 못하고 설명 글로만 알맞은 사진을 고릅니다. 설명이 없으면 사진이 제대로 나오지 않을 수 있습니다.\n\n그래도 저장할까요?');
+}
+const inDocEditor=e=>!!(e.target&&e.target.closest&&e.target.closest('#doc-editor'));
+document.addEventListener('paste',function(e){
+  if(inDocEditor(e)){
+    const files=Array.from((e.clipboardData&&e.clipboardData.files)||[]).filter(f=>/^image\//.test(f.type));
+    if(files.length){ e.preventDefault(); docImgUpload(files); }
+  }
+});
+document.addEventListener('dragover',function(e){ if(inDocEditor(e)&&e.dataTransfer&&Array.from(e.dataTransfer.types||[]).includes('Files')) e.preventDefault(); });
+document.addEventListener('drop',function(e){
+  if(inDocEditor(e)&&e.dataTransfer&&e.dataTransfer.files.length){
+    const files=Array.from(e.dataTransfer.files).filter(f=>/^image\//.test(f.type));
+    if(files.length){ e.preventDefault(); docImgUpload(files); }
+  }
+});
+
 /* ── 마크다운 → HTML 변환 (** 볼드, * 리스트, # 헤더 처리) ── */
 function mdToHtml(text){
+  let imgCount=0;
   return text
+    // 문서 사진 표시 [[그림:ID]] → 사진 (답변당 최대 8장, 형식이 맞는 것만)
+    .replace(DOC_IMG_RE, function(m,id,cap){
+      if(++imgCount>8) return '';
+      return '\n<img class="chat-img" data-doc-img="'+id+'" alt="'+(cap||'문서 사진').replace(/"/g,'')+'" data-id="'+id+'" onclick="openImgLb(this.dataset.id,this.alt)" onerror="docImgFail(this)">\n';
+    })
+    .replace(/\[\[\s*그림\s*[:：][^\]]*\]\]/g,'').replace(/\[\[\s*그림[^\]]*$/,'')
     // 헤더 ##, # 제거 (텍스트만 남김)
     .replace(/^#{1,3}\s+(.+)$/gm, '<strong>$1</strong>')
     // **볼드** → <strong>
@@ -2060,7 +2318,10 @@ function mdToHtml(text){
     // ` 인라인 코드
     .replace(/`([^`]+)`/g, '<code style="background:var(--bg3);padding:1px 5px;border-radius:4px;font-family:var(--mono);font-size:12px;">$1</code>')
     // 목록 항목(블록) 뒤 줄바꿈은 이미 줄이 나뉘므로 제거
+    .replace(/<\/span>\n+(?=<img )/g,'</span>')
     .replace(/<\/span>\n/g,'</span>')
+    // 사진 앞뒤의 빈 줄은 없앰 (사진 자체가 줄을 차지함)
+    .replace(/(<img [^>]*>)\n+/g,'$1')
     // 줄바꿈
     .replace(/\n/g,'<br>');
 }
@@ -2079,7 +2340,7 @@ function appendMsg(role,text,srcDocs){
     src='<div class="msg-src"><div class="msg-src-title">참조 문서</div>'+srcDocs.map(d=>'<div class="msg-src-item">📄 ['+d.cat+'] '+d.title+'</div>').join('')+'</div>';
   let speakBtn='';
   // TTS용 텍스트는 마크다운 기호 제거한 순수 텍스트
-  const plainText=text.replace(/[#*`>_~\[\]]/g,'').replace(/\n+/g,' ');
+  const plainText=stripImgMarkers(text).replace(/[#*`>_~\[\]]/g,'').replace(/\n+/g,' ');
   if(role==='bot') speakBtn='<button class="tts-speak-btn" onclick="speakText(this.dataset.text)" data-text="'+plainText.replace(/"/g,'&quot;')+'">🔊 읽기</button>';
   const rendered = role==='bot' ? mdToHtml(text) : text.replace(/\n/g,'<br>');
   const time='<span class="msg-time">'+new Date().toLocaleTimeString('ko-KR',{hour:'numeric',minute:'2-digit'})+'</span>';
@@ -2088,6 +2349,7 @@ function appendMsg(role,text,srcDocs){
     ? '<div class="msg-av">'+starIcon()+'</div><div class="msg-col"><span class="msg-name">ProGuide</span><div class="msg-line">'+bubble+time+'</div></div>'
     : '<div class="msg-col"><div class="msg-line">'+time+bubble+'</div></div>';
   body.appendChild(div); body.scrollTop=body.scrollHeight;
+  if(role==='bot') hydrateDocImgs(div).then(()=>{ body.scrollTop=body.scrollHeight; });
 }
 function appendTyping(){
   const body=document.getElementById('chat-body');
@@ -2152,6 +2414,7 @@ function openHistDetail(r){
   document.getElementById('hist-detail-question').textContent = r.question||'';
   // 답변 (마크다운 렌더링)
   document.getElementById('hist-detail-answer').innerHTML = mdToHtml(r.answer||'');
+  hydrateDocImgs(document.getElementById('hist-detail-answer'));
   // 참조 문서
   const refWrap = document.getElementById('hist-detail-ref-wrap');
   const refEl   = document.getElementById('hist-detail-ref');
@@ -2206,6 +2469,7 @@ function renderDash(){
 /* ════════ 무료 사용량 에너지바 (admin 전용) ════════ */
 const GEMINI_FREE_DAILY = {'gemini-2.5-flash-lite':1000,'gemini-2.5-flash':250};  // 무료 한도(건/일), 대시보드 안내 기준
 const DB_FREE_BYTES = 500*1024*1024;                                              // Supabase 무료 DB 500MB
+const STORAGE_FREE_BYTES = 1024*1024*1024;                                        // Supabase 무료 파일 저장소 1GB
 async function fetchTodayAsk(){
   try{
     const start=new Date(); start.setHours(0,0,0,0);
@@ -2217,6 +2481,12 @@ async function fetchDbBytes(){
   try{
     const r=await sb.rpc('get_db_usage');
     return (r.error||!r.data||r.data.db_bytes==null) ? null : Number(r.data.db_bytes);
+  }catch(e){ return null; }
+}
+async function fetchImgBytes(){
+  try{
+    const r=await sb.rpc('get_storage_usage');
+    return (r.error||!r.data||r.data.bytes==null) ? null : {bytes:Number(r.data.bytes),files:Number(r.data.files||0)};
   }catch(e){ return null; }
 }
 function fmtBytes(b){ return b>=1073741824 ? (b/1073741824).toFixed(2)+'GB' : (b/1048576).toFixed(b>=104857600?0:1)+'MB'; }
@@ -2243,7 +2513,7 @@ async function renderUsage(){
   card.style.display='';
   const box=document.getElementById('usage-bars');
   box.innerHTML='<div class="eb-foot" style="margin-top:12px;">불러오는 중...</div>';
-  const [ask,dbBytes,lib]=await Promise.all([fetchTodayAsk(),fetchDbBytes(),fetchLibUsage()]);
+  const [ask,dbBytes,lib,img]=await Promise.all([fetchTodayAsk(),fetchDbBytes(),fetchLibUsage(),fetchImgBytes()]);
   const lim=GEMINI_FREE_DAILY[GEMINI_MODEL]||1000;
   let h='';
   h+= ask===null ? energyNA('AI 질문 (오늘)','확인할 수 없습니다.')
@@ -2252,6 +2522,8 @@ async function renderUsage(){
                      : energyBar('데이터 저장공간', fmtBytes(dbBytes), fmtBytes(DB_FREE_BYTES), dbBytes/DB_FREE_BYTES, '회원·문서·대화 기록 포함');
   h+= lib===null ? energyNA('자료실 파일 저장공간','자료실 서버 설정이 끝나면 표시됩니다.')
                  : energyBar('자료실 파일 저장공간', libBytes(lib.usedBytes), libBytes(lib.limitBytes), lib.usedBytes/lib.limitBytes, '자료 '+lib.docCount+'건, 이전 버전 포함');
+  h+= img===null ? energyNA('문서 사진 저장소','확인할 수 없습니다. (사진 저장소 설정이 필요합니다)')
+                 : energyBar('문서 사진 저장소', fmtBytes(img.bytes), fmtBytes(STORAGE_FREE_BYTES), img.bytes/STORAGE_FREE_BYTES, '사진 '+img.files.toLocaleString()+'장');
   box.innerHTML=h;
 }
 
@@ -2660,8 +2932,7 @@ function editDocContent(idx){
 
   // 수정할 문서 데이터를 입력 폼에 채우기
   document.getElementById('doc-input-title').value=target.title;
-  document.getElementById('doc-input-content').value=target.content;
-  document.getElementById('char-count').textContent=target.content.length;
+  setDocContent(target.content);
   currentDocCat=target.cat;
   document.querySelectorAll('.ctab').forEach(t=>t.classList.toggle('active',t.dataset.cat===target.cat));
 
@@ -2680,6 +2951,7 @@ async function saveDocEdit(idx){
   const content=document.getElementById('doc-input-content').value.trim();
   if(!title){showToast('문서 제목을 입력하세요.','error');return;}
   if(content.length<10){showToast('내용을 입력하세요.','error');return;}
+  if(!docImgCaptionsOk(content)) return;
   const docs=products[modalDocRef.pi].models[modalDocRef.mi].docs;
   if(docs[idx]&&docs[idx].id) await dbUpd('documents',{id:docs[idx].id},{title,content,cat:currentDocCat});
   docs[idx].title=title;
@@ -2688,8 +2960,7 @@ async function saveDocEdit(idx){
   docs[idx].date=new Date().toISOString().slice(0,10);
   // 폼 초기화 & 저장 버튼 원래대로
   document.getElementById('doc-input-title').value='';
-  document.getElementById('doc-input-content').value='';
-  document.getElementById('char-count').textContent='0';
+  setDocContent('');
   const saveBtn=document.querySelector('#modal-doc-input .modal-actions .btn-primary');
   if(saveBtn){saveBtn.textContent='📝 저장';saveBtn.onclick=saveDocContent;}
   renderExistingDocs(); renderDocTree(); renderDash();
@@ -2704,8 +2975,7 @@ function openDocInputModal(pi,mi){
   const m=products[pi].models[mi];
   document.getElementById('modal-doc-input-title').textContent=`📝 ${products[pi].name} › ${m.name} — 문서 내용 입력`;
   document.getElementById('doc-input-title').value='';
-  document.getElementById('doc-input-content').value='';
-  document.getElementById('char-count').textContent='0';
+  setDocContent('');
   // 카테고리 탭 초기화
   document.querySelectorAll('.ctab').forEach(t=>t.classList.toggle('active',t.dataset.cat==='기술교본'));
   // 필터 탭 초기화
@@ -2730,11 +3000,6 @@ function selectDocCat(cat){
 }
 
 // 글자 수 카운트
-document.addEventListener('input',function(e){
-  if(e.target.id==='doc-input-content'){
-    document.getElementById('char-count').textContent=e.target.value.length;
-  }
-});
 
 function renderExistingDocs(){
   if(!modalDocRef)return;
@@ -2750,12 +3015,12 @@ function renderExistingDocs(){
             <span class="doc-card-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title}</span>
           </div>
           <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-            <span style="font-size:11px;color:var(--text3);">${d.content.length}자</span>
+            <span style="font-size:11px;color:var(--text3);">${d.content.length}자${docImgList(d.content).length?' · 🖼️'+docImgList(d.content).length:''}</span>
             <button class="btn btn-ghost btn-sm" onclick="editDocContent(${i})">✏️ 수정</button>
             <button class="btn btn-danger btn-sm" onclick="delDocContent(${i})">삭제</button>
           </div>
         </div>
-        <div class="doc-card-body">${d.content.slice(0,120).replace(/\n/g,' ')}${d.content.length>120?'...':''}</div>
+        <div class="doc-card-body">${docTextPlain(d.content).slice(0,120).replace(/\n/g,' ')}${docTextPlain(d.content).length>120?'...':''}</div>
       </div>`).join('');
 }
 
@@ -2765,6 +3030,7 @@ async function saveDocContent(){
   const content=document.getElementById('doc-input-content').value.trim();
   if(!title){showToast('문서 제목을 입력하세요.','error');return;}
   if(content.length<10){showToast('내용을 입력하세요. (10자 이상)','error');return;}
+  if(!docImgCaptionsOk(content)) return;
   const modelId=products[modalDocRef.pi].models[modalDocRef.mi].id;
   const docId='d'+Date.now();
   await dbIns('documents',{id:docId,model_id:modelId,title,cat:currentDocCat,content});
@@ -2773,8 +3039,7 @@ async function saveDocContent(){
     date:new Date().toISOString().slice(0,10)
   });
   document.getElementById('doc-input-title').value='';
-  document.getElementById('doc-input-content').value='';
-  document.getElementById('char-count').textContent='0';
+  setDocContent('');
   renderExistingDocs(); renderDocTree(); renderDash();
   // 드롭다운도 갱신
   if(currentUser?.role!=='admin') populateCatDD();
@@ -4238,6 +4503,7 @@ function libLogin(id,pw){
 }
 function libReset(){
   libToken=null;libLoginP=null;libLoginMsg='';libData=null;libLoadedAt=0;libPath=[];libQuery='';
+  docImgCache.clear();   // 로그아웃하면 문서 사진 임시 주소도 버림
   if(typeof libCloseViewer==='function')libCloseViewer();
   const q=document.getElementById('lib-q');if(q)q.value='';
 }
@@ -4727,8 +4993,7 @@ function closeModal(id){
     const saveBtn=document.querySelector('#modal-doc-input .modal-actions .btn-primary');
     if(saveBtn){saveBtn.textContent='📝 저장';saveBtn.onclick=saveDocContent;}
     document.getElementById('doc-input-title').value='';
-    document.getElementById('doc-input-content').value='';
-    document.getElementById('char-count').textContent='0';
+    setDocContent('');
   }
 }
 let _tt=null;

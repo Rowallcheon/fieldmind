@@ -81,7 +81,8 @@ async function authenticate(req, db) {
 /**
  * 엔드포인트 생성기
  * opts.auth: 'none' | 'user' | 'admin'
- * run({ body, user, db, r2, req }) 의 반환값을 JSON으로 응답
+ * opts.needsR2 / opts.needsStorage: R2 / Supabase 저장소 클라이언트를 만들어 run에 전달
+ * run({ body, user, db, r2, storage, req }) 의 반환값을 JSON으로 응답
  */
 function handler(run, opts = {}) {
   const auth = opts.auth || 'user';
@@ -92,6 +93,7 @@ function handler(run, opts = {}) {
       if (req.method !== 'POST') throw new HttpError(405, '허용되지 않는 요청입니다.');
       const { makeDb } = require('./db');
       const { makeR2 } = require('./r2');
+      const { makeStorage } = require('./storage');
       const db = makeDb();
       const body = await readBody(req);
       let user = null;
@@ -99,7 +101,7 @@ function handler(run, opts = {}) {
         user = await authenticate(req, db);
         if (auth === 'admin' && user.role !== 'admin') throw new HttpError(403, '관리자만 사용할 수 있습니다.');
       }
-      const result = await run({ body, user, db, r2: opts.needsR2 ? makeR2() : null, req });
+      const result = await run({ body, user, db, r2: opts.needsR2 ? makeR2() : null, storage: opts.needsStorage ? makeStorage() : null, req });
       send(200, result === undefined ? { ok: true } : result);
     } catch (e) {
       if (e instanceof HttpError) {

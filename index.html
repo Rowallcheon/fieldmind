@@ -458,6 +458,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .la-acts{display:flex;gap:4px;flex-wrap:wrap;}
 .la-acts .btn{padding:4px 8px;font-size:11px;}
 .la-body{padding:4px 0 2px;}
+.la-head[draggable=true],.la-doc[draggable=true]{cursor:grab;}
+.la-head .grip,.la-doc .grip{color:var(--text3);font-size:13px;letter-spacing:-2px;user-select:none;margin-right:-2px;}
+.la-head.dragging,.la-doc.dragging{opacity:.45;}
+.la-head.drop-into{outline:2px solid var(--accent);outline-offset:-2px;background:rgba(45,95,143,.12);}
+.la-head.drop-before{box-shadow:inset 0 3px 0 var(--accent);}
+.la-head.drop-after{box-shadow:inset 0 -3px 0 var(--accent);}
+.la-head.drop-no{outline:2px dashed #c4584b;outline-offset:-2px;cursor:not-allowed;}
+.la-root-drop{margin:0 0 8px;padding:7px 12px;border:1px dashed var(--border);border-radius:var(--radius);text-align:center;font-size:12px;color:var(--text3);opacity:.7;}
+.la-dnd-cat .la-root-drop{opacity:1;padding:12px;border-width:2px;}
+.la-root-drop.drop-into{border-color:var(--accent);background:rgba(45,95,143,.1);color:var(--accent);font-weight:700;}
+.la-movebox{font-size:13px;line-height:1.65;color:var(--text);}
+.la-movebox .row{margin:0 0 8px;}
+.la-movebox b{font-weight:700;}
+.la-movebox .warn{background:#fff6e5;border:1px solid #f0d28a;border-radius:8px;padding:8px 10px;margin:8px 0;}
+.la-movebox .info{background:#eef5fb;border:1px solid #c9dcee;border-radius:8px;padding:8px 10px;margin:8px 0;}
+.la-movebox .path{color:var(--text2);font-size:12.5px;}
+.la-check{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:6px 0 2px;cursor:pointer;}
 .la-doc{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--border);flex-wrap:wrap;}
 .la-doc .tx{flex:1;min-width:150px;}
 .la-doc .tt{font-size:13px;font-weight:600;overflow-wrap:anywhere;}
@@ -1106,6 +1123,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="modal-title" id="las-title"></div>
   <div class="form-group"><label class="form-label">옮길 위치</label><select class="form-input" id="las-select"></select></div>
   <div class="modal-actions"><button type="button" class="btn btn-ghost" onclick="laSelectDone(null)">취소</button><button type="button" class="btn btn-primary" onclick="laSelectDone(document.getElementById('las-select').value)">확인</button></div>
+</div></div>
+<div class="modal-overlay" id="modal-la-move"><div class="modal" style="max-width:540px;">
+  <div class="modal-title" id="lmv-title">이동</div>
+  <div class="la-movebox" id="lmv-body"></div>
+  <label class="la-check" id="lmv-optwrap"><input type="checkbox" id="lmv-follow" onchange="laMoveRender()"><span>고정하지 않고 <b>새 위치의 공개 범위</b>를 따르기 <span style="color:var(--text3)">(기본은 지금 공개 범위를 그대로 유지)</span></span></label>
+  <div class="modal-actions"><button type="button" class="btn btn-ghost" onclick="laMoveDone(false)">취소</button><button type="button" class="btn btn-primary" onclick="laMoveDone(true)">이동</button></div>
 </div></div>
 <div class="modal-overlay" id="modal-la-upload"><div class="modal" style="max-width:480px;">
   <div class="modal-title" id="lau-title">자료 올리기</div>
@@ -4770,7 +4793,7 @@ function laAskText(title,label,value){
 }
 function laTextDone(v){document.getElementById('modal-la-text').classList.remove('open');const r=LA.text;LA.text=null;if(r)r(v==null?null:String(v).trim()||null);}
 function laAskSelect(title,options,current){
-  return new Promise(res=>{LA.select=res;document.getElementById('las-title').textContent=title;const s=document.getElementById('las-select');s.innerHTML=options.map(o=>'<option value="'+libEsc(o.value)+'"'+(o.value===current?' selected':'')+'>'+libEsc(o.label)+'</option>').join('');document.getElementById('modal-la-select').classList.add('open');});
+  return new Promise(res=>{LA.select=res;document.getElementById('las-title').textContent=title;const s=document.getElementById('las-select');s.innerHTML=options.map(o=>'<option value="'+libEsc(o.value)+'"'+(o.value===current?' selected':'')+(o.disabled?' disabled':'')+'>'+libEsc(o.label)+'</option>').join('');document.getElementById('modal-la-select').classList.add('open');});
 }
 function laSelectDone(v){document.getElementById('modal-la-select').classList.remove('open');const r=LA.select;LA.select=null;if(r)r(v||null);}
 
@@ -4781,16 +4804,18 @@ function laDrawTree(){
   const reachable=new Set();LA.data.docs.filter(d=>d.is_latest).forEach(d=>laOldChain(d).forEach(o=>reachable.add(o.id)));
   LA.orphans=LA.data.docs.filter(d=>!d.is_latest&&!reachable.has(d.id));
   let h='<div class="la-bar"><button type="button" class="btn btn-primary btn-sm" onclick="laCatAdd(null)">＋ 대그룹 추가</button><button type="button" class="btn btn-ghost btn-sm" onclick="laUploadOpen(null)">⬆ 자료 올리기</button><span class="sp"></span><button type="button" class="btn btn-ghost btn-sm" onclick="renderLibAdmin(true)">새로고침</button></div>'
-    +'<p class="la-note">분류는 대그룹 › 중그룹 › 소그룹 3단계까지 만들 수 있고, 자료는 어느 단계에든 올릴 수 있습니다. 🔒 공개 범위를 정하지 않으면 상위 분류의 설정을 따르고, 대그룹의 기본값은 전체 공개입니다.</p>';
+    +'<p class="la-note">분류는 대그룹 › 중그룹 › 소그룹 3단계까지 만들 수 있고, 자료는 어느 단계에든 올릴 수 있습니다. 🔒 공개 범위를 정하지 않으면 상위 분류의 설정을 따르고, 대그룹의 기본값은 전체 공개입니다.<br>📦 폴더나 자료 줄을 <b>끌어서 다른 폴더 위에 놓으면</b> 이동합니다(폴더 줄의 윗/아랫 가장자리에 놓으면 그 폴더 앞/뒤로 순서가 바뀝니다). 끌기가 안 되는 휴대폰에서는 각 줄의 「이동」 버튼을 쓰세요.</p>';
+  h+='<div class="la-root-drop" data-root="1">⬆ 폴더를 여기에 놓으면 <b>대그룹(최상위)</b>으로 옮겨집니다</div>';
   h+=top.length?top.map(laCatHtml).join(''):'<div class="lib-empty">아직 분류가 없습니다.<br>「＋ 대그룹 추가」로 첫 분류를 만들어 주세요.</div>';
   document.getElementById('la-body').innerHTML=h;
+  laDndBind();
 }
 function laDocRow(d,old){
   const olds=old?[]:laOldChain(d);
-  let h='<div class="la-doc'+(old?' old':'')+'"><div class="tx"><div class="tt">'+(d.file_type==='pdf'?'📄 ':'🖼️ ')+libEsc(d.title)+'<span class="lib-vbadge">v'+d.version+'</span>'+(old?'<span class="la-vis">이전 버전</span>':laVis(d,'doc'))+'</div>'
+  let h='<div class="la-doc'+(old?' old':'')+'"'+(old?'':' draggable="true" data-dk="doc" data-id="'+d.id+'"')+'><div class="tx"><div class="tt">'+(d.file_type==='pdf'?'📄 ':'🖼️ ')+libEsc(d.title)+'<span class="lib-vbadge">v'+d.version+'</span>'+(old?'<span class="la-vis">이전 버전</span>':laVis(d,'doc'))+'</div>'
     +'<div class="mt">'+(d.file_type==='pdf'?'PDF':'이미지')+' · '+libBytes(d.file_size)+' · '+libDate(d.created_at)+(d.uploader?' · '+libEsc(d.uploader):'')+'</div></div><div class="la-acts">'
     +'<button type="button" class="btn btn-ghost" onclick="laDocOpen(\''+d.id+'\')">열기</button>';
-  if(!old)h+='<button type="button" class="btn btn-ghost" onclick="laAccess(\'doc\',\''+d.id+'\')">🔒 공개범위</button><button type="button" class="btn btn-ghost" onclick="laDocRename(\''+d.id+'\')">제목</button><button type="button" class="btn btn-ghost" onclick="laDocMove(\''+d.id+'\')">이동</button><button type="button" class="btn btn-ghost" onclick="laUploadOpen(null,\''+d.id+'\')">🔄 새 버전</button>'+(olds.length?'<button type="button" class="btn btn-ghost" onclick="laToggleVers(\''+d.id+'\')">이전 버전 '+olds.length+'개 '+(LA.vers.has(d.id)?'▴':'▾')+'</button>':'');
+  if(!old)h+='<button type="button" class="btn btn-ghost" onclick="laAccess(\'doc\',\''+d.id+'\')">🔒 공개범위</button><button type="button" class="btn btn-ghost" onclick="laDocRename(\''+d.id+'\')">제목</button><button type="button" class="btn btn-ghost" onclick="laDocMovePick(\''+d.id+'\')">이동</button><button type="button" class="btn btn-ghost" onclick="laUploadOpen(null,\''+d.id+'\')">🔄 새 버전</button>'+(olds.length?'<button type="button" class="btn btn-ghost" onclick="laToggleVers(\''+d.id+'\')">이전 버전 '+olds.length+'개 '+(LA.vers.has(d.id)?'▴':'▾')+'</button>':'');
   h+='<button type="button" class="btn btn-danger" onclick="laDocDel(\''+d.id+'\')">삭제</button></div></div>';
   if(!old&&LA.vers.has(d.id))h+=olds.map(o=>laDocRow(o,true)).join('');
   return h;
@@ -4800,10 +4825,10 @@ function laCatHtml(c){
   const docs=LA.data.docs.filter(d=>d.category_id===c.id&&d.is_latest).sort((a,b)=>String(a.title).localeCompare(String(b.title),'ko',{numeric:true}));
   const orph=(LA.orphans||[]).filter(d=>d.category_id===c.id);
   const n=docs.length+orph.length+kids.length;
-  let h='<div class="la-cat"><div class="la-head"><span class="lv">'+LA_LV[c.level]+'</span><span class="nm" onclick="laToggle(\''+c.id+'\')">'+(open?'▾ ':'▸ ')+libEsc(c.name)+'</span>'+laVis(c,'category')
+  let h='<div class="la-cat"><div class="la-head" draggable="true" data-dk="cat" data-id="'+c.id+'"><span class="grip" aria-hidden="true">⋮⋮</span><span class="lv">'+LA_LV[c.level]+'</span><span class="nm" onclick="laToggle(\''+c.id+'\')">'+(open?'▾ ':'▸ ')+libEsc(c.name)+'</span>'+laVis(c,'category')
     +'<span class="la-acts">'+(c.level<3?'<button type="button" class="btn btn-ghost" onclick="laCatAdd(\''+c.id+'\')">＋ 하위</button>':'')
     +'<button type="button" class="btn btn-ghost" onclick="laUploadOpen(\''+c.id+'\')">⬆ 자료</button><button type="button" class="btn btn-ghost" onclick="laAccess(\'category\',\''+c.id+'\')">🔒 공개범위</button><button type="button" class="btn btn-ghost" onclick="laCatRename(\''+c.id+'\')">이름</button>'
-    +'<button type="button" class="btn btn-ghost" onclick="laCatMove(\''+c.id+'\',-1)" aria-label="위로">▲</button><button type="button" class="btn btn-ghost" onclick="laCatMove(\''+c.id+'\',1)" aria-label="아래로">▼</button><button type="button" class="btn btn-danger" onclick="laCatDel(\''+c.id+'\')">삭제</button></span></div>';
+    +'<button type="button" class="btn btn-ghost" onclick="laCatMovePick(\''+c.id+'\')">이동</button><button type="button" class="btn btn-ghost" onclick="laCatMove(\''+c.id+'\',-1)" aria-label="위로">▲</button><button type="button" class="btn btn-ghost" onclick="laCatMove(\''+c.id+'\',1)" aria-label="아래로">▼</button><button type="button" class="btn btn-danger" onclick="laCatDel(\''+c.id+'\')">삭제</button></span></div>';
   if(open){
     h+='<div class="la-body">'+docs.map(d=>laDocRow(d,false)).join('')+orph.map(d=>laDocRow(d,true)).join('')+kids.map(laCatHtml).join('')+(n?'':'<div class="la-empty">비어 있습니다.</div>')+'</div>';
   }
@@ -4837,10 +4862,178 @@ async function laDocRename(id){
   const d=laDoc(id);const t=await laAskText('자료 제목 수정','자료 제목',d.title);
   if(t&&t!==d.title)await laAct('doc.update',{id:id,title:t},'제목을 바꿨습니다.');
 }
-async function laDocMove(id){
-  const d=laDoc(id);const to=await laAskSelect('자료 이동',laCatOptions(),d.category_id);
-  if(to&&to!==d.category_id)await laAct('doc.update',{id:id,categoryId:to},'자료를 옮겼습니다.');
+/* ════ 폴더·자료 이동 (끌어서 놓기 + 이동 버튼) — 설계서 '폴더·자료 이동' ════
+ * 위치·단계·공개 범위 고정은 서버(category.move → DB 함수 library_move_category)가 한 번에 처리한다.
+ * 화면은 규칙 위반을 미리 표시(빨간 점선)하고, 위치가 바뀌는 이동은 공개 범위 확인 창을 거친다. */
+const laCatMap=()=>new Map(LA.data.categories.map(c=>[c.id,c]));
+function laIsDesc(ancId,id){const m=laCatMap();let c=m.get(id);const seen=new Set();while(c&&c.parent_id&&!seen.has(c.id)){if(c.parent_id===ancId)return true;seen.add(c.id);c=m.get(c.parent_id);}return false;}
+function laHeight(id){const k=LA.data.categories.filter(c=>c.parent_id===id);return k.length?1+Math.max.apply(null,k.map(c=>laHeight(c.id))):0;}
+function laSubtreeIds(id){const out=[id];LA.data.categories.filter(c=>c.parent_id===id).forEach(c=>out.push.apply(out,laSubtreeIds(c.id)));return out;}
+function laEff(cat){
+  const m=laCatMap();let c=cat;const seen=new Set();
+  while(c&&!seen.has(c.id)){seen.add(c.id);if(c.visibility!=='inherit')return {vis:c.visibility,owner:c};c=c.parent_id?m.get(c.parent_id):null;}
+  return {vis:'all',owner:null};
 }
+function laSubjName(p){
+  if(p.subject_type==='user'){const u=LA.data.users.find(x=>x.id===p.user_id);return u?u.name:p.user_id;}
+  if(p.subject_type==='library_group'){const g=LA.data.groups.find(x=>x.id===p.library_group_id);return '👥 '+(g?g.name:'(삭제된 그룹)');}
+  const g=LA.data.baseGroups.find(x=>x.id===p.group_id);return '👥 '+(g?g.name:p.group_id);
+}
+function laRuleText(rule){
+  if(rule.vis==='all')return '<b>로그인한 모든 사용자</b>(전체 공개)';
+  const ps=LA.data.permissions.filter(p=>p.target_type==='category'&&p.category_id===rule.owner.id);
+  if(!ps.length)return '<b>관리자만</b>(허용 대상이 없음)';
+  const n=ps.map(laSubjName);
+  return '<b>지정한 사람만</b> — '+libEsc(n.slice(0,6).join(', '))+(n.length>6?' 외 '+(n.length-6)+'건':'');
+}
+const laDestLabel=pid=>pid?libEsc(laPathLabel(pid)):'최상위(대그룹)';
+function laMoveCheck(kind,id,parentId){      // 규칙 위반 사유(없으면 null)
+  if(kind==='doc'){const d=laDoc(id);return d&&d.category_id===parentId?'같은 폴더입니다.':null;}
+  if(parentId===id||(parentId&&laIsDesc(id,parentId)))return '자기 자신이나 자기 하위 폴더로는 옮길 수 없습니다.';
+  const newLevel=parentId?laCat(parentId).level+1:1;
+  if(newLevel+laHeight(id)>3)return '3단계(대그룹 › 중그룹 › 소그룹)를 넘어 옮길 수 없습니다.';
+  const me=laCat(id),dup=LA.data.categories.find(c=>c.id!==id&&(c.parent_id||null)===(parentId||null)&&String(c.name).toLowerCase()===String(me.name).toLowerCase());
+  if(dup)return '옮길 위치에 같은 이름("'+me.name+'")의 폴더가 이미 있습니다. 이름을 먼저 바꿔 주세요.';
+  return null;
+}
+/* 확인 창: 이동 전/후 공개 범위를 보여주고, 필요하면 "고정하지 않기" 선택 */
+function laMoveConfirm(kind,id,parentId){
+  return new Promise(res=>{
+    const isDoc=kind==='doc',item=isDoc?laDoc(id):laCat(id);
+    const catOfItem=isDoc?laCat(item.category_id):item;
+    const cur=laEff(isDoc?catOfItem:item);                                      // 지금 적용 중인 규칙 (자료는 소속 분류 기준)
+    const own=item.visibility!=='inherit';                                      // 직접 지정한 공개 범위가 있는가
+    const newPar=parentId?laCat(parentId):null;
+    const after=newPar?laEff(newPar):{vis:'all',owner:null};
+    const needKeep=!own&&cur.vis==='restricted';                                // 고정 선택이 의미 있는 경우
+    LA.mv={res:res,kind:kind,id:id,parentId:parentId,needKeep:needKeep,own:own,cur:cur,after:after,item:item,newPar:newPar};
+    document.getElementById('lmv-title').textContent=isDoc?'자료 이동':'폴더 이동';
+    document.getElementById('lmv-optwrap').style.display=needKeep?'':'none';
+    document.getElementById('lmv-follow').checked=false;
+    laMoveRender();
+    document.getElementById('modal-la-move').classList.add('open');
+  });
+}
+function laMoveRender(){
+  const m=LA.mv;if(!m)return;
+  const isDoc=m.kind==='doc',follow=document.getElementById('lmv-follow').checked;
+  const fromPath=isDoc?laPathLabel(m.item.category_id):(m.item.parent_id?laPathLabel(m.item.parent_id):'최상위(대그룹)');
+  let h='<div class="row"><b>'+libEsc(isDoc?m.item.title:m.item.name)+'</b><div class="path">'+libEsc(fromPath)+'  →  '+laDestLabel(m.parentId)+'</div></div>';
+  if(!isDoc){
+    const ids=laSubtreeIds(m.item.id),kids=ids.length-1,docs=LA.data.docs.filter(d=>d.is_latest&&ids.includes(d.category_id)).length;
+    h+='<div class="row">함께 이동: 하위 폴더 '+kids+'개, 자료 '+docs+'건 (이전 버전·열람 기록은 그대로 유지됩니다)</div>';
+  }
+  h+='<div class="row">지금 이 '+(isDoc?'자료':'폴더')+'를 볼 수 있는 사람: '+laRuleText(m.cur)+(m.own?' <span class="path">(직접 지정)</span>':(m.cur.owner?' <span class="path">(상위 폴더 "'+libEsc(m.cur.owner.name)+'"의 설정)</span>':' <span class="path">(기본값)</span>'))+'</div>';
+  h+='<div class="row">새 위치 '+(m.newPar?'"'+libEsc(m.newPar.name)+'"':'(최상위)')+'의 공개 범위: '+laRuleText(m.after)+'</div>';
+  if(m.own){
+    h+='<div class="info">이 '+(isDoc?'자료':'폴더')+'에는 <b>직접 지정한 공개 범위</b>가 있어 이동해도 그대로 유지됩니다.'+(m.after.vis==='restricted'?' 다만 새 위치가 "지정한 사람만"이라, 새 위치의 허용 대상에게 보이지 않으면 이 '+(isDoc?'자료':'폴더')+'도 보이지 않습니다.':'')+'</div>';
+  }else if(m.needKeep&&!follow){
+    h+='<div class="info">✅ 이동 후에도 <b>지금과 같은 사람만</b> 볼 수 있도록, 허용 대상을 이 '+(isDoc?'자료':'폴더')+'에 직접 지정해 고정합니다.'+(m.after.vis==='restricted'?' (새 위치도 "지정한 사람만"이라, 두 곳 모두에 해당하는 사람만 볼 수 있습니다.)':'')+'</div>';
+  }else if(m.needKeep&&follow){
+    h+='<div class="warn">⚠️ 고정하지 않으면 이동 후 <b>새 위치의 설정</b>을 따라 '+laRuleText(m.after)+'가 볼 수 있게 됩니다.'+(m.after.vis==='all'?' <b>지금보다 더 넓은 범위에 공개됩니다.</b>':'')+'</div>';
+  }else{
+    h+='<div class="info">이동 후에는 새 위치의 설정을 따릅니다: '+laRuleText(m.after)+(m.after.vis==='restricted'?'<br>⚠️ 새 위치가 "지정한 사람만"이라 앞으로 그 사람들만 볼 수 있습니다.':'')+'</div>';
+  }
+  document.getElementById('lmv-body').innerHTML=h;
+}
+function laMoveDone(ok){
+  document.getElementById('modal-la-move').classList.remove('open');
+  const m=LA.mv;LA.mv=null;if(!m)return;
+  m.res(ok?{keep:!document.getElementById('lmv-follow').checked}:null);
+}
+/* 실제 이동: 위치가 바뀌면 확인 창, 같은 상위 안의 순서만 바뀌면 바로 실행 */
+async function laMoveExec(kind,id,parentId,beforeId){
+  const why=laMoveCheck(kind,id,parentId);
+  if(why){showToast(why,'error');return;}
+  const item=kind==='doc'?laDoc(id):laCat(id);
+  const samePlace=kind==='doc'?false:((item.parent_id||null)===(parentId||null));
+  let keep=true;
+  if(!samePlace){const r=await laMoveConfirm(kind,id,parentId);if(!r)return;keep=r.keep;}
+  if(parentId)LA.closed.delete(parentId);
+  let r;
+  if(kind==='doc')r=await laAct('doc.update',{id:id,categoryId:parentId,keepAccess:keep},'자료를 옮겼습니다.');
+  else r=await laAct('category.move',{id:id,parentId:parentId||null,beforeId:beforeId||null,keepAccess:keep},samePlace?'순서를 바꿨습니다.':'폴더를 옮겼습니다.');
+  if(r&&r.keptAccess)showToast('🔒 이동 전의 공개 범위를 그대로 유지하도록 고정했습니다.','success');
+}
+function laMoveOptions(kind,id){
+  const out=[];
+  if(kind==='cat')out.push({value:'__root__',label:'최상위(대그룹)',disabled:!!laMoveCheck('cat',id,null)||!laCat(id).parent_id});
+  (function walk(pid){laKids(pid).forEach(c=>{const why=laMoveCheck(kind,id,c.id);out.push({value:c.id,label:laPathLabel(c.id)+(why&&kind==='cat'&&c.id!==id?'  (옮길 수 없음)':''),disabled:!!why});walk(c.id);});})(null);
+  return out;
+}
+async function laCatMovePick(id){
+  const c=laCat(id);
+  const to=await laAskSelect('폴더 이동: "'+c.name+'"',laMoveOptions('cat',id),c.parent_id||'__root__');
+  if(!to)return;const pid=to==='__root__'?null:to;
+  if((pid||null)===(c.parent_id||null))return;
+  await laMoveExec('cat',id,pid,null);
+}
+async function laDocMovePick(id){
+  const d=laDoc(id);
+  const to=await laAskSelect('자료 이동',laMoveOptions('doc',id),d.category_id);
+  if(to&&to!==d.category_id)await laMoveExec('doc',id,to,null);
+}
+
+/* ── 끌어서 놓기 (PC) ── */
+LA.drag=null;
+const tg=ev=>ev.target.nodeType===1?ev.target:ev.target.parentElement;
+function laDropPlan(e){
+  const d=LA.drag;if(!d)return null;
+  const root=tg(e).closest&&tg(e).closest('.la-root-drop');
+  if(root){
+    if(d.kind!=='cat')return {el:root,ok:false};
+    const c=laCat(d.id),bad=laMoveCheck('cat',d.id,null);
+    return {el:root,zone:'into',parentId:null,beforeId:null,ok:!bad&&!!c.parent_id,why:bad};
+  }
+  const head=tg(e).closest&&tg(e).closest('.la-head');if(!head)return null;
+  const tid=head.dataset.id,t=laCat(tid);if(!t)return null;
+  if(d.kind==='doc'){
+    const bad=laMoveCheck('doc',d.id,tid);
+    return {el:head,zone:'into',parentId:tid,ok:!bad,why:bad};
+  }
+  if(tid===d.id)return {el:head,ok:false};
+  const r=head.getBoundingClientRect(),y=(e.clientY-r.top)/Math.max(1,r.height);
+  const zone=y<0.25?'before':y>0.75?'after':'into';
+  let parentId,beforeId=null;
+  if(zone==='into'){parentId=tid;}
+  else{
+    parentId=t.parent_id||null;
+    const sibs=laKids(parentId).filter(x=>x.id!==d.id);
+    const idx=sibs.findIndex(x=>x.id===tid);
+    beforeId=zone==='before'?tid:(sibs[idx+1]?sibs[idx+1].id:null);
+  }
+  const bad=laMoveCheck('cat',d.id,parentId);
+  return {el:head,zone:zone,parentId:parentId,beforeId:beforeId,ok:!bad,why:bad};
+}
+function laDndClear(){document.querySelectorAll('.drop-into,.drop-before,.drop-after,.drop-no,.dragging').forEach(x=>x.classList.remove('drop-into','drop-before','drop-after','drop-no','dragging'));}
+function laDndBind(){
+  const body=document.getElementById('la-body');if(!body||body.dataset.dnd)return;body.dataset.dnd='1';
+  body.addEventListener('dragstart',e=>{
+    const el=tg(e).closest&&tg(e).closest('[data-dk]');if(!el||!LA.data){return;}
+    LA.drag={kind:el.dataset.dk,id:el.dataset.id};
+    e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',LA.drag.kind+':'+LA.drag.id);}catch(x){}
+    el.classList.add('dragging');
+    if(LA.drag.kind==='cat')body.classList.add('la-dnd-cat');
+  });
+  body.addEventListener('dragover',e=>{
+    if(!LA.drag)return;
+    const p=laDropPlan(e);
+    document.querySelectorAll('.drop-into,.drop-before,.drop-after,.drop-no').forEach(x=>x.classList.remove('drop-into','drop-before','drop-after','drop-no'));
+    if(!p||!p.el)return;
+    if(p.ok){e.preventDefault();e.dataTransfer.dropEffect='move';p.el.classList.add('drop-'+p.zone);}
+    else{e.dataTransfer.dropEffect='none';if(p.why)p.el.classList.add('drop-no');}
+  });
+  body.addEventListener('drop',async e=>{
+    if(!LA.drag)return;
+    e.preventDefault();
+    const p=laDropPlan(e),d=LA.drag;LA.drag=null;laDndClear();body.classList.remove('la-dnd-cat');
+    if(!p)return;
+    if(!p.ok){if(p.why)showToast(p.why,'error');return;}
+    await laMoveExec(d.kind,d.id,p.parentId,p.beforeId);
+  });
+  body.addEventListener('dragend',()=>{LA.drag=null;laDndClear();body.classList.remove('la-dnd-cat');});
+}
+
 async function laDocDel(id){
   const d=laDoc(id);
   if(!confirm('"'+d.title+'"'+(d.is_latest?'':' (이전 버전)')+'을(를) 삭제할까요?\n저장된 원본 파일도 함께 삭제되며 되돌릴 수 없습니다.'))return;

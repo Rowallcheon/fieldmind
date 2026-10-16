@@ -11,7 +11,7 @@
 | `fake-s3.js` | R2 흉내. 임시 주소(SigV4)를 실제로 다시 계산해 검증하고 만료 시각도 확인 |
 | `api-server.js` | `/api/*`를 실제 핸들러에 연결하고 `index.html`을 제공 |
 | `api-test.js` | 서버 함수 통합 테스트 (로그인/권한/업로드/버전/삭제/사용량 등) |
-| `e2e-user.js`, `e2e-admin.js` | Playwright 브라우저 테스트 (모바일 사용자 화면, 관리자 화면) |
+| `e2e-user.js`, `e2e-admin.js`, `e2e-move.js` | Playwright 브라우저 테스트 (모바일 사용자 화면, 관리자 화면, 폴더·자료 끌어서 이동) |
 
 단위 테스트(권한 판정, R2 서명)는 의존성 없이 저장소 루트에서 `node --test tests/library-core.test.js`.
 
@@ -24,5 +24,6 @@ node make-samples.js        # 샘플 PDF/PNG 생성 (Playwright + Chromium 필�
 ./reset-db.sh && node api-test.js
 ./reset-db.sh && node e2e-user.js
 ./reset-db.sh && node e2e-admin.js
+./reset-db.sh && node e2e-move.js
 ```
 Playwright가 전역 설치되어 있지 않으면 `npm i playwright` 후 `CHROMIUM_PATH`로 브라우저 경로를 지정합니다.

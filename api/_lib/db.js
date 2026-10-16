@@ -29,6 +29,7 @@ function makeDb(env = process.env, fetchImpl = (...a) => fetch(...a)) {
   const url = env.SUPABASE_URL, key = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new HttpError(500, '서버 설정이 완료되지 않았습니다.', { missing: 'SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY' });
   const base = url.replace(/\/$/, '') + '/rest/v1';
+  const baseHeaders = Object.assign({ apikey: key, 'Content-Type': 'application/json' }, key.startsWith('sb_') ? {} : { Authorization: 'Bearer ' + key });   // 새 방식 키(sb_secret_…)는 JWT가 아니라 apikey 헤더만 사용
 
   async function request(method, table, { select, filters = [], order, limit, offset, body, returning = false, count = false } = {}) {
     const u = new URL(base + '/' + table);
@@ -37,7 +38,7 @@ function makeDb(env = process.env, fetchImpl = (...a) => fetch(...a)) {
     if (order) u.searchParams.set('order', order);
     if (limit !== undefined) u.searchParams.set('limit', String(limit));
     if (offset) u.searchParams.set('offset', String(offset));
-    const headers = Object.assign({ apikey: key, 'Content-Type': 'application/json' }, key.startsWith('sb_') ? {} : { Authorization: 'Bearer ' + key });   // 새 방식 키(sb_secret_…)는 JWT가 아니라 apikey 헤더만 사용
+    const headers = Object.assign({}, baseHeaders);
     const prefer = [];
     if (returning) prefer.push('return=representation');
     if (count) prefer.push('count=exact');
@@ -64,6 +65,15 @@ function makeDb(env = process.env, fetchImpl = (...a) => fetch(...a)) {
         if (rows.length < PAGE) break;
       }
       return all;
+    },
+    // DB 함수 호출 (PostgREST /rpc/함수명). 함수가 raise exception 하면 P0001 → 400으로 메시지 전달
+    async rpc(fn, args = {}) {
+      const res = await fetchImpl(base + '/rpc/' + fn, { method: 'POST', headers: Object.assign({}, baseHeaders), body: JSON.stringify(args) });
+      const text = await res.text();
+      let json = null;
+      if (text) { try { json = JSON.parse(text); } catch (e) { json = null; } }
+      if (!res.ok) throw mapDbError(res.status, json);
+      return json;
     },
     async insert(table, rows) { return (await request('POST', table, { body: rows, returning: true })).rows; },
     async update(table, filters, patch) { return (await request('PATCH', table, { filters, body: patch, returning: true })).rows; },

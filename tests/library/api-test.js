@@ -284,6 +284,135 @@ async function upload(token, fileName, bytes, extra) {
     await shim.pool.query("update users set id='u1' where id='u1_new'");
   });
 
+  console.log('[폴더 이동 (끌어서 놓기)]');
+  {
+    const adm = (action, body) => api('library-admin', Object.assign({ action }, body), A);
+    const mk = async (name, parentId) => (await adm('category.create', { name, parentId })).json.category;
+    const row = async id => (await shim.pool.query('select id,parent_id,level,visibility,sort_order from library_categories where id=$1', [id])).rows[0];
+    await shim.pool.query('truncate library_view_logs, library_permissions, library_docs, library_categories restart identity cascade');
+    const mvA = await mk('이동A'), mvA1 = await mk('이동A1', mvA.id), mvA1x = await mk('이동A1x', mvA1.id);
+    const mvB = await mk('이동B'), mvC = await mk('이동C'), mvC1 = await mk('이동C1', mvC.id);
+    const move = (id, parentId, extra) => adm('category.move', Object.assign({ id, parentId }, extra));
+
+    await step('폴더를 다른 대그룹 아래로 옮기면 하위 폴더의 단계(level)도 함께 바뀐다', async () => {
+      const r = await move(mvC1.id, mvB.id);
+      assert.equal(r.status, 200, JSON.stringify(r.json)); assert.equal(r.json.moved, true);
+      const x = await row(mvC1.id); assert.equal(x.parent_id, mvB.id); assert.equal(x.level, 2);
+    });
+    await step('하위가 있는 중그룹을 다른 대그룹 아래로 옮기면 하위(소그룹)도 따라가고 단계가 맞는다', async () => {
+      const r = await move(mvA1.id, mvB.id);
+      assert.equal(r.status, 200, JSON.stringify(r.json));
+      assert.equal((await row(mvA1.id)).level, 2); assert.equal((await row(mvA1x.id)).level, 3);
+      assert.equal((await row(mvA1x.id)).parent_id, mvA1.id);
+    });
+    await step('3단계를 넘는 이동은 거부하고 이유를 알려준다 (옮기지 않음)', async () => {
+      const R = await mk('깊이시험'), R1 = await mk('깊이시험1', R.id);       // 대 › 중(하위 없음)
+      const r = await move(mvA1.id, R1.id);                                  // 중그룹(소그룹 포함)을 중그룹 밑으로 → 대›중›중›소 = 4단계
+      assert.equal(r.status, 400); assert.match(r.json.error, /3단계/);
+      assert.equal((await row(mvA1.id)).parent_id, mvB.id);
+      const r2 = await move(mvB.id, R1.id);                                  // 하위 2단계를 가진 대그룹을 중그룹 밑으로
+      assert.equal(r2.status, 400); assert.match(r2.json.error, /3단계/);
+      assert.equal((await row(mvB.id)).parent_id, null);
+      const ok = await move(mvA1x.id, R1.id);                                // 하위 없는 소그룹은 중그룹 밑(3단계)으로 가능
+      assert.equal(ok.status, 200, JSON.stringify(ok.json)); assert.equal((await row(mvA1x.id)).level, 3);
+      await move(mvA1x.id, mvA1.id);                                         // 원래 자리로
+      await adm('category.delete', { id: R1.id }); await adm('category.delete', { id: R.id });
+    });
+    await step('자기 자신이나 자기 하위로는 옮길 수 없다', async () => {
+      assert.equal((await move(mvB.id, mvB.id)).status, 400);
+      const r = await move(mvB.id, mvA1x.id); assert.equal(r.status, 400);
+      assert.equal((await row(mvB.id)).parent_id, null);
+    });
+    await step('이동할 위치에 같은 이름이 있으면 거부 (대소문자 무시)', async () => {
+      const d1 = await mk('중복이름', mvA.id), d2 = await mk('중복이름'.toUpperCase(), mvB.id);
+      const r = await move(d1.id, mvB.id);
+      assert.equal(r.status, 400); assert.match(r.json.error, /같은 이름/);
+      assert.equal((await row(d1.id)).parent_id, mvA.id);
+      await adm('category.delete', { id: d1.id }); await adm('category.delete', { id: d2.id });
+    });
+    await step('최상위(대그룹)로 옮기면 단계가 한 단계씩 올라간다', async () => {
+      const r = await move(mvA1.id, null);
+      assert.equal(r.status, 200, JSON.stringify(r.json));
+      assert.equal((await row(mvA1.id)).level, 1); assert.equal((await row(mvA1x.id)).level, 2);
+      assert.equal((await row(mvA1.id)).parent_id, null);
+    });
+    await step('이미 그 위치면 아무것도 바꾸지 않는다 (moved=false)', async () => {
+      const r = await move(mvA1.id, null); assert.equal(r.status, 200); assert.equal(r.json.moved, false);
+    });
+    await step('beforeId를 주면 새 상위 안에서 그 앞에 놓이고, 없으면 맨 뒤', async () => {
+      const t1 = await mk('순서1'), t2 = await mk('순서2'), t3 = await mk('순서3');
+      await move(t3.id, mvB.id);                           // B 아래 맨 뒤
+      await move(t2.id, mvB.id, { beforeId: t3.id });      // t3 앞
+      await move(t1.id, mvB.id, { beforeId: t2.id });      // t2 앞
+      const sib = (await shim.pool.query('select id from library_categories where parent_id=$1 order by sort_order,name', [mvB.id])).rows.map(r => r.id);
+      const tail = sib.slice(-3); assert.deepEqual(tail, [t1.id, t2.id, t3.id]);
+      // 같은 상위 안에서 순서만 바꾸기
+      await move(t3.id, mvB.id, { beforeId: t1.id });
+      const sib2 = (await shim.pool.query('select id from library_categories where parent_id=$1 order by sort_order,name', [mvB.id])).rows.map(r => r.id);
+      assert.ok(sib2.indexOf(t3.id) < sib2.indexOf(t1.id));
+    });
+
+    // ── 공개 범위 유지 ──
+    const open = await mk('공개폴더'), secret = await mk('비밀폴더'), inner = await mk('비밀하위', secret.id), innerExplicit = await mk('직접설정하위', secret.id);
+    await adm('access.set', { targetType: 'category', targetId: secret.id, visibility: 'restricted', subjects: [{ type: 'user', id: 'u1' }] });
+    await adm('access.set', { targetType: 'category', targetId: innerExplicit.id, visibility: 'all' });
+    const visTo = async (token, id) => (await api('library-tree', {}, token)).json.categories.some(c => c.id === id);
+    await step('(이동 전) 비밀폴더 아래 폴더는 u1만 보고 u2는 못 본다', async () => {
+      assert.equal(await visTo(U1, inner.id), true); assert.equal(await visTo(U2, inner.id), false);
+    });
+    await step('상위 따름 폴더를 공개폴더로 옮겨도 공개 범위가 유지된다(지정한 사람만 → 같은 허용 대상 고정)', async () => {
+      const r = await move(inner.id, open.id);
+      assert.equal(r.status, 200, JSON.stringify(r.json)); assert.equal(r.json.keptAccess, true);
+      const x = await row(inner.id); assert.equal(x.visibility, 'restricted');
+      const perms = (await shim.pool.query("select user_id from library_permissions where target_type='category' and category_id=$1", [inner.id])).rows;
+      assert.deepEqual(perms.map(p => p.user_id), ['u1']);
+      assert.equal(await visTo(U1, inner.id), true); assert.equal(await visTo(U2, inner.id), false);
+    });
+    await step('고정하지 않기(keepAccess=false)를 고르면 새 위치의 설정을 따른다', async () => {
+      const t = await mk('임시비밀', secret.id);
+      const r = await move(t.id, open.id, { keepAccess: false });
+      assert.equal(r.status, 200); assert.equal(r.json.keptAccess, false);
+      assert.equal((await row(t.id)).visibility, 'inherit');
+      assert.equal(await visTo(U2, t.id), true);           // 공개폴더 안이라 보임
+    });
+    await step('이미 직접 공개 범위가 있는 폴더는 이동해도 그대로', async () => {
+      const r = await move(innerExplicit.id, open.id);
+      assert.equal(r.status, 200); assert.equal(r.json.keptAccess, false);
+      assert.equal((await row(innerExplicit.id)).visibility, 'all');
+      assert.equal(await visTo(U2, innerExplicit.id), true);
+    });
+    await step('하위 폴더(상위 따름)도 이동한 폴더의 고정된 범위를 따라간다', async () => {
+      const kid = await mk('비밀손자', inner.id);          // inner는 이제 공개폴더 아래 + restricted(u1)
+      assert.equal(await visTo(U1, kid.id), true); assert.equal(await visTo(U2, kid.id), false);
+    });
+    await step('자료도 다른 폴더로 옮길 때 공개 범위가 유지된다 (분류 따름 → 지정한 사람만 고정)', async () => {
+      const sec2 = await mk('비밀폴더2'); await adm('access.set', { targetType: 'category', targetId: sec2.id, visibility: 'restricted', subjects: [{ type: 'user', id: 'u1' }] });
+      const inSec = await mk('비밀안', sec2.id);
+      const d = (await upload(A, '문서.pdf', PDF, { categoryId: inSec.id })).json.doc;
+      assert.equal((await api('library-tree', {}, U2)).json.docs.some(x => x.id === d.id), false);
+      const r = await adm('doc.update', { id: d.id, categoryId: open.id });
+      assert.equal(r.status, 200, JSON.stringify(r.json)); assert.equal(r.json.keptAccess, true);
+      const dd = (await shim.pool.query('select visibility,category_id from library_docs where id=$1', [d.id])).rows[0];
+      assert.equal(dd.visibility, 'restricted'); assert.equal(dd.category_id, open.id);
+      assert.equal((await api('library-tree', {}, U2)).json.docs.some(x => x.id === d.id), false);   // u2는 여전히 못 봄
+      assert.equal((await api('library-tree', {}, U1)).json.docs.some(x => x.id === d.id), true);
+      const d2 = (await upload(A, '문서2.pdf', PDF, { categoryId: inSec.id })).json.doc;
+      const r2 = await adm('doc.update', { id: d2.id, categoryId: open.id, keepAccess: false });
+      assert.equal(r2.json.keptAccess, false);
+      assert.equal((await api('library-tree', {}, U2)).json.docs.some(x => x.id === d2.id), true);
+    });
+    await step('이동 함수 입력 검증과 권한: 일반 사용자 403, 잘못된 번호 400, 없는 분류 404/400', async () => {
+      assert.equal((await api('library-admin', { action: 'category.move', id: open.id, parentId: null }, U1)).status, 403);
+      assert.equal((await move('not-a-uuid', null)).status, 400);
+      assert.equal((await move(open.id, 'bad')).status, 400);
+      assert.equal((await move('00000000-0000-4000-8000-000000000000', null)).status, 400);
+    });
+    await step('DB 함수는 브라우저(anon)에서 직접 호출할 수 없다 (실행 권한 회수)', async () => {
+      const r = await shim.pool.query("select has_function_privilege('anon','public.library_move_category(uuid,uuid,boolean)','execute') as a, has_function_privilege('authenticated','public.library_move_category(uuid,uuid,boolean)','execute') as b");
+      assert.equal(r.rows[0].a, false); assert.equal(r.rows[0].b, false);
+    });
+  }
+
   console.log('\n통과 ' + pass + ' / 실패 ' + fails.length);
   if (fails.length) console.log('실패 목록:\n - ' + fails.join('\n - '));
   await Promise.all([shim.close(), s3.close(), srv.close()]); await shim.pool.end();

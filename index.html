@@ -139,12 +139,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dimg-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 8px;}
 .dimg-bar select{font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-family:inherit;}
 .dimg-hint{font-size:11px;color:var(--text3);}
-.dimg-strip{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
-.dimg-item{width:112px;border:1px solid var(--border);border-radius:8px;background:#fff;overflow:hidden;position:relative;}
-.dimg-item img{display:block;width:100%;height:72px;object-fit:cover;background:#eef3f8;cursor:zoom-in;}
-.dimg-item .cap{font-size:10.5px;color:var(--text2);padding:4px 6px 5px;line-height:1.35;height:34px;overflow:hidden;}
-.dimg-item .cap.empty{color:#b3261e;}
-.dimg-item .x{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:12px;line-height:22px;padding:0;cursor:pointer;}
+.de{border:1px solid var(--border);border-radius:var(--radius-sm);background:#fff;padding:8px;display:flex;flex-direction:column;gap:6px;}
+.de:focus-within{border-color:var(--accent);}
+.de-text{width:100%;border:0;outline:0;resize:none;background:transparent;font-family:var(--font);font-size:13px;line-height:1.7;color:var(--text);padding:4px 6px;overflow:hidden;min-height:48px;}
+.de-img{background:#f3f7fb;border:1px solid var(--border);border-radius:10px;padding:8px;}
+.de-imgbox{position:relative;display:inline-block;max-width:100%;}
+.de-imgbox img{display:block;max-width:min(100%,420px);max-height:300px;border-radius:8px;background:#e6edf5;cursor:zoom-in;min-width:80px;min-height:48px;}
+.de-imgbox .x{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:13px;line-height:26px;padding:0;cursor:pointer;}
+.de-cap{display:block;width:100%;margin-top:7px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;font-family:var(--font);background:#fff;color:var(--text);outline:0;}
+.de-cap:focus{border-color:var(--accent);}
+.de-cap.empty{border-color:#e57373;background:#fff8f8;}
 .typing{display:flex;gap:4px;align-items:center;padding:4px 0;}
 .typing-dot{width:7px;height:7px;border-radius:50%;background:var(--info);opacity:.5;animation:tbd 1.2s infinite;}
 .typing-dot:nth-child(2){animation-delay:.2s;}
@@ -1071,25 +1075,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         </select>
         <span class="dimg-hint">글 쓰는 위치에 사진이 들어갑니다 · 캡처를 복사해 붙여넣기(Ctrl+V)해도 됩니다</span>
       </div>
-      <textarea class="form-input" id="doc-input-content" rows="12"
-        placeholder="여기에 문서 내용을 붙여넣으세요.
-
-예시:
-■ 에러코드 목록
-E-101: 압력 과부하 → 즉시 운전 중단 후 안전밸브 점검
-E-204: 압력 센서 이상 → 기술팀 연락 (내선 2041)
-E-301: 온도 초과 → 냉각수 순환 상태 확인
-
-■ 정기 점검 항목 (월 1회)
-1. 오일 수위 확인
-2. 벨트 장력 점검
-3. 필터 청소 또는 교체"
-        style="resize:vertical;min-height:240px;font-size:13px;line-height:1.7;"></textarea>
+      <textarea id="doc-input-content" style="display:none" aria-hidden="true" tabindex="-1"></textarea>
+      <div id="doc-editor" class="de"></div>
       <div style="font-size:11px;color:var(--text3);margin-top:5px;display:flex;justify-content:space-between;">
         <span>입력된 글자 수: <span id="char-count">0</span>자</span>
         <span>권장: 500자 이상</span>
       </div>
-      <div id="doc-img-strip" class="dimg-strip"></div>
     </div>
 
     <!-- 기존 문서 목록 -->
@@ -2161,13 +2152,107 @@ async function compressImage(file,maxW,quality){
   if(!blob) throw new Error('사진을 줄이지 못했습니다.');
   return {blob,ext,w,h};
 }
+/* ── 문서 입력 편집기: 글 칸과 사진 칸이 번갈아 나옵니다 ──
+   저장 형식은 그대로(글 + [[그림:파일명|설명]]). 화면에는 코드 대신 사진 미리보기와 설명 칸만 보입니다.
+   숨겨진 #doc-input-content 에 항상 저장 형식의 글이 들어 있어, 저장·AI 전달 코드는 이 값을 읽습니다. */
+const DOC_EDITOR_PLACEHOLDER='여기에 문서 내용을 붙여넣으세요.\n\n예시:\n■ 에러코드 목록\nE-101: 압력 과부하 → 즉시 운전 중단 후 안전밸브 점검\nE-204: 압력 센서 이상 → 기술팀 연락 (내선 2041)\n\n■ 정기 점검 항목 (월 1회)\n1. 오일 수위 확인\n2. 벨트 장력 점검\n\n사진은 위의 [사진 넣기] 버튼으로, 글 쓰던 위치에 넣을 수 있습니다.';
+const DE={segs:[{t:'text',v:''}],focusIdx:0,pos:0,touched:false};   // segs: {t:'text',v} | {t:'img',name,cap}
+const docLocalPreview={};                                          // 방금 올린 사진은 내 파일로 바로 미리보기
+function deSanCap(x){ return String(x||'').replace(/[\[\]|\r\n]/g,' ').replace(/\s+/g,' ').trim(); }
+function deSerialize(){
+  const parts=[];
+  DE.segs.forEach(s=>{
+    if(s.t==='img') parts.push('[[그림:'+s.name+'|'+deSanCap(s.cap)+']]');
+    else{ const v=s.v.replace(/^\n+|\n+$/g,''); if(v.trim()!=='') parts.push(v); }
+  });
+  return parts.join('\n');
+}
+function deParse(text){
+  const segs=[], re=new RegExp(DOC_IMG_RE.source,'g'); let last=0,m; text=text||'';
+  const push=v=>segs.push({t:'text',v:v});
+  while((m=re.exec(text))){
+    push(text.slice(last,m.index).replace(/^\n/,'').replace(/\n$/,''));
+    const cap=(m[2]||'').trim();
+    segs.push({t:'img',name:m[1],cap:cap===DOC_IMG_PLACEHOLDER?'':cap});
+    last=m.index+m[0].length;
+  }
+  push(text.slice(last).replace(/^\n/,''));
+  return segs;
+}
+function deSync(){
+  document.getElementById('doc-input-content').value=deSerialize();
+  document.getElementById('char-count').textContent=DE.segs.reduce((a,x)=>a+(x.t==='text'?x.v.length:0),0);
+}
+function setDocContent(text){ DE.segs=deParse(text); DE.focusIdx=0; DE.pos=0; DE.touched=false; deRender(); deSync(); }
+function deGrow(ta){ ta.style.height='auto'; ta.style.height=Math.max(ta.scrollHeight,+ta.dataset.min||0)+'px'; }
+function deRender(focus){
+  const box=document.getElementById('doc-editor'); if(!box) return;
+  const only=DE.segs.length===1;
+  box.innerHTML='';
+  DE.segs.forEach((sg,i)=>{
+    if(sg.t==='text'){
+      const ta=document.createElement('textarea'); ta.className='de-text'; ta.value=sg.v; ta.rows=1;
+      ta.dataset.i=i; ta.dataset.min=only?240:40;
+      if(only) ta.placeholder=DOC_EDITOR_PLACEHOLDER;
+      const mark=()=>{ DE.focusIdx=i; DE.pos=ta.selectionStart; DE.touched=true; };
+      ta.addEventListener('input',()=>{ sg.v=ta.value; mark(); deGrow(ta); deSync(); });
+      ['focus','click','keyup','select'].forEach(ev=>ta.addEventListener(ev,mark));
+      box.appendChild(ta);
+    }else{
+      const d=document.createElement('div'); d.className='de-img';
+      const ib=document.createElement('div'); ib.className='de-imgbox';
+      const im=document.createElement('img'); im.alt='문서 사진';
+      im.addEventListener('click',()=>openImgLb(sg.name,sg.cap));
+      if(docLocalPreview[sg.name]) im.src=docLocalPreview[sg.name];
+      else{ im.dataset.docImg=sg.name; im.setAttribute('onerror','docImgFail(this)'); }
+      const x=document.createElement('button'); x.type='button'; x.className='x'; x.title='이 사진 빼기'; x.textContent='✕';
+      x.addEventListener('click',()=>deRemoveImg(i));
+      ib.appendChild(im); ib.appendChild(x);
+      const cap=document.createElement('input'); cap.type='text'; cap.className='de-cap'+(sg.cap?'':' empty'); cap.maxLength=120;
+      cap.placeholder='사진 설명 (예: 결재 메뉴 위치 — 화면 상단 가운데)';
+      cap.value=sg.cap; cap.dataset.i=i;
+      cap.addEventListener('input',()=>{ sg.cap=cap.value; cap.classList.toggle('empty',!cap.value.trim()); deSync(); });
+      d.appendChild(ib); d.appendChild(cap); box.appendChild(d);
+    }
+  });
+  box.querySelectorAll('.de-text').forEach(deGrow);
+  hydrateDocImgs(box);
+  if(focus){
+    if(focus.cap!=null){ const c=box.querySelector('.de-cap[data-i="'+focus.cap+'"]'); if(c){ c.focus(); c.scrollIntoView({block:'nearest'}); } }
+    else if(focus.i!=null){ const t=box.querySelector('.de-text[data-i="'+focus.i+'"]'); if(t){ t.focus(); t.setSelectionRange(focus.pos||0,focus.pos||0); } }
+  }
+}
+function deMerge(){                    // 사진을 뺀 뒤 서로 붙게 된 글 칸을 하나로 합침
+  const out=[];
+  DE.segs.forEach(sg=>{
+    const prev=out[out.length-1];
+    if(sg.t==='text'&&prev&&prev.t==='text') prev.v=(prev.v&&sg.v)?prev.v+'\n'+sg.v:(prev.v||sg.v);
+    else out.push(sg);
+  });
+  if(!out.length||out[0].t!=='text') out.unshift({t:'text',v:''});
+  if(out[out.length-1].t!=='text') out.push({t:'text',v:''});
+  DE.segs=out;
+}
+function deRemoveImg(i){
+  DE.segs.splice(i,1); deMerge(); DE.focusIdx=Math.min(DE.focusIdx,DE.segs.length-1); DE.touched=false;
+  deRender(); deSync();
+}
+function deInsertImage(name,cap){      // 마지막으로 커서가 있던 위치(없으면 맨 끝)에 사진 칸을 끼워 넣음
+  let i=DE.touched?DE.focusIdx:DE.segs.length-1;
+  if(!DE.segs[i]||DE.segs[i].t!=='text') i=DE.segs.length-1;
+  if(DE.segs[i].t!=='text'){ DE.segs.push({t:'text',v:''}); i=DE.segs.length-1; }
+  const v=DE.segs[i].v, pos=DE.touched?Math.min(DE.pos,v.length):v.length;
+  DE.segs.splice(i,1,{t:'text',v:v.slice(0,pos).replace(/\n$/,'')},{t:'img',name:name,cap:cap||''},{t:'text',v:v.slice(pos).replace(/^\n/,'')});
+  DE.focusIdx=i+2; DE.pos=0; DE.touched=true;
+  deRender({cap:i+1}); deSync();
+}
+
 let _docImgBusy=false;
 async function docImgUpload(files){
   const list=Array.from(files||[]).filter(f=>/^image\//.test(f.type));
   if(!list.length){ showToast('사진 파일만 넣을 수 있습니다.','error'); return; }
   if(_docImgBusy){ showToast('사진을 올리는 중입니다. 잠시 후 다시 해주세요.'); return; }
   _docImgBusy=true;
-  const ta=document.getElementById('doc-input-content');
   const maxW=parseInt(document.getElementById('doc-img-size').value,10)||1000;
   let done=0, saved=0;
   try{
@@ -2181,56 +2266,30 @@ async function docImgUpload(files){
         const t=await libApi('doc-image-upload-url',{ext:c.ext,size:c.blob.size});   // 이름·임시 업로드 토큰은 서버(관리자 확인)가 발급
         const r=await sb.storage.from(t.bucket).uploadToSignedUrl(t.path,t.token,c.blob,{contentType:t.contentType,cacheControl:'3600'});
         if(r.error) throw new Error('올리기 실패: '+r.error.message);
-        const name=t.name;
-        // 커서 위치(없으면 맨 끝)에 자리표 삽입
-        const pos=(document.activeElement===ta||ta.selectionStart!==0)?ta.selectionStart:ta.value.length;
-        const mk='[[그림:'+name+'|'+DOC_IMG_PLACEHOLDER+']]';
-        const pre=ta.value.slice(0,pos), post=ta.value.slice(pos);
-        const lead=(pre&&!pre.endsWith('\n'))?'\n':'', trail=(post&&!post.startsWith('\n'))?'\n':'';
-        ta.value=pre+lead+mk+trail+post;
-        const capStart=pre.length+lead.length+mk.length-2-DOC_IMG_PLACEHOLDER.length;
-        ta.setSelectionRange(capStart,capStart+DOC_IMG_PLACEHOLDER.length);
+        docLocalPreview[t.name]=URL.createObjectURL(c.blob);
+        deInsertImage(t.name,'');
         saved++;
       }catch(e){ showToast('⚠️ '+(f.name||'사진')+': '+e.message,'error'); }
       done++;
     }
   } finally { _docImgBusy=false; }
-  ta.dispatchEvent(new Event('input',{bubbles:true}));
-  if(saved){ ta.focus(); showToast('✅ 사진 '+saved+'장을 넣었습니다. 선택된 "'+DOC_IMG_PLACEHOLDER+'" 자리에 사진 설명을 적어 주세요.','success'); }
+  if(saved) showToast('✅ 사진 '+saved+'장을 넣었습니다. 사진 아래 칸에 설명을 적어 주세요.','success');
 }
 function docImgPick(inp){ const f=inp.files; docImgUpload(f).then(()=>{ inp.value=''; }); }
-
-function renderDocImgStrip(){
-  const box=document.getElementById('doc-img-strip'); if(!box) return;
-  const ta=document.getElementById('doc-input-content');
-  const items=docImgList(ta.value);
-  box.innerHTML=items.map((it,i)=>{
-    const empty=!it.cap||it.cap===DOC_IMG_PLACEHOLDER;
-    return '<div class="dimg-item"><img data-doc-img="'+it.name+'" onerror="docImgFail(this)" alt="" data-i="'+i+'" onclick="openImgLb(\''+it.name+'\',this.dataset.cap)" data-cap="'+it.cap.replace(/"/g,'&quot;')+'">'
-      +'<div class="cap'+(empty?' empty':'')+'">'+(empty?'설명을 적어 주세요':it.cap.replace(/</g,'&lt;'))+'</div>'
-      +'<button type="button" class="x" title="이 사진 빼기" onclick="docImgRemove('+i+')">✕</button></div>';
-  }).join('');
-  hydrateDocImgs(box);
-}
-function docImgRemove(i){
-  const ta=document.getElementById('doc-input-content');
-  const it=docImgList(ta.value)[i]; if(!it) return;
-  ta.value=ta.value.replace(it.raw,'').replace(/\n{3,}/g,'\n\n');
-  ta.dispatchEvent(new Event('input',{bubbles:true}));
-}
 function docImgCaptionsOk(text){      // 설명이 비었으면 저장 전에 한 번 확인
   const bad=docImgList(text).filter(it=>!it.cap||it.cap===DOC_IMG_PLACEHOLDER).length;
   return bad===0 || confirm('사진 '+bad+'장에 설명이 없습니다.\n\nAI는 사진을 직접 보지 못하고 설명 글로만 알맞은 사진을 고릅니다. 설명이 없으면 사진이 제대로 나오지 않을 수 있습니다.\n\n그래도 저장할까요?');
 }
+const inDocEditor=e=>!!(e.target&&e.target.closest&&e.target.closest('#doc-editor'));
 document.addEventListener('paste',function(e){
-  if(e.target&&e.target.id==='doc-input-content'){
+  if(inDocEditor(e)){
     const files=Array.from((e.clipboardData&&e.clipboardData.files)||[]).filter(f=>/^image\//.test(f.type));
     if(files.length){ e.preventDefault(); docImgUpload(files); }
   }
 });
-document.addEventListener('dragover',function(e){ if(e.target&&e.target.id==='doc-input-content'&&e.dataTransfer&&Array.from(e.dataTransfer.types||[]).includes('Files')) e.preventDefault(); });
+document.addEventListener('dragover',function(e){ if(inDocEditor(e)&&e.dataTransfer&&Array.from(e.dataTransfer.types||[]).includes('Files')) e.preventDefault(); });
 document.addEventListener('drop',function(e){
-  if(e.target&&e.target.id==='doc-input-content'&&e.dataTransfer&&e.dataTransfer.files.length){
+  if(inDocEditor(e)&&e.dataTransfer&&e.dataTransfer.files.length){
     const files=Array.from(e.dataTransfer.files).filter(f=>/^image\//.test(f.type));
     if(files.length){ e.preventDefault(); docImgUpload(files); }
   }
@@ -2873,9 +2932,7 @@ function editDocContent(idx){
 
   // 수정할 문서 데이터를 입력 폼에 채우기
   document.getElementById('doc-input-title').value=target.title;
-  document.getElementById('doc-input-content').value=target.content;
-  document.getElementById('char-count').textContent=target.content.length;
-  renderDocImgStrip();
+  setDocContent(target.content);
   currentDocCat=target.cat;
   document.querySelectorAll('.ctab').forEach(t=>t.classList.toggle('active',t.dataset.cat===target.cat));
 
@@ -2903,8 +2960,7 @@ async function saveDocEdit(idx){
   docs[idx].date=new Date().toISOString().slice(0,10);
   // 폼 초기화 & 저장 버튼 원래대로
   document.getElementById('doc-input-title').value='';
-  document.getElementById('doc-input-content').value='';
-  document.getElementById('char-count').textContent='0'; renderDocImgStrip();
+  setDocContent('');
   const saveBtn=document.querySelector('#modal-doc-input .modal-actions .btn-primary');
   if(saveBtn){saveBtn.textContent='📝 저장';saveBtn.onclick=saveDocContent;}
   renderExistingDocs(); renderDocTree(); renderDash();
@@ -2919,9 +2975,7 @@ function openDocInputModal(pi,mi){
   const m=products[pi].models[mi];
   document.getElementById('modal-doc-input-title').textContent=`📝 ${products[pi].name} › ${m.name} — 문서 내용 입력`;
   document.getElementById('doc-input-title').value='';
-  document.getElementById('doc-input-content').value='';
-  document.getElementById('char-count').textContent='0';
-  renderDocImgStrip();
+  setDocContent('');
   // 카테고리 탭 초기화
   document.querySelectorAll('.ctab').forEach(t=>t.classList.toggle('active',t.dataset.cat==='기술교본'));
   // 필터 탭 초기화
@@ -2946,12 +3000,6 @@ function selectDocCat(cat){
 }
 
 // 글자 수 카운트
-document.addEventListener('input',function(e){
-  if(e.target.id==='doc-input-content'){
-    document.getElementById('char-count').textContent=e.target.value.length;
-    renderDocImgStrip();
-  }
-});
 
 function renderExistingDocs(){
   if(!modalDocRef)return;
@@ -2991,8 +3039,7 @@ async function saveDocContent(){
     date:new Date().toISOString().slice(0,10)
   });
   document.getElementById('doc-input-title').value='';
-  document.getElementById('doc-input-content').value='';
-  document.getElementById('char-count').textContent='0'; renderDocImgStrip();
+  setDocContent('');
   renderExistingDocs(); renderDocTree(); renderDash();
   // 드롭다운도 갱신
   if(currentUser?.role!=='admin') populateCatDD();
@@ -4946,8 +4993,7 @@ function closeModal(id){
     const saveBtn=document.querySelector('#modal-doc-input .modal-actions .btn-primary');
     if(saveBtn){saveBtn.textContent='📝 저장';saveBtn.onclick=saveDocContent;}
     document.getElementById('doc-input-title').value='';
-    document.getElementById('doc-input-content').value='';
-    document.getElementById('char-count').textContent='0';
+    setDocContent('');
   }
 }
 let _tt=null;

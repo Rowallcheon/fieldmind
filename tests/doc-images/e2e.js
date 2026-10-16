@@ -105,12 +105,13 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await page.waitForSelector('#screen-admin.active', { timeout: 8000 });
   await page.evaluate(() => { openDocInputModal(0, 0); });
   await page.waitForSelector('#modal-doc-input.open');
+  const hidden = () => page.inputValue('#doc-input-content');
 
   await page.fill('#doc-input-title', '결재 올리는 방법');
-  await page.fill('#doc-input-content', '1. 그룹웨어에 접속합니다.\n2. 상단의 결재 메뉴를 누릅니다.\n3. 완료합니다.');
-  await page.evaluate(() => { const t = document.getElementById('doc-input-content'); const p = t.value.indexOf('3. 완료'); t.focus(); t.setSelectionRange(p, p); });
+  await page.fill('#doc-editor .de-text', '1. 그룹웨어에 접속합니다.\n2. 상단의 결재 메뉴를 누릅니다.\n3. 완료합니다.');
+  await page.evaluate(() => { const t = document.querySelector('#doc-editor .de-text'); const p = t.value.indexOf('3. 완료'); t.focus(); t.setSelectionRange(p, p); t.dispatchEvent(new Event('keyup')); });
   await page.setInputFiles('#doc-img-file', { name: 'cap.png', mimeType: 'image/png', buffer: BIG });
-  await page.waitForFunction(() => document.getElementById('doc-input-content').value.includes('[[그림:'), null, { timeout: 8000 });
+  await page.waitForSelector('#doc-editor .de-img', { timeout: 8000 });
   const up = await page.evaluate(() => window.__uploads);
   ok(up && up.length === 1 && up[0].b === 'doc-images' && /^UP/.test(up[0].token), '사진이 doc-images 저장소로, 서버가 준 업로드 토큰으로 올라간다');
   ok(apiLog.some(a => a.u === '/api/doc-image-upload-url' && a.auth === 'Bearer TOK-ADMIN' && a.b.ext === 'webp'), '업로드 토큰은 관리자 로그인 토큰으로 요청한다');
@@ -118,48 +119,70 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(up && /^[a-z0-9]{8,24}\.webp$/.test(up[0].name), '파일명이 무작위 영소문자/숫자 + .webp 이다 (' + (up && up[0].name) + ')');
   ok(up && up[0].type === 'image/webp', '브라우저가 WebP로 변환했다');
   ok(up && up[0].size < BIG.length / 5 && up[0].size < 1.9 * 1024 * 1024, '용량이 크게 줄었다 (' + BIG.length + ' → ' + (up && up[0].size) + ' bytes)');
-  const sel = await page.evaluate(() => { const t = document.getElementById('doc-input-content'); return t.value.slice(t.selectionStart, t.selectionEnd); });
-  ok(sel === '설명 입력', '삽입 직후 "설명 입력" 글자가 선택되어 바로 설명을 쓸 수 있다');
-  const val1 = await page.inputValue('#doc-input-content');
-  ok(val1.indexOf('[[그림:') > val1.indexOf('2. 상단') && val1.indexOf('[[그림:') < val1.indexOf('3. 완료'), '사진 자리표가 커서 위치(2번과 3번 사이)에 들어갔다');
-  ok((await page.$$('#doc-img-strip .dimg-item')).length === 1 && await page.$eval('#doc-img-strip .cap', e => e.classList.contains('empty')), '아래 미리보기에 사진이 보이고 "설명을 적어 주세요" 표시가 뜬다');
-  const wh = await page.$eval('#doc-img-strip img', i => new Promise(r => { if (i.complete && i.naturalWidth) return r([i.naturalWidth, i.naturalHeight]); i.onload = () => r([i.naturalWidth, i.naturalHeight]); setTimeout(() => r([0, 0]), 3000); }));
-  ok(wh[0] === 1000 && wh[1] === 556, '미리보기 사진이 실제로 불러와지고 가로 1000px로 줄었다 (' + wh.join('x') + ')');
+
+  const layout = await page.$$eval('#doc-editor > *', l => l.map(e => e.classList.contains('de-img') ? 'IMG' : 'TEXT:' + e.value));
+  ok(layout.length === 3 && layout[0].startsWith('TEXT:1. 그룹웨어') && layout[0].includes('2. 상단') && layout[1] === 'IMG' && layout[2] === 'TEXT:3. 완료합니다.', '사진이 커서 위치(2번과 3번 사이)에 그림 칸으로 들어가고 글은 앞뒤로 나뉜다');
+  const visible = await page.$eval('#doc-editor', e => e.innerText + Array.from(e.querySelectorAll('textarea,input')).map(x => x.value + x.placeholder).join(''));
+  ok(!/\[\[그림|\.webp/.test(visible), '입력 화면에 그림 코드(파일명)가 보이지 않는다');
+  const wh = await page.$eval('#doc-editor .de-img img', i => new Promise(r => { if (i.complete && i.naturalWidth) return r([i.naturalWidth, i.naturalHeight]); i.onload = () => r([i.naturalWidth, i.naturalHeight]); setTimeout(() => r([0, 0]), 3000); }));
+  ok(wh[0] === 1000 && wh[1] === 556, '글 쓰는 자리에 사진 미리보기가 바로 보이고 가로 1000px로 줄었다 (' + wh.join('x') + ')');
+  ok(await page.$eval('#doc-editor .de-cap', e => document.activeElement === e && e.classList.contains('empty') && e.value === ''), '사진 아래 설명 칸에 커서가 가 있고, 비어 있으면 빨간 테두리로 표시된다');
+  ok((await hidden()).includes('[[그림:' + up[0].name + '|]]') && (await hidden()).indexOf('[[그림') > (await hidden()).indexOf('2. 상단'), '저장 형식(숨김)에는 자리표가 같은 위치에 만들어진다');
+  ok((await page.textContent('#char-count')) === String('1. 그룹웨어에 접속합니다.\n2. 상단의 결재 메뉴를 누릅니다.'.length + '3. 완료합니다.'.length), '글자 수에는 사진 코드가 포함되지 않는다');
+  await page.screenshot({ path: path.join(OUT, 'admin-modal.png') });
 
   // 설명 비운 채 저장 → 확인창, 취소하면 저장 안 됨
-  await page.screenshot({ path: path.join(OUT, 'admin-modal.png') });
   await page.evaluate(() => { window.__writes.length = 0; });
   dialogAnswer = false; await page.click('#modal-doc-input .modal-actions .btn-primary'); await page.waitForTimeout(300);
   ok(dialogs.length === 1 && /설명이 없습니다/.test(dialogs[0]), '설명이 비었으면 저장 전에 확인창이 뜬다');
   ok(!(await page.evaluate(() => window.__writes.some(w => w.t === 'documents'))), '확인창에서 취소하면 저장되지 않는다');
 
-  // 설명 입력 후 저장
-  await page.evaluate(() => { const t = document.getElementById('doc-input-content'); const p = t.value.indexOf('설명 입력'); t.focus(); t.setSelectionRange(p, p + '설명 입력'.length); });
+  // 설명 입력 후 저장 (설명 칸에 커서가 있으므로 바로 입력)
+  await page.click('#doc-editor .de-cap');
   await page.keyboard.type('결재 메뉴 위치 (화면 상단 가운데)');
-  ok(!(await page.$eval('#doc-img-strip .cap', e => e.classList.contains('empty'))) && /결재 메뉴 위치/.test(await page.$eval('#doc-img-strip .cap', e => e.textContent)), '설명을 쓰면 미리보기에 설명이 표시된다');
+  ok(!(await page.$eval('#doc-editor .de-cap', e => e.classList.contains('empty'))) && (await hidden()).includes('|결재 메뉴 위치 (화면 상단 가운데)]]'), '설명을 쓰면 빨간 표시가 사라지고 저장 형식에 설명이 반영된다');
   dialogs.length = 0; await page.click('#modal-doc-input .modal-actions .btn-primary'); await page.waitForTimeout(300);
   const w = await page.evaluate(() => window.__writes.filter(x => x.t === 'documents' && x.k === 'insert'));
   ok(dialogs.length === 0 && w.length === 1, '설명이 있으면 확인창 없이 저장된다');
   const saved = w[0] && w[0].a[0].content;
   ok(saved && saved.includes('[[그림:' + up[0].name + '|결재 메뉴 위치 (화면 상단 가운데)]]'), '문서 글에 [[그림:파일명|설명]] 형태로 저장된다');
+  ok(saved === '1. 그룹웨어에 접속합니다.\n2. 상단의 결재 메뉴를 누릅니다.\n[[그림:' + up[0].name + '|결재 메뉴 위치 (화면 상단 가운데)]]\n3. 완료합니다.', '저장된 글이 "앞 글 / 사진 / 뒷 글" 순서 그대로다');
   const card = await page.$eval('#existing-docs-list .doc-card', e => e.textContent);
   ok(/🖼️/.test(card) && !/\[\[그림/.test(card), '등록된 문서 목록에는 자리표 대신 🖼️ 로 보인다');
+  ok((await page.$$('#doc-editor .de-img')).length === 0 && (await hidden()) === '', '저장 후 입력 칸은 비워진다');
+
+  // 저장된 문서를 다시 열면(수정) 그림 칸으로 복원되고, 그대로 저장해도 글이 같다
+  await page.evaluate(() => { editDocContent(0); });
+  const re = await page.$$eval('#doc-editor > *', l => l.map(e => e.classList.contains('de-img') ? 'IMG:' + e.querySelector('.de-cap').value : 'TEXT'));
+  ok(re.length === 3 && re[1] === 'IMG:결재 메뉴 위치 (화면 상단 가운데)', '수정 화면에서 사진 칸과 설명이 그대로 복원된다');
+  ok((await hidden()) === saved, '불러왔다가 다시 직렬화해도 저장 형식이 똑같다');
+  const wh2 = await page.$eval('#doc-editor .de-img img', i => new Promise(r => { const ck = () => i.complete && i.naturalWidth ? r(i.naturalWidth) : setTimeout(ck, 100); ck(); setTimeout(() => r(0), 5000); }));
+  ok(wh2 === 1000, '수정 화면의 사진은 서버가 준 임시 주소로 불러와진다');
+  await page.evaluate(() => { openDocInputModal(0, 0); });
 
   // 붙여넣기(Ctrl+V)
-  await page.evaluate(() => { document.getElementById('doc-input-content').value = ''; document.getElementById('doc-input-content').focus(); });
+  await page.evaluate(() => { document.querySelector('#doc-editor .de-text').focus(); });
   await page.evaluate(async (b64) => {
     const bin = atob(b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
     const dt = new DataTransfer(); dt.items.add(new File([a], 'p.png', { type: 'image/png' }));
-    document.getElementById('doc-input-content').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    document.querySelector('#doc-editor .de-text').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
   }, BIG.toString('base64'));
-  await page.waitForFunction(() => document.getElementById('doc-input-content').value.includes('[[그림:'), null, { timeout: 8000 });
+  await page.waitForSelector('#doc-editor .de-img', { timeout: 8000 });
   ok((await page.evaluate(() => window.__uploads.length)) === 2, '캡처 이미지를 붙여넣기(Ctrl+V)해도 올라간다');
-  await page.click('#doc-img-strip .x'); await page.waitForTimeout(100);
-  ok(!(await page.inputValue('#doc-input-content')).includes('[[그림:') && (await page.$$('#doc-img-strip .dimg-item')).length === 0, '✕ 를 누르면 글에서 자리표가 빠진다');
+  await page.click('#doc-editor .de-imgbox .x'); await page.waitForTimeout(100);
+  ok((await page.$$('#doc-editor .de-img')).length === 0 && (await page.$$('#doc-editor .de-text')).length === 1 && (await hidden()) === '', '✕ 를 누르면 사진 칸이 빠지고 글 칸이 하나로 합쳐진다');
   // 사진이 아닌 파일
   await page.setInputFiles('#doc-img-file', { name: 'a.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') });
   await page.waitForTimeout(300);
   ok((await page.evaluate(() => window.__uploads.length)) === 2, '사진이 아닌 파일은 올라가지 않는다');
+  // 두 장 연속 + 글 사이
+  await page.fill('#doc-editor .de-text', 'AAA\nBBB');
+  await page.evaluate(() => { const t = document.querySelector('#doc-editor .de-text'); t.focus(); t.setSelectionRange(3, 3); t.dispatchEvent(new Event('keyup')); });
+  await page.setInputFiles('#doc-img-file', [{ name: 'a.png', mimeType: 'image/png', buffer: BIG }, { name: 'b.png', mimeType: 'image/png', buffer: BIG }]);
+  await page.waitForFunction(() => document.querySelectorAll('#doc-editor .de-img').length === 2, null, { timeout: 12000 });
+  const lay2 = await page.$$eval('#doc-editor > *', l => l.map(e => e.classList.contains('de-img') ? 'IMG' : 'T:' + e.value));
+  ok(JSON.stringify(lay2) === JSON.stringify(['T:AAA', 'IMG', 'IMG', 'T:BBB']) || JSON.stringify(lay2) === JSON.stringify(['T:AAA', 'IMG', 'T:', 'IMG', 'T:BBB']), '여러 장을 한 번에 올리면 차례대로 같은 위치에 이어서 들어간다 (' + lay2.join(' | ') + ')');
+  await page.evaluate(() => { setDocContent(''); closeModal('modal-doc-input'); });
 
   // ── 사용자 챗봇 ──
   console.log('[사용자: 챗봇 답변]');

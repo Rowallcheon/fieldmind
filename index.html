@@ -135,6 +135,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 #img-lb img{display:block;margin:56px auto 24px;max-width:none;width:min(1000px,100%);height:auto;}
 #img-lb .lb-x{position:fixed;top:10px;right:12px;z-index:2;background:rgba(255,255,255,.16);color:#fff;border:0;border-radius:20px;padding:9px 16px;font-size:14px;font-family:inherit;cursor:pointer;}
 #img-lb .lb-cap{position:fixed;left:14px;right:96px;top:14px;z-index:2;color:#dfe8f2;font-size:13px;line-height:1.4;max-height:40px;overflow:hidden;}
+.chat-img-miss{display:block;margin:8px 0 6px;padding:14px 12px;border:1px dashed var(--border);border-radius:10px;font-size:12px;color:var(--text3);background:#f6f8fb;}
 .dimg-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 8px;}
 .dimg-bar select{font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-family:inherit;}
 .dimg-hint{font-size:11px;color:var(--text3);}
@@ -2075,13 +2076,42 @@ ${docCtx}`;
 }
 
 
-/* ════════ 문서 사진 (Supabase 저장소 'doc-images') ════════
+/* ════════ 문서 사진 (Supabase 비공개 저장소 'doc-images') ════════
    문서 글 속에 [[그림:파일명|설명]] 형태로 자리표를 둡니다. AI는 설명 글만 읽고,
-   답변에 [[그림:파일명]]을 넣으면 화면에서 사진으로 바뀝니다. */
+   답변에 [[그림:파일명]]을 넣으면 화면에서 사진으로 바뀝니다.
+   저장소는 비공개라서, 로그인한 사용자에게만 서버 함수(/api/doc-image-url)가 5분짜리 임시 주소를 줍니다. */
 const DOC_IMG_BUCKET='doc-images';
 const DOC_IMG_RE=/\[\[그림:([a-z0-9]{8,24}\.(?:webp|jpg))(?:\|([^\]\n]*))?\]\]/g;
 const DOC_IMG_PLACEHOLDER='설명 입력';
-function docImgUrl(name){ return _SB_URL+'/storage/v1/object/public/'+DOC_IMG_BUCKET+'/'+name; }
+const docImgCache=new Map();          // 파일명 → {url, exp}
+async function docImgResolve(names){   // 파일명 목록 → {파일명: 임시 주소|null}
+  const now=Date.now(), out={}, need=[];
+  names.forEach(n=>{ const c=docImgCache.get(n); if(c&&c.exp>now) out[n]=c.url; else if(!need.includes(n)) need.push(n); });
+  for(let i=0;i<need.length;i+=20){
+    const part=need.slice(i,i+20);
+    try{
+      if(libLoginP) await libLoginP;
+      const r=await libApi('doc-image-url',{names:part});
+      part.forEach(n=>{ const u=(r.urls||{})[n]||null; out[n]=u; if(u) docImgCache.set(n,{url:u,exp:now+((r.expiresIn||300)-45)*1000}); });
+    }catch(e){ part.forEach(n=>{ out[n]=null; }); docImgFail.lastError=e; }
+  }
+  return out;
+}
+async function hydrateDocImgs(root){   // root 안의 사진 자리(img[data-doc-img])에 임시 주소를 채움
+  const imgs=Array.from((root||document).querySelectorAll('img[data-doc-img]:not([src])'));
+  if(!imgs.length) return;
+  const map=await docImgResolve(imgs.map(i=>i.dataset.docImg));
+  imgs.forEach(i=>{ const u=map[i.dataset.docImg]; if(u) i.src=u; else docImgFail(i); });
+}
+function docImgFail(img){              // 사진을 못 불러왔을 때: 깨진 그림 대신 안내
+  if(!img||!img.parentNode) return;
+  if(img.dataset.retried!=='1' && img.dataset.docImg && img.getAttribute('src')){   // 만료된 주소일 수 있으니 한 번만 새로 받아서 재시도
+    img.dataset.retried='1'; docImgCache.delete(img.dataset.docImg); img.removeAttribute('src'); hydrateDocImgs(img.parentNode); return;
+  }
+  const sp=document.createElement('span'); sp.className='chat-img-miss';
+  sp.textContent='🖼️ 사진을 불러올 수 없습니다'+((docImgFail.lastError&&docImgFail.lastError.status===401)?' (다시 로그인해 주세요)':'');
+  img.replaceWith(sp);
+}
 function docImgList(text){            // 글 속 사진 자리표 목록 [{name, cap, raw}]
   const out=[]; let m; const re=new RegExp(DOC_IMG_RE.source,'g');
   while((m=re.exec(text||''))){ out.push({name:m[1],cap:(m[2]||'').trim(),raw:m[0]}); }
@@ -2093,11 +2123,14 @@ function docTextPlain(text){          // 목록·미리보기용: 자리표를 �
 // 형식이 틀리거나 끊긴 [[그림:...]] 까지 모두 제거 (음성 읽기·남은 글자 정리용)
 function stripImgMarkers(text){ return (text||'').replace(/\[\[\s*그림\s*[:：][^\]]*\]\]/g,'').replace(/\[\[\s*그림[^\]]*$/,''); }
 
-function openImgLb(name,cap){
+async function openImgLb(name,cap){
   const lb=document.getElementById('img-lb'); if(!lb||!/^[a-z0-9]{8,24}\.(webp|jpg)$/.test(name||'')) return;
-  document.getElementById('img-lb-img').src=docImgUrl(name);
-  document.getElementById('img-lb-cap').textContent=cap||'';
+  const im=document.getElementById('img-lb-img');
+  im.removeAttribute('src'); document.getElementById('img-lb-cap').textContent=cap||'';
   lb.classList.add('open'); lb.scrollTop=0; lb.setAttribute('aria-hidden','false');
+  const u=(await docImgResolve([name]))[name];
+  if(!lb.classList.contains('open')) return;            // 그 사이 닫았으면 중단
+  if(u) im.src=u; else { document.getElementById('img-lb-cap').textContent='사진을 불러올 수 없습니다.'; }
 }
 function closeImgLb(){
   const lb=document.getElementById('img-lb'); if(!lb) return;
@@ -2128,10 +2161,6 @@ async function compressImage(file,maxW,quality){
   if(!blob) throw new Error('사진을 줄이지 못했습니다.');
   return {blob,ext,w,h};
 }
-function newImgId(){
-  const a=new Uint8Array(9); crypto.getRandomValues(a);
-  return Array.from(a,b=>(b%36).toString(36)).join('')+Date.now().toString(36).slice(-3);
-}
 let _docImgBusy=false;
 async function docImgUpload(files){
   const list=Array.from(files||[]).filter(f=>/^image\//.test(f.type));
@@ -2148,9 +2177,11 @@ async function docImgUpload(files){
         if(f.size>25*1024*1024) throw new Error('사진 한 장은 25MB 이하여야 합니다.');
         const c=await compressImage(f,maxW,0.72);
         if(c.blob.size>1.9*1024*1024) throw new Error('줄여도 너무 큽니다. 크기를 "작게"로 바꿔 보세요.');
-        const name=newImgId()+'.'+c.ext;
-        const r=await sb.storage.from(DOC_IMG_BUCKET).upload(name,c.blob,{contentType:c.blob.type,cacheControl:'31536000',upsert:false});
+        if(libLoginP) await libLoginP;
+        const t=await libApi('doc-image-upload-url',{ext:c.ext,size:c.blob.size});   // 이름·임시 업로드 토큰은 서버(관리자 확인)가 발급
+        const r=await sb.storage.from(t.bucket).uploadToSignedUrl(t.path,t.token,c.blob,{contentType:t.contentType,cacheControl:'3600'});
         if(r.error) throw new Error('올리기 실패: '+r.error.message);
+        const name=t.name;
         // 커서 위치(없으면 맨 끝)에 자리표 삽입
         const pos=(document.activeElement===ta||ta.selectionStart!==0)?ta.selectionStart:ta.value.length;
         const mk='[[그림:'+name+'|'+DOC_IMG_PLACEHOLDER+']]';
@@ -2175,10 +2206,11 @@ function renderDocImgStrip(){
   const items=docImgList(ta.value);
   box.innerHTML=items.map((it,i)=>{
     const empty=!it.cap||it.cap===DOC_IMG_PLACEHOLDER;
-    return '<div class="dimg-item"><img src="'+docImgUrl(it.name)+'" alt="" data-i="'+i+'" onclick="openImgLb(\''+it.name+'\',this.dataset.cap)" data-cap="'+it.cap.replace(/"/g,'&quot;')+'">'
+    return '<div class="dimg-item"><img data-doc-img="'+it.name+'" onerror="docImgFail(this)" alt="" data-i="'+i+'" onclick="openImgLb(\''+it.name+'\',this.dataset.cap)" data-cap="'+it.cap.replace(/"/g,'&quot;')+'">'
       +'<div class="cap'+(empty?' empty':'')+'">'+(empty?'설명을 적어 주세요':it.cap.replace(/</g,'&lt;'))+'</div>'
       +'<button type="button" class="x" title="이 사진 빼기" onclick="docImgRemove('+i+')">✕</button></div>';
   }).join('');
+  hydrateDocImgs(box);
 }
 function docImgRemove(i){
   const ta=document.getElementById('doc-input-content');
@@ -2211,7 +2243,7 @@ function mdToHtml(text){
     // 문서 사진 표시 [[그림:ID]] → 사진 (답변당 최대 8장, 형식이 맞는 것만)
     .replace(DOC_IMG_RE, function(m,id,cap){
       if(++imgCount>8) return '';
-      return '\n<img class="chat-img" loading="lazy" src="'+docImgUrl(id)+'" alt="'+(cap||'문서 사진').replace(/"/g,'')+'" data-id="'+id+'" onclick="openImgLb(this.dataset.id)" onerror="this.style.display=\'none\'">\n';
+      return '\n<img class="chat-img" data-doc-img="'+id+'" alt="'+(cap||'문서 사진').replace(/"/g,'')+'" data-id="'+id+'" onclick="openImgLb(this.dataset.id,this.alt)" onerror="docImgFail(this)">\n';
     })
     .replace(/\[\[\s*그림\s*[:：][^\]]*\]\]/g,'').replace(/\[\[\s*그림[^\]]*$/,'')
     // 헤더 ##, # 제거 (텍스트만 남김)
@@ -2258,6 +2290,7 @@ function appendMsg(role,text,srcDocs){
     ? '<div class="msg-av">'+starIcon()+'</div><div class="msg-col"><span class="msg-name">ProGuide</span><div class="msg-line">'+bubble+time+'</div></div>'
     : '<div class="msg-col"><div class="msg-line">'+time+bubble+'</div></div>';
   body.appendChild(div); body.scrollTop=body.scrollHeight;
+  if(role==='bot') hydrateDocImgs(div).then(()=>{ body.scrollTop=body.scrollHeight; });
 }
 function appendTyping(){
   const body=document.getElementById('chat-body');
@@ -2322,6 +2355,7 @@ function openHistDetail(r){
   document.getElementById('hist-detail-question').textContent = r.question||'';
   // 답변 (마크다운 렌더링)
   document.getElementById('hist-detail-answer').innerHTML = mdToHtml(r.answer||'');
+  hydrateDocImgs(document.getElementById('hist-detail-answer'));
   // 참조 문서
   const refWrap = document.getElementById('hist-detail-ref-wrap');
   const refEl   = document.getElementById('hist-detail-ref');
@@ -4422,6 +4456,7 @@ function libLogin(id,pw){
 }
 function libReset(){
   libToken=null;libLoginP=null;libLoginMsg='';libData=null;libLoadedAt=0;libPath=[];libQuery='';
+  docImgCache.clear();   // 로그아웃하면 문서 사진 임시 주소도 버림
   if(typeof libCloseViewer==='function')libCloseViewer();
   const q=document.getElementById('lib-q');if(q)q.value='';
 }

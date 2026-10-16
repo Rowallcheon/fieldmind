@@ -1,22 +1,19 @@
 -- ============================================================
--- 문서 사진 저장소 (Supabase Storage 버킷 'doc-images')
--- 방식: 1차 = 주소를 알아야만 볼 수 있는 공개 버킷 (파일명은 무작위, 목록 조회는 막음)
---       나중에 서버 함수가 임시 주소를 발급하는 방식(로그인한 사람만)으로 올릴 수 있습니다.
+-- 문서 사진 저장소 (Supabase Storage 버킷 'doc-images') — 비공개 방식
+-- 방식: 버킷은 비공개. 브라우저(anon)는 정책이 없어 직접 읽기·쓰기·목록 조회가 모두 막혀 있고,
+--       서버 함수(/api/doc-image-url, /api/doc-image-upload-url)가 서비스 키로
+--       로그인한 사용자에게만 임시 열람 주소(5분), 관리자에게만 임시 업로드 토큰을 발급합니다.
 -- 여러 번 실행해도 안전합니다.
 -- ============================================================
 
--- 1. 버킷: 공개 읽기, 한 장 2MB 이하, 사진 형식만
+-- 1. 버킷: 비공개, 한 장 2MB 이하, 사진 형식만
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('doc-images', 'doc-images', true, 2097152, array['image/webp','image/jpeg','image/png'])
+values ('doc-images', 'doc-images', false, 2097152, array['image/webp','image/jpeg'])
 on conflict (id) do update
-  set public = true, file_size_limit = 2097152, allowed_mime_types = array['image/webp','image/jpeg','image/png'];
+  set public = false, file_size_limit = 2097152, allowed_mime_types = array['image/webp','image/jpeg'];
 
--- 2. 업로드만 허용 (조회·목록·수정·삭제 정책은 만들지 않음 → 브라우저에서 파일 목록을 볼 수 없음)
---    공개 버킷은 파일 주소를 알면 정책 없이도 읽을 수 있습니다.
+-- 2. 브라우저용 정책은 만들지 않음 (이전 공개 방식에서 만든 업로드 정책이 있으면 제거)
 drop policy if exists "doc_images_upload" on storage.objects;
-create policy "doc_images_upload" on storage.objects
-  for insert to anon, authenticated
-  with check (bucket_id = 'doc-images');
 
 -- 3. 사용량 조회 (관리자 대시보드 에너지바용): 사진 총 용량·장수
 create or replace function public.get_storage_usage()

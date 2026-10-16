@@ -18,15 +18,46 @@ const BIG = makePng(1800, 1000);
 const OUT = path.join(__dirname, 'out'); fs.mkdirSync(OUT, { recursive: true });
 
 // ── 가짜 서버: 화면 + 사진 저장소 ──
-const files = new Map();
+const files = new Map(), tokens = new Map(), apiLog = [];
+let loginOk = true, failNextImg = false, sigN = 0;
+const NAME_RE = /^[a-z0-9]{8,24}\.(webp|jpg)$/;
 const srv = http.createServer((req, res) => {
-  const u = req.url.split('?')[0];
+  const [u, qs] = req.url.split('?');
+  const json = (st, o) => { res.statusCode = st; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(o)); };
   if (u === '/') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); return res.end(fs.readFileSync(INDEX)); }
-  if (u.startsWith('/__up/') && req.method === 'POST') {
-    const chunks = []; req.on('data', c => chunks.push(c));
-    return req.on('end', () => { files.set(decodeURIComponent(u.slice(6)), { body: Buffer.concat(chunks), type: req.headers['content-type'] }); res.end('ok'); });
-  }
-  res.statusCode = 404; res.end();
+  const chunks = []; req.on('data', c => chunks.push(c));
+  req.on('end', () => {
+    const raw = Buffer.concat(chunks);
+    if (u.startsWith('/__up/') && req.method === 'POST') {
+      const name = decodeURIComponent(u.slice(6));
+      if (tokens.get(name) !== req.headers['x-token']) return json(403, { error: 'bad token' });
+      files.set(name, { body: raw, type: req.headers['content-type'] }); return res.end('ok');
+    }
+    if (u.startsWith('/__img/')) {                      // 서명된 임시 주소로만 사진을 내려줌
+      const name = decodeURIComponent(u.slice(7)), f = files.get(name);
+      if (!/sig=ok\d+/.test(qs || '') || !f) { res.statusCode = 403; return res.end('no'); }
+      if (failNextImg) { failNextImg = false; res.statusCode = 403; return res.end('expired'); }
+      res.setHeader('Content-Type', f.type); return res.end(f.body);
+    }
+    if (u.startsWith('/api/')) {
+      let b = {}; try { b = JSON.parse(raw.toString() || '{}'); } catch (e) {}
+      const auth = req.headers.authorization || '';
+      apiLog.push({ u, b, auth });
+      if (u === '/api/library-login') return loginOk ? json(200, { token: b.id === 'admin' ? 'TOK-ADMIN' : 'TOK-USER', expiresIn: 28800, user: { id: b.id } }) : json(404, { error: 'nf' });
+      if (!/^Bearer TOK-(ADMIN|USER)$/.test(auth)) return json(401, { error: '로그인이 필요합니다.' });
+      if (u === '/api/doc-image-upload-url') {
+        if (auth !== 'Bearer TOK-ADMIN') return json(403, { error: '관리자만 사용할 수 있습니다.' });
+        const name = Math.random().toString(36).slice(2, 14).padEnd(12, 'x') + '.' + b.ext, token = 'UP' + Math.random().toString(36).slice(2);
+        tokens.set(name, token);
+        return json(200, { name, path: name, token, bucket: 'doc-images', contentType: b.ext === 'webp' ? 'image/webp' : 'image/jpeg', maxBytes: 2097152 });
+      }
+      if (u === '/api/doc-image-url') {
+        const urls = {}; (b.names || []).forEach(n => { urls[n] = NAME_RE.test(n) && files.has(n) ? BASE + '/__img/' + n + '?sig=ok' + (++sigN) : null; });
+        return json(200, { urls, expiresIn: 300 });
+      }
+    }
+    res.statusCode = 404; res.end();
+  });
 });
 
 // ── 가짜 supabase-js ──
@@ -43,8 +74,8 @@ const STUB = `(function(){
   ['insert','update','delete','upsert'].forEach(k=>q[k]=(...a)=>{ window.__writes.push({t,k,a}); return Promise.resolve({data:null,error:null}); });
   q.then=(res,rej)=>Promise.resolve({data:(FX[t]||[]).slice(),error:null,count:0}).then(res,rej); return q; }
  window.supabase={createClient:()=>({from:mk, rpc:()=>Promise.resolve({data:null,error:{message:'x'}}),
-  storage:{from:(b)=>({upload:async(name,blob,o)=>{ window.__uploads=(window.__uploads||[]); window.__uploads.push({b,name,type:blob.type,size:blob.size,opts:o});
-     await fetch('${BASE}/__up/'+encodeURIComponent(name),{method:'POST',body:blob,headers:{'Content-Type':blob.type}}); return {data:{path:name},error:null}; }})}})};
+  storage:{from:(b)=>({uploadToSignedUrl:async(path,token,blob,o)=>{ window.__uploads=(window.__uploads||[]); window.__uploads.push({b,name:path,token,type:blob.type,size:blob.size,opts:o});
+     const r=await fetch('${BASE}/__up/'+encodeURIComponent(path),{method:'POST',body:blob,headers:{'Content-Type':blob.type,'x-token':token}}); return r.ok?{data:{path},error:null}:{data:null,error:{message:'upload '+r.status}}; }})}})};
 })()`;
 
 let pass = 0, fail = 0;
@@ -62,8 +93,6 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
     const u = r.request().url();
     if (u.includes('supabase-js')) return r.fulfill({ contentType: 'application/javascript', body: STUB });
     if (u.includes('generativelanguage.googleapis.com')) { geminiReq = JSON.parse(r.request().postData()); return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: geminiReply }] } }] }) }); }
-    const m = u.match(/\/storage\/v1\/object\/public\/doc-images\/([^?]+)$/);
-    if (m) { const f = files.get(decodeURIComponent(m[1])); return f ? r.fulfill({ contentType: f.type, body: f.body }) : r.fulfill({ status: 404, body: '' }); }
     if (u.startsWith(BASE) || u.startsWith('data:') || u.startsWith('blob:')) return r.continue();
     return r.abort();
   });
@@ -83,7 +112,9 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await page.setInputFiles('#doc-img-file', { name: 'cap.png', mimeType: 'image/png', buffer: BIG });
   await page.waitForFunction(() => document.getElementById('doc-input-content').value.includes('[[그림:'), null, { timeout: 8000 });
   const up = await page.evaluate(() => window.__uploads);
-  ok(up && up.length === 1 && up[0].b === 'doc-images', '사진이 doc-images 저장소로 올라간다');
+  ok(up && up.length === 1 && up[0].b === 'doc-images' && /^UP/.test(up[0].token), '사진이 doc-images 저장소로, 서버가 준 업로드 토큰으로 올라간다');
+  ok(apiLog.some(a => a.u === '/api/doc-image-upload-url' && a.auth === 'Bearer TOK-ADMIN' && a.b.ext === 'webp'), '업로드 토큰은 관리자 로그인 토큰으로 요청한다');
+  ok(!apiLog.some(a => a.u === '/api/doc-image-upload-url' && 'name' in a.b), '파일 이름은 화면이 정하지 않고 서버가 정한다');
   ok(up && /^[a-z0-9]{8,24}\.webp$/.test(up[0].name), '파일명이 무작위 영소문자/숫자 + .webp 이다 (' + (up && up[0].name) + ')');
   ok(up && up[0].type === 'image/webp', '브라우저가 WebP로 변환했다');
   ok(up && up[0].size < BIG.length / 5 && up[0].size < 1.9 * 1024 * 1024, '용량이 크게 줄었다 (' + BIG.length + ' → ' + (up && up[0].size) + ' bytes)');
@@ -149,7 +180,12 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(/\[\[그림:파일명\]\] 만 그대로 출력/.test(sys), '사진 표시 규칙이 AI 지시문에 들어간다');
   ok(JSON.stringify(geminiReq).length < 6000, 'AI 요청에 사진 데이터는 없다 (글만: ' + JSON.stringify(geminiReq).length + ' bytes)');
   const imgs = await page.$$eval('.msg.bot .chat-img', l => l.map(i => i.getAttribute('src')));
-  ok(imgs.length === 1 && imgs[0].endsWith('/storage/v1/object/public/doc-images/' + name), '답변에 사진이 한 장 표시된다 (형식이 틀린 파일명은 무시)');
+  ok(imgs.length === 1 && imgs[0].includes('/__img/' + name + '?sig=ok'), '답변에 사진이 한 장, 서버가 준 임시 주소(서명 포함)로 표시된다 (형식이 틀린 파일명은 무시)');
+  const lastUrlReq = apiLog.filter(a => a.u === '/api/doc-image-url').pop();
+  ok(lastUrlReq && lastUrlReq.auth === 'Bearer TOK-USER' && lastUrlReq.b.names.length === 1 && lastUrlReq.b.names[0] === name, '임시 주소는 사용자 로그인 토큰으로 요청하고, 형식이 틀린 이름은 요청에 넣지 않는다' + (lastUrlReq ? ' ' + JSON.stringify(lastUrlReq).slice(0, 200) : ''));
+  ok(await page.evaluate(() => docImgCache.size) >= 1, '받은 임시 주소가 화면에 보관된다');
+  const direct = await fetch(BASE + '/__img/' + name);
+  ok(direct.status === 403, '임시 주소(서명) 없이 사진 주소를 직접 열면 거부된다');
   const nat = await page.$eval('.msg.bot .chat-img', i => new Promise(r => { if (i.complete) return r(i.naturalWidth); i.onload = () => r(i.naturalWidth); setTimeout(() => r(0), 3000); }));
   ok(nat === 1000, '사진이 실제로 불러와진다');
   const bubble = await page.$eval('.msg.bot .msg-bubble', e => e.textContent);
@@ -157,7 +193,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   const ttsText = await page.$eval('.msg.bot .tts-speak-btn', b => b.dataset.text);
   ok(!/그림|webp/.test(ttsText), '읽기(음성)에서 사진 파일명을 읽지 않는다');
   await page.click('.msg.bot .chat-img');
-  ok(await page.$eval('#img-lb', e => e.classList.contains('open')) && (await page.$eval('#img-lb-img', i => i.getAttribute('src'))).endsWith(name), '사진을 누르면 크게 보기가 열린다');
+  ok(await page.$eval('#img-lb', e => e.classList.contains('open')) && (await page.$eval('#img-lb-img', i => i.getAttribute('src'))).includes('/__img/' + name), '사진을 누르면 크게 보기가 열린다');
   await page.keyboard.press('Escape');
   ok(!(await page.$eval('#img-lb', e => e.classList.contains('open'))), '닫으면 크게 보기가 닫힌다');
   // 사진이 8장을 넘으면 8장까지만
@@ -166,7 +202,25 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok((html.match(/<img /g) || []).length === 8, '한 답변에 사진은 최대 8장까지만 보인다');
   // 설명(alt)에 따옴표·태그가 있어도 깨지거나 실행되지 않음
   const safe = await page.evaluate(n => { const d = document.createElement('div'); d.innerHTML = mdToHtml('[[그림:' + n + '|"><script>window.__x=1</script><img src=x onerror=window.__x=2>]]'); return { script: !!d.querySelector('script'), imgs: d.querySelectorAll('img').length, onerr: d.querySelector('img').getAttribute('onerror') }; }, name);
-  ok(!safe.script && safe.imgs === 1 && /^this\.style/.test(safe.onerr), '설명 글에 태그·따옴표가 있어도 실행되지 않는다');
+  ok(!safe.script && safe.imgs === 1 && /^docImgFail/.test(safe.onerr), '설명 글에 태그·따옴표가 있어도 실행되지 않는다');
+  // 임시 주소가 만료된 경우: 한 번 새 주소를 받아 다시 시도
+  await page.evaluate(n => { docImgCache.clear(); }, name);
+  failNextImg = true;
+  const n0 = apiLog.filter(a => a.u === '/api/doc-image-url').length;
+  await page.evaluate(n => { appendMsg('bot', '다시 보여드립니다.\n[[그림:' + n + ']]', null); }, name);
+  await page.waitForFunction(() => { const i = Array.from(document.querySelectorAll('.msg.bot .chat-img')).pop(); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 8000 });
+  ok(apiLog.filter(a => a.u === '/api/doc-image-url').length === n0 + 2, '만료된 주소는 새 주소를 한 번 더 받아 불러온다 (요청 ' + (apiLog.filter(a => a.u === '/api/doc-image-url').length - n0) + '회)');
+  // 같은 사진을 다시 보여줄 때는 주소를 새로 요청하지 않는다(5분 보관)
+  const n1 = apiLog.filter(a => a.u === '/api/doc-image-url').length;
+  await page.evaluate(n => { appendMsg('bot', '한 번 더.\n[[그림:' + n + ']]', null); }, name);
+  await page.waitForFunction(() => { const i = Array.from(document.querySelectorAll('.msg.bot .chat-img')).pop(); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 8000 });
+  ok(apiLog.filter(a => a.u === '/api/doc-image-url').length === n1, '이미 받은 임시 주소는 5분 동안 다시 쓴다 (서버 요청 없음)');
+  await page.evaluate(() => { libReset(); });
+  ok(await page.evaluate(() => docImgCache.size) === 0, '로그아웃하면 사진 임시 주소 보관분도 지워진다');
+  // 로그인 토큰이 없으면(서버 미설정/만료) 깨진 그림 대신 안내 문구
+  await page.evaluate(n => { libToken = null; docImgCache.clear(); appendMsg('bot', '사진 없이 보이는지.\n[[그림:' + n + ']]', null); }, name);
+  await page.waitForSelector('.msg.bot:last-child .chat-img-miss', { timeout: 8000 });
+  ok(/불러올 수 없습니다/.test(await page.$eval('.msg.bot:last-child .chat-img-miss', e => e.textContent)), '로그인 정보가 없으면 "사진을 불러올 수 없습니다" 안내가 나온다');
   ok(errs.length === 0, '페이지 오류 없음' + (errs.length ? ' ' + JSON.stringify(errs) : ''));
 
   await browser.close(); srv.close();

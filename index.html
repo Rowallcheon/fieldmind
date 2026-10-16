@@ -465,9 +465,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .la-head.drop-before{box-shadow:inset 0 3px 0 var(--accent);}
 .la-head.drop-after{box-shadow:inset 0 -3px 0 var(--accent);}
 .la-head.drop-no{outline:2px dashed #c4584b;outline-offset:-2px;cursor:not-allowed;}
-.la-root-drop{margin:0 0 8px;padding:7px 12px;border:1px dashed var(--border);border-radius:var(--radius);text-align:center;font-size:12px;color:var(--text3);opacity:.7;}
-.la-dnd-cat .la-root-drop{opacity:1;padding:12px;border-width:2px;}
+.la-root-drop{margin:0 0 8px;padding:9px 12px;border:2px dashed var(--border);border-radius:var(--radius);text-align:center;font-size:12px;color:var(--text3);opacity:.7;}
+.la-dnd-cat .la-root-drop{opacity:1;border-color:var(--accent);color:var(--accent);}
 .la-root-drop.drop-into{border-color:var(--accent);background:rgba(45,95,143,.1);color:var(--accent);font-weight:700;}
+.la-dnd-hint{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:900;max-width:min(92vw,520px);background:#3b1f1b;color:#fff;border-radius:10px;padding:10px 16px;font-size:13px;line-height:1.5;box-shadow:0 6px 22px rgba(0,0,0,.35);pointer-events:none;}
 .la-movebox{font-size:13px;line-height:1.65;color:var(--text);}
 .la-movebox .row{margin:0 0 8px;}
 .la-movebox b{font-weight:700;}
@@ -4992,8 +4993,8 @@ function laDropPlan(e){
     return {el:head,zone:'into',parentId:tid,ok:!bad,why:bad};
   }
   if(tid===d.id)return {el:head,ok:false};
-  const r=head.getBoundingClientRect(),y=(e.clientY-r.top)/Math.max(1,r.height);
-  const zone=y<0.25?'before':y>0.75?'after':'into';
+  const r=head.getBoundingClientRect(),y=e.clientY-r.top,edge=Math.min(10,r.height*0.25);      // 줄이 여러 겹이어도 가장자리는 10px
+  const zone=y<edge?'before':y>r.height-edge?'after':'into';
   let parentId,beforeId=null;
   if(zone==='into'){parentId=tid;}
   else{
@@ -5005,7 +5006,13 @@ function laDropPlan(e){
   const bad=laMoveCheck('cat',d.id,parentId);
   return {el:head,zone:zone,parentId:parentId,beforeId:beforeId,ok:!bad,why:bad};
 }
-function laDndClear(){document.querySelectorAll('.drop-into,.drop-before,.drop-after,.drop-no,.dragging').forEach(x=>x.classList.remove('drop-into','drop-before','drop-after','drop-no','dragging'));}
+function laDndHint(msg){            // 놓을 수 없는 곳 위에서는 이유를 바로 알려준다 (놓을 수 없으면 drop 이벤트가 오지 않으므로)
+  let h=document.getElementById('la-dnd-hint');
+  if(!msg){if(h)h.remove();return;}
+  if(!h){h=document.createElement('div');h.id='la-dnd-hint';h.className='la-dnd-hint';h.setAttribute('role','status');document.body.appendChild(h);}
+  h.textContent='⛔ '+msg;
+}
+function laDndClear(){laDndHint(null);document.querySelectorAll('.drop-into,.drop-before,.drop-after,.drop-no,.dragging').forEach(x=>x.classList.remove('drop-into','drop-before','drop-after','drop-no','dragging'));}
 function laDndBind(){
   const body=document.getElementById('la-body');if(!body||body.dataset.dnd)return;body.dataset.dnd='1';
   body.addEventListener('dragstart',e=>{
@@ -5019,9 +5026,10 @@ function laDndBind(){
     if(!LA.drag)return;
     const p=laDropPlan(e);
     document.querySelectorAll('.drop-into,.drop-before,.drop-after,.drop-no').forEach(x=>x.classList.remove('drop-into','drop-before','drop-after','drop-no'));
+    laDndHint(null);
     if(!p||!p.el)return;
     if(p.ok){e.preventDefault();e.dataTransfer.dropEffect='move';p.el.classList.add('drop-'+p.zone);}
-    else{e.dataTransfer.dropEffect='none';if(p.why)p.el.classList.add('drop-no');}
+    else{e.dataTransfer.dropEffect='none';if(p.why){p.el.classList.add('drop-no');laDndHint(p.why);}}
   });
   body.addEventListener('drop',async e=>{
     if(!LA.drag)return;

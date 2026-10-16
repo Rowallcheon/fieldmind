@@ -1,0 +1,10 @@
+create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
+grant usage on schema public to anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+create table users(id text primary key, pw text not null, name text not null, dept text not null, role text not null default 'user', status text not null default 'active', created_at timestamptz default now());
+create table groups(id text primary key, name text not null, created_at timestamptz default now());
+create table group_members(group_id text not null references groups(id) on delete cascade, user_id text not null references users(id) on delete cascade, primary key(group_id,user_id));
+create table inquiries(id text primary key, user_id text references users(id) on delete cascade, title text);
+create table user_chat_logs(id bigserial primary key, user_id text references users(id) on delete cascade, ts bigint not null);

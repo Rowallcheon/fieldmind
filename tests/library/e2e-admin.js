@@ -103,6 +103,7 @@ const step = async (name, fn) => { try { await fn(); pass++; console.log('  ok  
     await page.click('.la-doc:not(.old):has-text("입문 교재") button:has-text("제목")'); await modalText('입문 교재(개정)'); await waitText('입문 교재(개정)');
     await page.click('.la-doc:not(.old):has-text("입문 교재(개정)") button:has-text("이동")');
     await page.selectOption('#las-select', { label: '교육과정 › 신입 입문' }); await page.click('#modal-la-select .btn-primary');
+    await page.waitForSelector('#modal-la-move.open'); assert.ok((await page.textContent('#lmv-body')).includes('새 위치')); await page.click('#modal-la-move .btn-primary');   // 이동 전 공개 범위 확인 창
     await page.waitForFunction(() => { const c = [...document.querySelectorAll('.la-cat')].find(x => x.querySelector('.la-head .nm').textContent.includes('1주차')); return c && !c.textContent.includes('입문 교재'); });
     const o = await overview(); assert.ok(o.docs.filter(d => d.title === '입문 교재(개정)').every(d => laCatName(o, d.category_id) === '신입 입문'));
     function laCatName(o, id) { return o.categories.find(c => c.id === id).name; }

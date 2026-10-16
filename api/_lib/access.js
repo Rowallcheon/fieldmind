@@ -6,6 +6,18 @@
 //  - 상위 분류가 보이지 않으면 그 아래 분류와 자료도 보이지 않는다. (분류 접근이 우선)
 //  - 이전 버전(is_latest=false)은 관리자만 볼 수 있다.
 
+// 분류의 실제 적용 규칙: 가장 가까운(자기 자신 포함) inherit 아닌 설정 (없으면 전체 공개)
+function effectiveRuleOf(catById, cat) {
+  const seen = new Set();
+  let c = cat;
+  while (c && !seen.has(c.id)) {
+    seen.add(c.id);
+    if (c.visibility !== 'inherit') return { visibility: c.visibility, ownerId: c.id };
+    c = c.parent_id ? catById.get(c.parent_id) : null;
+  }
+  return { visibility: 'all', ownerId: null };
+}
+
 /**
  * @param {object} p
  * @param {Array} p.categories   library_categories 행
@@ -36,17 +48,7 @@ function createAccess({ categories, docs, permissions, user, groupIds = [], libG
     return (permsByTarget.get(targetType + ':' + targetId) || []).some(subjectMatches);
   }
 
-  // 분류의 실제 적용 규칙: 가장 가까운 inherit 아닌 설정 (없으면 전체 공개)
-  function effectiveCategoryRule(cat) {
-    const seen = new Set();
-    let c = cat;
-    while (c && !seen.has(c.id)) {
-      seen.add(c.id);
-      if (c.visibility !== 'inherit') return { visibility: c.visibility, ownerId: c.id };
-      c = c.parent_id ? catById.get(c.parent_id) : null;
-    }
-    return { visibility: 'all', ownerId: null };
-  }
+  const effectiveCategoryRule = cat => effectiveRuleOf(catById, cat);
 
   const catMemo = new Map();
   function isCategoryVisible(id) {
@@ -85,4 +87,4 @@ function createAccess({ categories, docs, permissions, user, groupIds = [], libG
   };
 }
 
-module.exports = { createAccess };
+module.exports = { createAccess, effectiveRuleOf };

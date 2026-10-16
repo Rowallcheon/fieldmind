@@ -36,6 +36,12 @@ const server = http.createServer(async (req, res) => {
   const send = (st, obj, headers = {}) => { res.writeHead(st, Object.assign({ 'Content-Type': 'application/json' }, CORS, headers)); res.end(obj === undefined ? '' : JSON.stringify(obj)); };
   try {
     if (!req.headers.apikey || !/^Bearer /.test(req.headers.authorization || '')) return send(401, { message: 'no key' });
+    const rp = /^\/rest\/v1\/rpc\/([a-z_]+)$/.exec(u.pathname);
+    if (rp && req.method === 'POST') {            // DB 함수 호출 (PostgREST /rpc/함수명, 이름 있는 인자)
+      const fn = ident(rp[1]); const args = JSON.parse(bodyText || '{}'); const keys = Object.keys(args);
+      const r = await pool.query('select ' + fn + '(' + keys.map((k, i) => ident(k) + ' => $' + (i + 1)).join(',') + ') as r', keys.map(k => args[k]));
+      return send(200, r.rows[0].r);
+    }
     const m = /^\/rest\/v1\/([a-z_]+)$/.exec(u.pathname);
     if (!m) return send(404, { message: 'not found' });
     const table = ident(m[1]); const prefer = req.headers.prefer || '';

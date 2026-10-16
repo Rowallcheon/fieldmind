@@ -13,5 +13,6 @@ $P -d lib -f "$HERE/stub-schema.sql"
 $P -d lib -f "$SQLDIR/library_01_tables.sql" 2>&1 | grep -v NOTICE || true
 $P -d lib -f "$SQLDIR/library_02_rls.sql"
 $P -d lib -f "$SQLDIR/library_03_user_id_cascade.sql"
+$P -d lib -f "$SQLDIR/library_04_move_category.sql"
 $P -d lib -f "$HERE/seed.sql"
 echo "DB ready"

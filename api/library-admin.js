@@ -3,6 +3,7 @@
 // 분류/자료/그룹/권한/열람 기록. 자료실 테이블은 브라우저에서 직접 접근할 수 없어 모든 관리가 이 함수를 거칩니다.
 const { handler, HttpError } = require('./_lib/http');
 const { MAX_BYTES } = require('./library-upload-url');
+const { effectiveRuleOf } = require('./_lib/access');
 
 const VIS = ['inherit', 'all', 'restricted'];
 const R2_FREE_BYTES = 10 * 1024 * 1024 * 1024; // R2 무료 저장공간 10GB
@@ -41,6 +42,30 @@ async function chainIds(db, docId) {
   const seen = new Set([docId]), q = [docId];
   while (q.length) for (const n of adj.get(q.pop()) || []) if (!seen.has(n)) { seen.add(n); q.push(n); }
   return [...seen];
+}
+
+/** 자료를 다른 분류로 옮길 때 공개 범위 유지: "분류 따름"인 자료가 지금 '지정한 사람만' 규칙 아래에 있으면 같은 허용 대상을 자료에 직접 지정해 고정 */
+async function keepDocAccess(db, chainIdList, newCategoryId) {
+  const docs = await db.select('library_docs', { select: 'id,category_id,visibility', filters: [['id', 'in', chainIdList]] });
+  if (!docs.length || docs.every(d => d.category_id === newCategoryId)) return false;
+  const inherit = docs.filter(d => d.visibility === 'inherit');
+  if (!inherit.length) return false;
+  const catById = new Map((await db.selectAll('library_categories', { select: 'id,parent_id,visibility', order: 'id' })).map(c => [c.id, c]));
+  const rule = effectiveRuleOf(catById, catById.get(docs[0].category_id));
+  if (rule.visibility !== 'restricted' || !rule.ownerId) return false;
+  const subs = await db.select('library_permissions', { select: 'subject_type,group_id,library_group_id,user_id', filters: [['target_type', 'eq', 'category'], ['category_id', 'eq', rule.ownerId]] });
+  const ids = inherit.map(d => d.id);
+  const have = await db.select('library_permissions', { select: 'doc_id,subject_type,group_id,library_group_id,user_id', filters: [['target_type', 'eq', 'doc'], ['doc_id', 'in', ids]] });
+  const k = r => [r.doc_id, r.subject_type, r.group_id || '', r.library_group_id || '', r.user_id || ''].join('|');
+  const haveSet = new Set(have.map(k));
+  const rows = [];
+  for (const did of ids) for (const s of subs) {
+    const row = { target_type: 'doc', doc_id: did, subject_type: s.subject_type, group_id: s.group_id, library_group_id: s.library_group_id, user_id: s.user_id };
+    if (!haveSet.has(k(row))) rows.push(row);
+  }
+  if (rows.length) await db.insert('library_permissions', rows);
+  await db.update('library_docs', [['id', 'in', ids]], { visibility: 'restricted' });
+  return true;
 }
 
 const actions = {
@@ -104,6 +129,22 @@ const actions = {
     if (!ids.length || a !== b) throw new HttpError(400, '같은 단계의 분류 전체를 순서대로 보내야 합니다.');
     await Promise.all(ids.map((id, i) => db.update('library_categories', [['id', 'eq', id]], { sort_order: i })));
     return { ok: true };
+  },
+  /* 폴더 이동 (끌어서 놓기 / 이동 버튼). 위치·단계·공개 범위 고정은 DB 함수가 한 번에(원자적으로) 처리.
+   * beforeId: 새 상위 안에서 이 분류 앞에 둠(없으면 맨 뒤) */
+  async 'category.move'({ db, body }) {
+    const id = needUuid(body.id, '분류');
+    const parentId = body.parentId ? needUuid(body.parentId, '새 상위 분류') : null;
+    const beforeId = body.beforeId ? needUuid(body.beforeId, '기준 분류') : null;
+    const keep = body.keepAccess !== false;
+    const r = await db.rpc('library_move_category', { p_id: id, p_parent: parentId, p_keep: keep });
+    const sibs = await db.select('library_categories', { select: 'id,sort_order,name', filters: [['parent_id', parentId ? 'eq' : 'is', parentId || 'null']] });
+    sibs.sort((a, b) => (a.sort_order - b.sort_order) || String(a.name).localeCompare(String(b.name), 'ko'));
+    const order = sibs.map(s => s.id).filter(x => x !== id);
+    const at = beforeId && beforeId !== id ? order.indexOf(beforeId) : -1;
+    if (at >= 0) order.splice(at, 0, id); else order.push(id);
+    await Promise.all(order.map((x, i) => (sibs.find(s => s.id === x).sort_order === i ? null : db.update('library_categories', [['id', 'eq', x]], { sort_order: i }))));
+    return { ok: true, moved: !!(r && r.moved), keptAccess: !!(r && r.materialized) };
   },
   async 'category.delete'({ db, body }) {
     const id = needUuid(body.id, '분류');
@@ -172,8 +213,10 @@ const actions = {
     if (!Object.keys(chainPatch).length) throw new HttpError(400, '바꿀 내용이 없습니다.');
     // 제목·위치는 이전 버전까지 함께 바꿔 한 묶음으로 유지
     const ids = await chainIds(db, id);
+    let keptAccess = false;
+    if (chainPatch.category_id && body.keepAccess !== false) keptAccess = await keepDocAccess(db, ids, chainPatch.category_id);
     await db.update('library_docs', [['id', 'in', ids]], chainPatch);
-    return { ok: true };
+    return { ok: true, keptAccess };
   },
   async 'doc.delete'({ db, r2, body }) {
     const id = needUuid(body.id, '자료');

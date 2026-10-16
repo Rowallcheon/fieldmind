@@ -37,7 +37,7 @@ function makeDb(env = process.env, fetchImpl = (...a) => fetch(...a)) {
     if (order) u.searchParams.set('order', order);
     if (limit !== undefined) u.searchParams.set('limit', String(limit));
     if (offset) u.searchParams.set('offset', String(offset));
-    const headers = { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' };
+    const headers = Object.assign({ apikey: key, 'Content-Type': 'application/json' }, key.startsWith('sb_') ? {} : { Authorization: 'Bearer ' + key });   // 새 방식 키(sb_secret_…)는 JWT가 아니라 apikey 헤더만 사용
     const prefer = [];
     if (returning) prefer.push('return=representation');
     if (count) prefer.push('count=exact');

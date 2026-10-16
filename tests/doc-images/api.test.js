@@ -114,3 +114,16 @@ test('GET 요청과 환경변수 누락은 안전하게 거부', async () => {
   process.env.SUPABASE_SERVICE_ROLE_KEY = saved;
   assert.equal(r2.status, 500); assert.ok(!/SERVICE_ROLE/.test(JSON.stringify(r2.json)));
 });
+
+test('서비스 키 형식: 옛 방식(JWT)은 Bearer도 보내고, 새 방식(sb_secret_)은 apikey만 보낸다', async () => {
+  const { makeDb } = require('../../api/_lib/db');
+  for (const [key, bearer] of [['eyJhbGciOi.fake.jwt', true], ['sb_secret_fake123', false]]) {
+    const seen = [];
+    const env = { SUPABASE_URL: 'https://proj.supabase.co', SUPABASE_SERVICE_ROLE_KEY: key };
+    const f = async (u, init) => { seen.push(init.headers); return { ok: true, status: 200, headers: { get: () => null }, text: async () => '[]' }; };
+    await makeDb(env, f).select('users', { limit: 1 });
+    await makeStorage(env, f).signMany('doc-images', ['aaaaaaaaaaaa.webp'], 60);
+    for (const h of seen) { assert.equal(h.apikey, key); assert.equal('Authorization' in h, bearer); }
+    assert.equal(seen.length, 2);
+  }
+});

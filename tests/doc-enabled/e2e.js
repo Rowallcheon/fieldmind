@@ -107,6 +107,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await u.waitForSelector('.msg.bot .msg-src-item', { timeout: 8000 });
   const sys = u.gem.req.system_instruction.parts[0].text;
   ok(sys.includes('AAA') && sys.includes('BBB') && !sys.includes('CCC'), '켜 둔 문서(결재·휴가)는 AI에게 전달되고, 꺼 둔 문서(출장 신청)는 전달되지 않는다');
+  ok(/11\. 질문이 넓은 범위/.test(sys) && /빠짐없이 찾아/.test(sys) && /역질문/.test(sys), '넓은 질문에는 해당 항목을 모두 나열하거나 역질문으로 좁히라는 지침이 AI에게 전달된다');
   ok(/문서 1\/2 /.test(sys) && /문서 2\/2 /.test(sys) && !/문서 3\/3/.test(sys), '문서 번호는 켜 둔 문서만 1/2, 2/2로 매겨진다');
   const ref = await u.textContent('.msg.bot .msg-src');
   ok(ref.includes('휴가 신청') && !ref.includes('출장 신청'), '"참조: 2"는 켜 둔 문서 기준 2번(휴가 신청)으로 표시된다');

@@ -219,10 +219,10 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(await page.$eval('#img-lb', e => e.classList.contains('open')) && (await page.$eval('#img-lb-img', i => i.getAttribute('src'))).includes('/__img/' + name), '사진을 누르면 크게 보기가 열린다');
   await page.keyboard.press('Escape');
   ok(!(await page.$eval('#img-lb', e => e.classList.contains('open'))), '닫으면 크게 보기가 닫힌다');
-  // 사진이 8장을 넘으면 8장까지만
-  const many = Array.from({ length: 12 }, () => '[[그림:' + name + ']]').join('\n');
+  // 사진이 20장을 넘으면 20장까지만
+  const many = Array.from({ length: 24 }, () => '[[그림:' + name + ']]').join('\n');
   const html = await page.evaluate(m => mdToHtml(m), many);
-  ok((html.match(/<img /g) || []).length === 8, '한 답변에 사진은 최대 8장까지만 보인다');
+  ok((html.match(/<img /g) || []).length === 20, '한 답변에 사진은 최대 20장까지만 보인다');
   // 설명(alt)에 따옴표·태그가 있어도 깨지거나 실행되지 않음
   const safe = await page.evaluate(n => { const d = document.createElement('div'); d.innerHTML = mdToHtml('[[그림:' + n + '|"><script>window.__x=1</script><img src=x onerror=window.__x=2>]]'); return { script: !!d.querySelector('script'), imgs: d.querySelectorAll('img').length, onerr: d.querySelector('img').getAttribute('onerror') }; }, name);
   ok(!safe.script && safe.imgs === 1 && /^docImgFail/.test(safe.onerr), '설명 글에 태그·따옴표가 있어도 실행되지 않는다');

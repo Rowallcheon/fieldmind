@@ -149,6 +149,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .de-cap{display:block;width:100%;margin-top:7px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;font-family:var(--font);background:#fff;color:var(--text);outline:0;}
 .de-cap:focus{border-color:var(--accent);}
 .de-cap.empty{border-color:#e57373;background:#fff8f8;}
+/* 작업 중 표시: 저장·불러오기가 진행되는 동안 화면 위 막대와 '작업 중' 알림을 보여줌 */
+#busy-bar{position:fixed;top:0;left:0;right:0;height:3px;z-index:100000;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .15s;}
+#busy-bar.on{opacity:1;}
+#busy-bar::before{content:'';position:absolute;top:0;bottom:0;width:35%;background:var(--info,#2d5f8f);border-radius:2px;animation:busyslide 1.1s ease-in-out infinite;}
+@keyframes busyslide{0%{left:-35%;}100%{left:100%;}}
+#busy-pill{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:100000;display:none;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--surface,#161b22);color:var(--text,#e6edf3);border:1px solid var(--border,#30363d);font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.35);pointer-events:none;}
+#busy-pill.on{display:flex;}
+.busy-spin{width:14px;height:14px;border:2px solid var(--border,#30363d);border-top-color:var(--info,#2d5f8f);border-radius:50%;animation:dbspin .8s linear infinite;flex:none;}
+.dl-eye.busy{pointer-events:none;}
+.dl-eye.busy svg{display:none;}
+.dl-eye.busy::before{content:'';display:inline-block;width:14px;height:14px;border:2px solid var(--border,#30363d);border-top-color:var(--info,#2d5f8f);border-radius:50%;animation:dbspin .8s linear infinite;vertical-align:middle;}
+@keyframes dbspin{to{transform:rotate(360deg)}}
 .typing{display:flex;gap:4px;align-items:center;padding:4px 0;}
 .typing-dot{width:7px;height:7px;border-radius:50%;background:var(--info);opacity:.5;animation:tbd 1.2s infinite;}
 .typing-dot:nth-child(2){animation-delay:.2s;}
@@ -1382,30 +1394,53 @@ const _SB_URL = 'https://lixiqdhymlefrynleglw.supabase.co';
 const _SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpeGlxZGh5bWxlZnJ5bmxlZ2x3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTUwMjEsImV4cCI6MjA5MzU5MTAyMX0.fktKL_X0oyKLfcMVBWBuZy6oDjAqYoVjIaIOtwdtDfg';
 const sb = supabase.createClient(_SB_URL, _SB_KEY);
 
+/* 작업 중 표시 (진행 중인 작업이 하나라도 있으면 막대+알림 표시, 0.25초 넘게 걸릴 때만 알림 글씨 표시) */
+let _busyN = 0, _busyT = null;
+function busyBegin(){
+  _busyN++;
+  let bar = document.getElementById('busy-bar');
+  if(!bar){
+    bar = document.createElement('div'); bar.id = 'busy-bar'; bar.setAttribute('role','progressbar'); bar.setAttribute('aria-label','작업 중');
+    const pill = document.createElement('div'); pill.id = 'busy-pill'; pill.setAttribute('role','status');
+    pill.innerHTML = '<span class="busy-spin"></span><span>작업 중입니다…</span>';
+    document.body.appendChild(bar); document.body.appendChild(pill);
+  }
+  bar.classList.add('on');
+  if(!_busyT) _busyT = setTimeout(function(){ const p = document.getElementById('busy-pill'); if(p && _busyN>0) p.classList.add('on'); }, 250);
+}
+function busyEnd(){
+  _busyN = Math.max(0,_busyN-1);
+  if(_busyN>0) return;
+  clearTimeout(_busyT); _busyT = null;
+  const bar = document.getElementById('busy-bar'), pill = document.getElementById('busy-pill');
+  if(bar) bar.classList.remove('on'); if(pill) pill.classList.remove('on');
+}
+async function withBusy(fn){ busyBegin(); try{ return await fn(); } finally { busyEnd(); } }
+
 async function dbQ(table, sel) {
   sel = sel || '*';
-  const res = await sb.from(table).select(sel);
+  const res = await withBusy(function(){ return sb.from(table).select(sel); });
   if (res.error) { console.error(table, res.error); return []; }
   return res.data || [];
 }
 async function dbIns(table, row) {
-  const res = await sb.from(table).insert(row);
+  const res = await withBusy(function(){ return sb.from(table).insert(row); });
   if (res.error) console.error('insert', table, res.error);
   return !res.error;
 }
 async function dbUpd(table, match, changes) {
-  const res = await sb.from(table).update(changes).match(match);
+  const res = await withBusy(function(){ return sb.from(table).update(changes).match(match); });
   if (res.error) console.error('update', table, res.error);
   return !res.error;
 }
 async function dbDel(table, match) {
-  const res = await sb.from(table).delete().match(match);
+  const res = await withBusy(function(){ return sb.from(table).delete().match(match); });
   if (res.error) console.error('delete', table, res.error);
   return !res.error;
 }
 async function dbUps(table, row, col) {
   col = col || 'id';
-  const res = await sb.from(table).upsert(row, {onConflict: col});
+  const res = await withBusy(function(){ return sb.from(table).upsert(row, {onConflict: col}); });
   if (res.error) console.error('upsert', table, res.error);
   return !res.error;
 }
@@ -2010,7 +2045,8 @@ async function sendMsg(){
 8. 다른 모델에 대한 질문이면 해당 모델 선택을 안내하세요.
 9. 답변의 맨 마지막 줄에, 답변을 작성하면서 내용을 참고한 문서를 하나도 빠뜨리지 말고 전부 번호로 아래 형식에 출력하세요(대표 문서 1개만 쓰지 말 것). 질문과 무관한 문서는 넣지 마세요. 근거로 쓴 문서가 없으면 [[참조: 없음]]으로 쓰세요. 이 줄은 시스템이 처리하므로 다른 설명을 덧붙이지 마세요.
    형식: [[참조: 1, 3]]   (문서 번호는 "=== 문서 N/전체 ===" 의 N)
-10. 문서 내용에 [[그림:파일명|설명]] 표시가 있으면 그 자리에 화면 캡처 사진이 들어 있다는 뜻입니다(사진 자체는 볼 수 없으니 설명 글을 근거로 판단하세요). 답변에서 어떤 단계나 화면을 설명할 때 그와 관련된 사진이 있으면, 그 설명 바로 다음 줄에 [[그림:파일명]] 만 그대로 출력하세요. 파일명은 한 글자도 바꾸지 말고, 설명은 덧붙이지 마세요. 질문과 관계없는 사진은 넣지 말고, 사진은 한 번의 답변에 최대 6장까지만 넣으세요. 사진 표시는 답변 본문에만 쓰고 [[참조: ...]] 줄에는 쓰지 마세요.
+10. 문서 내용에 [[그림:파일명|설명]] 표시가 있으면 그 자리에 화면 캡처 사진이 들어 있다는 뜻입니다(사진 자체는 볼 수 없으니 설명 글을 근거로 판단하세요). 답변에서 어떤 단계나 화면을 설명할 때 그와 관련된 사진이 있으면, 그 설명 바로 다음 줄에 [[그림:파일명]] 만 그대로 출력하세요. 파일명은 한 글자도 바꾸지 말고, 설명은 덧붙이지 마세요. 질문과 관계없는 사진은 넣지 말고, 사진은 한 번의 답변에 최대 20장까지만 넣으세요. 사진 표시는 답변 본문에만 쓰고 [[참조: ...]] 줄에는 쓰지 마세요.
+11. 질문이 넓은 범위를 가리키는데(예: "유로도 알려줘", "에러코드 알려줘") 문서에 해당하는 항목이 여러 개 있으면, 그중 하나만 골라 답하지 마세요. 해당하는 항목을 문서에서 하나도 빠뜨리지 말고 전부 찾아 이름과 한 줄 설명으로 모두 보여 주세요. 일부만 보여 주고 나머지를 생략하거나 "더 있습니다"로 끝내지 마세요. 각 항목에 사진이 있으면 그 항목 설명 바로 다음 줄에 넣으세요. 모든 항목을 다 보여 준 뒤에 필요하면 "이 중 어떤 것을 자세히 볼까요?"처럼 짧게 물어보세요. 질문이 이미 구체적이어서 답이 하나로 정해지면 되묻지 말고 바로 답하세요.
 
 [${selModel.name} 등록 문서 내용]
 ${docCtx}`;
@@ -2326,9 +2362,9 @@ document.addEventListener('drop',function(e){
 function mdToHtml(text){
   let imgCount=0;
   return text
-    // 문서 사진 표시 [[그림:ID]] → 사진 (답변당 최대 8장, 형식이 맞는 것만)
+    // 문서 사진 표시 [[그림:ID]] → 사진 (답변당 최대 20장, 형식이 맞는 것만)
     .replace(DOC_IMG_RE, function(m,id,cap){
-      if(++imgCount>8) return '';
+      if(++imgCount>20) return '';
       return '\n<img class="chat-img" data-doc-img="'+id+'" alt="'+(cap||'문서 사진').replace(/"/g,'')+'" data-id="'+id+'" onclick="openImgLb(this.dataset.id,this.alt)" onerror="docImgFail(this)">\n';
     })
     .replace(/\[\[\s*그림\s*[:：][^\]]*\]\]/g,'').replace(/\[\[\s*그림[^\]]*$/,'')
@@ -2627,6 +2663,7 @@ function renderDocTree(){
     catModels.className = 'cat-models';
     catModels.id = 'cm-'+pi;
     if(_sortMode) catModels.style.display='block';
+    if(_catOpen.has(pi)){ catModels.classList.add('open'); chevEl.classList.add('open'); }
 
     p.models.forEach(function(m, mi){
       const row = document.createElement('div');
@@ -2718,7 +2755,7 @@ function renderDocTree(){
         lab.appendChild(cb); lab.appendChild(bd); lab.appendChild(tt);
         if(d.enabled===false){ lab.classList.add('off'); const ot=document.createElement('span'); ot.className='off-tag'; ot.textContent='사용 안 함'; lab.appendChild(ot); }
         lab.appendChild(nn);
-        const eye = document.createElement('button'); eye.type='button'; eye.className='dl-eye'; eye.dataset.eye=(d.enabled===false?'off':'on');
+        const eye = document.createElement('button'); eye.type='button'; eye.className='dl-eye'; eye.dataset.doc=d.id; eye.dataset.eye=(d.enabled===false?'off':'on');
         eye.title = d.enabled===false ? '지금은 챗봇이 이 문서를 사용하지 않습니다. 누르면 다시 사용합니다.' : '챗봇이 이 문서를 사용 중입니다. 누르면 사용하지 않도록 끕니다. (문서는 그대로 보관)';
         eye.setAttribute('aria-label', d.enabled===false ? '문서 사용 켜기' : '문서 사용 끄기');
         eye.innerHTML = d.enabled===false ? EYE_OFF : EYE_ON;
@@ -2764,6 +2801,7 @@ function renderDocTree(){
 
 /* ════════ 문서 선택 다운로드 (ZIP, 텍스트) ════════ */
 const _dlSel = new Set();      // 선택된 문서 (id 또는 객체)
+const _catOpen = new Set();    // 펼쳐진 제품군 (다시 그려도 유지)
 const _docOpen = new Set();    // 펼쳐진 모델 문서 목록
 let _inlineBars = [];           // 모델별 문서 목록 안쪽 작업 막대 (다운로드/삭제/복사/이동)
 function dlKey(d){ return d.id || d; }
@@ -2935,11 +2973,15 @@ const EYE_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 async function toggleDocEnabledObj(d){
   if(!d||!d.id)return;
   const on=d.enabled===false;                                  // 지금 꺼져 있으면 켜기
-  if(!(await dbUpd('documents',{id:d.id},{enabled:on}))){
+  if(d._eyeBusy)return;d._eyeBusy=true;
+  const btns=[].slice.call(document.querySelectorAll('.dl-eye[data-doc="'+d.id+'"]'));btns.forEach(function(b){b.classList.add('busy');});
+  let ok;try{ok=await dbUpd('documents',{id:d.id},{enabled:on});}finally{d._eyeBusy=false;btns.forEach(function(b){b.classList.remove('busy');});}
+  if(!ok){
     showToast('DB 저장 실패. 사용 설정을 바꾸지 못했습니다. (문서 사용 설정 SQL이 아직 적용되지 않았을 수 있습니다)','error');return;
   }
   d.enabled=on;
-  renderDocTree(); if(modalDocRef&&document.getElementById('modal-doc-input').classList.contains('open'))renderExistingDocs();
+  const sy=window.scrollY;
+  renderDocTree();window.scrollTo(0,sy); if(modalDocRef&&document.getElementById('modal-doc-input').classList.contains('open'))renderExistingDocs();
   showToast(on?'👁 챗봇이 이 문서를 다시 사용합니다.':'🙈 챗봇이 이 문서를 사용하지 않습니다. (문서는 그대로 보관됩니다)','success');
 }
 
@@ -3004,7 +3046,10 @@ async function saveModelOrder(pi){
 }
 
 
-async function toggleCat(mid,cvid){document.getElementById(mid).classList.toggle('open');document.getElementById(cvid).classList.toggle('open');}
+async function toggleCat(mid,cvid){
+  const open=document.getElementById(mid).classList.toggle('open');document.getElementById(cvid).classList.toggle('open');
+  const pi=Number(String(mid).replace('cm-',''));if(!isNaN(pi)){if(open)_catOpen.add(pi);else _catOpen.delete(pi);}
+}
 
 /* CAT / MODEL */
 async function renderCatSel(){document.getElementById('new-model-cat').innerHTML=products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');}
@@ -3182,7 +3227,7 @@ function renderExistingDocs(){
           </div>
           <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
             <span style="font-size:11px;color:var(--text3);">${d.content.length}자${docImgList(d.content).length?' · 🖼️'+docImgList(d.content).length:''}</span>
-            <button type="button" class="dl-eye" data-eye="${d.enabled===false?'off':'on'}" title="${d.enabled===false?'지금은 챗봇이 이 문서를 사용하지 않습니다. 누르면 다시 사용합니다.':'챗봇이 이 문서를 사용 중입니다. 누르면 사용하지 않도록 끕니다.'}" onclick="toggleDocEnabledObj(modalDocRef&&products[modalDocRef.pi].models[modalDocRef.mi].docs[${i}])">${d.enabled===false?EYE_OFF:EYE_ON}</button>
+            <button type="button" class="dl-eye" data-doc="${d.id}" data-eye="${d.enabled===false?'off':'on'}" title="${d.enabled===false?'지금은 챗봇이 이 문서를 사용하지 않습니다. 누르면 다시 사용합니다.':'챗봇이 이 문서를 사용 중입니다. 누르면 사용하지 않도록 끕니다.'}" onclick="toggleDocEnabledObj(modalDocRef&&products[modalDocRef.pi].models[modalDocRef.mi].docs[${i}])">${d.enabled===false?EYE_OFF:EYE_ON}</button>
             <button class="btn btn-ghost btn-sm" onclick="editDocContent(${i})">✏️ 수정</button>
             <button class="btn btn-danger btn-sm" onclick="delDocContent(${i})">삭제</button>
           </div>
@@ -4652,7 +4697,7 @@ function libBytes(n){n=Number(n)||0;if(n<=0)return '0KB';return n>=1073741824?(n
 function libDate(s){return (s||'').slice(0,10);}
 
 async function libApi(name,body){
-  const res=await fetch('/api/'+name,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(libToken||'')},body:JSON.stringify(body||{})});
+  const res=await withBusy(function(){return fetch('/api/'+name,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(libToken||'')},body:JSON.stringify(body||{})});});
   let j={};try{j=await res.json();}catch(e){}
   if(!res.ok){
     const err=new Error(res.status===404&&!j.error?'자료실 기능이 아직 설정되지 않았습니다. 관리자에게 문의해 주세요.':(j.error||'요청에 실패했습니다.'));

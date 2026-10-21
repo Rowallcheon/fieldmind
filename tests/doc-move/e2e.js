@@ -1,6 +1,7 @@
-// 문서 관리: 모델을 다른 제품군으로 이동·복사, 문서를 다른 모델로 이동 브라우저 시험 (가짜 DB 사용)
+// 문서 관리: 체크박스로 고른 문서를 다른 제품군의 모델로 이동·복사 브라우저 시험 (가짜 DB 사용)
 // 실행: node tests/doc-move/e2e.js   (Playwright + Chromium 필요)
 const http = require('http'), fs = require('fs'), path = require('path');
+const OUT = path.join(__dirname, 'out'); fs.mkdirSync(OUT, { recursive: true });
 let chromium; try { ({ chromium } = require('playwright')); } catch (e) { ({ chromium } = require('/opt/node22/lib/node_modules/playwright')); }
 const PORT = 54341, BASE = 'http://127.0.0.1:' + PORT, INDEX = path.join(__dirname, '..', '..', 'index.html');
 const srv = http.createServer((req, res) => { if (req.url.split('?')[0] === '/') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); return res.end(fs.readFileSync(INDEX)); } res.statusCode = 404; res.end(); });
@@ -40,132 +41,102 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await page.route('**/*', r => { const u = r.request().url(); if (u.includes('supabase-js')) return r.fulfill({ contentType: 'application/javascript', body: STUB }); if (u.startsWith(BASE) || u.startsWith('data:') || u.startsWith('blob:')) return r.continue(); return r.abort(); });
   const writes = () => page.evaluate(() => window.__writes.slice());
   const clearW = () => page.evaluate(() => { window.__writes.length = 0; });
-  const tree = () => page.evaluate(() => products.map(p => p.name + ':' + p.models.map(m => m.name + '(' + m.docs.length + ')').join(',')));
+  const counts = () => page.evaluate(() => products.map(p => p.name + ':' + p.models.map(m => m.name + '(' + m.docs.map(d => d.title).join('/') + ')').join(',')).join('|'));
+  const check = async t => { const cb = page.locator('.dl-doc', { hasText: t }).locator('input'); if (!(await cb.isChecked())) await cb.check(); };
+  const uncheckAll = () => page.click('button:has-text("선택 해제")');
+  const mvOpenBtn = n => page.click('#dl-' + n + '-btn');
   const confirmMv = async () => { await page.click('#mv-ok'); await page.waitForFunction(() => !document.getElementById('modal-mv').classList.contains('open')); await page.waitForTimeout(200); };
-  const preText = () => page.textContent('#mv-pre');
-  const modelRow = n => page.locator('.model-row', { has: page.locator('.model-nm', { hasText: new RegExp('^' + n + '$') }) });
+  const pre = async () => (await page.textContent('#mv-pre')).replace(/\s+/g, ' ');
+  const pick = async (prod, model) => { await page.selectOption('#mv-prod', { label: new RegExp(prod) .source ? (await page.$$eval('#mv-prod option', (l, k) => l.map(o => o.textContent).find(t => t.includes(k)), prod)) : prod }); if (model) await page.selectOption('#mv-model', { label: (await page.$$eval('#mv-model option', (l, k) => l.map(o => o.textContent).find(t => t.startsWith(k)), model)) }); };
+  const openLists = () => page.evaluate(() => { products.forEach((p, i) => p.models.forEach((m, j) => _docOpen.add(i + '-' + j))); renderDocTree(); });
 
   await page.goto(BASE + '/'); await page.waitForTimeout(600);
   await page.fill('#login-id', 'admin'); await page.fill('#login-pw', '1234'); await page.click('.login-btn');
   await page.waitForSelector('#screen-admin.active', { timeout: 8000 });
-  await page.evaluate(() => {          // 화면이 다시 그려져도 모든 제품군을 펼친 채로 두어 조작하기 쉽게 함
+  await page.evaluate(() => {
     showPanel('docs'); const t = document.getElementById('doc-tree');
     const open = () => document.querySelectorAll('.cat-models').forEach(x => x.classList.add('open'));
     new MutationObserver(open).observe(t, { childList: true }); open();
   });
-  await page.waitForSelector('.model-row');
-  console.log('[모델 이동: 버튼]');
-  ok((await tree()).join('|') === '사무행정:그룹웨어(2),ERP(0)|정수기:CP-100(1),ERP(0)|비데:', '시작 상태: 사무행정(그룹웨어2, ERP0) / 정수기(CP-100, ERP) / 비데(빈)');
-  ok((await page.$$('.model-row button:has-text("↔ 제품군 이동")')).length === 4 && (await page.$$('.model-row button:has-text("⧉ 복사")')).length === 4, '모델마다 「↔ 제품군 이동」 「⧉ 복사」 버튼이 있다');
+  await page.waitForSelector('.model-row'); await openLists();
 
-  await clearW();
-  await modelRow('그룹웨어').locator('button:has-text("↔ 제품군 이동")').click();
-  await page.waitForSelector('#modal-mv.open');
-  let opts = await page.$$eval('#mv-target option', l => l.map(o => o.textContent));
-  ok(opts.length === 2 && !opts.some(t => t.includes('사무행정')), '현재 제품군은 선택지에서 빠진다');
-  await page.selectOption('#mv-target', { label: opts.find(t => t.includes('비데')) });
-  let t = await preText();
-  ok(t.includes('행정팀') && t.includes('전체팀') && t.includes('그룹 없음'), '비데로 옮기면: 지금 보는 그룹(행정팀, 전체팀) / 이동 후(그룹 없음) 이 보인다');
-  ok(/하나도 없어/.test(t), '이동 후 볼 수 있는 그룹이 없으면 경고가 뜬다');
-  ok((await page.textContent('#mv-src')).includes('문서 2건'), '문서 건수가 함께 표시된다');
-  await page.click('#modal-mv .btn-ghost'); await page.waitForTimeout(150);
-  ok((await writes()).length === 0, '취소하면 아무것도 저장하지 않는다');
+  console.log('[다운로드 막대의 이동·복사 버튼]');
+  ok((await page.$$('#doc-dl-bar button')).length >= 5 && await page.isVisible('#dl-move-btn') && await page.isVisible('#dl-copy-btn'), '다운로드 막대에 「↔ 선택 문서 이동」 「⧉ 선택 문서 복사」 버튼이 있다');
+  ok(await page.$eval('#dl-move-btn', b => b.disabled) && await page.$eval('#dl-copy-btn', b => b.disabled), '문서를 체크하지 않으면 두 버튼은 잠겨 있다');
+  ok((await page.$$('.model-row button:has-text("제품군 이동")')).length === 0, '(요청과 다른) 모델 줄 이동 버튼은 없다');
+  await check('결재 방법'); await check('휴가 신청');
+  ok(!(await page.$eval('#dl-move-btn', b => b.disabled)) && (await page.textContent('#dl-count')).includes('2건'), '체크하면 버튼이 켜지고 선택 건수가 보인다');
 
-  await modelRow('그룹웨어').locator('button:has-text("↔ 제품군 이동")').click(); await page.waitForSelector('#modal-mv.open');
-  await page.selectOption('#mv-target', { label: opts.find(t => t.includes('정수기')) });
-  t = await preText();
-  ok(t.includes('전체팀') && /지금 이 모델을 볼 수 있는 그룹: 행정팀, 전체팀/.test(t.replace(/\s+/g, ' ')) && /이동 후 볼 수 있는 그룹: 전체팀/.test(t.replace(/\s+/g, ' ')), '정수기로 옮기면: 행정팀·전체팀 → 전체팀만 보게 된다고 보여준다');
-  await confirmMv();
+  await page.screenshot({ path: path.join(OUT, 'dl-bar.png'), clip: { x: 0, y: 0, width: 1200, height: 500 } });
+  console.log('[이동: 확인 창]');
+  await mvOpenBtn('move'); await page.waitForSelector('#modal-mv.open');
+  ok((await page.textContent('#mv-src')).includes('선택한 문서 2건') && (await page.textContent('#mv-src')).includes('사무행정 › 그룹웨어 — 2건'), '선택한 문서 2건과 출처(사무행정 › 그룹웨어)가 보인다');
+  const prodOpts = await page.$$eval('#mv-prod option', l => l.map(o => ({ t: o.textContent, d: o.disabled })));
+  ok(prodOpts.length === 3 && prodOpts.find(o => o.t.includes('비데')).d, '제품군 목록에 모든 제품군이 나오고, 모델이 없는 제품군(비데)은 고를 수 없다');
+  ok(await page.$eval('#mv-prod', s => s.selectedOptions[0].textContent.includes('정수기')), '기본 선택은 선택한 문서와 다른 제품군(정수기)이다');
+  await pick('정수기', 'CP-100');
+  await page.screenshot({ path: path.join(OUT, 'move-modal.png') });
+  let t = await pre();
+  ok(/→ 💧 정수기 › CP-100/.test(t) && /지금 보는 그룹: 행정팀, 전체팀/.test(t) && /이동 후 보는 그룹: 전체팀/.test(t), '정수기 › CP-100으로: 행정팀·전체팀 → 전체팀만 보게 된다고 보여준다');
+  await pick('사무행정', 'ERP');
+  ok(/접근 권한은 그대로/.test(await pre()), '같은 제품군 안의 이동이면 "접근 권한은 그대로"라고 안내한다');
+  await pick('정수기', 'CP-100');
+  await clearW(); await page.click('#modal-mv .btn-ghost'); await page.waitForTimeout(150);
+  ok((await writes()).length === 0 && (await counts()).includes('그룹웨어(결재 방법/휴가 신청)'), '취소하면 아무것도 바뀌지 않는다');
+
+  console.log('[이동 실행]');
+  await uncheckAll(); await check('결재 방법');
+  await mvOpenBtn('move'); await page.waitForSelector('#modal-mv.open'); await pick('정수기', 'ERP');
+  await clearW(); await confirmMv();
   const w1 = await writes();
-  ok(w1.some(x => x.t === 'models' && x.k === 'update' && x.a.product_id === 'p2' && x.m.id === 'm1'), '모델의 제품군만 DB에서 바뀐다 (models.product_id = p2)');
-  ok(!w1.some(x => x.t === 'documents'), '문서는 건드리지 않는다(모델에 붙어 있어 그대로 따라감)');
-  ok(w1.some(x => x.t === 'models' && x.k === 'update' && 'sort_order' in x.a), '순서도 새로 저장된다');
-  ok((await tree()).join('|') === '사무행정:ERP(0)|정수기:CP-100(1),ERP(0),그룹웨어(2)|비데:', '화면: 그룹웨어(문서 2건)가 정수기로 옮겨졌다');
+  ok(w1.length === 1 && w1[0].t === 'documents' && w1[0].k === 'update' && w1[0].a.model_id === 'm4' && w1[0].m.id === 'd1', '체크한 문서 1건의 모델만 DB에서 바뀐다 (documents.model_id = m4)');
+  ok((await counts()).includes('정수기:CP-100(필터 교체),ERP(결재 방법)') && (await counts()).includes('그룹웨어(휴가 신청)'), '화면: 결재 방법이 정수기 › ERP로 옮겨졌고 나머지는 그대로');
+  ok((await page.textContent('#dl-count')).includes('0건') && await page.$eval('#dl-move-btn', b => b.disabled), '이동 후 선택은 해제된다');
+  ok(await page.isVisible('.dl-doc:has-text("결재 방법")'), '결과를 볼 수 있게 대상 모델의 문서 목록이 펼쳐져 있다');
 
-  console.log('[모델 이동: 이름 충돌 / 실패]');
-  await clearW();
-  await modelRow('ERP').first().locator('button:has-text("↔ 제품군 이동")').click(); await page.waitForSelector('#modal-mv.open');
-  await page.selectOption('#mv-target', { label: (await page.$$eval('#mv-target option', l => l.map(o => o.textContent))).find(x => x.includes('정수기')) });
-  ok(/같은 이름\("ERP"\)의 모델이 이미 있습니다/.test(await preText()) && await page.$eval('#mv-ok', b => b.disabled), '같은 이름이 있으면 경고하고 이동 버튼이 잠긴다');
-  await page.click('#modal-mv .btn-ghost');
-  await modelRow('그룹웨어').locator('button:has-text("↔ 제품군 이동")').click(); await page.waitForSelector('#modal-mv.open');
-  await page.selectOption('#mv-target', { label: (await page.$$eval('#mv-target option', l => l.map(o => o.textContent))).find(x => x.includes('비데')) });
-  await page.evaluate(() => { window.__failNext = 'models.update'; });
-  await page.click('#mv-ok'); await page.waitForTimeout(400);
-  ok(/DB 저장 실패/.test(await page.textContent('#toast')) && (await tree()).join('|').includes('정수기:CP-100(1),ERP(0),그룹웨어(2)'), 'DB 저장이 실패하면 이동하지 않고 화면도 그대로다');
-  await page.click('#modal-mv .btn-ghost');
+  console.log('[복사 실행]');
+  await check('휴가 신청');
+  await mvOpenBtn('copy'); await page.waitForSelector('#modal-mv.open');
+  ok((await page.textContent('#mv-title')).includes('복사') && (await page.textContent('#mv-ok')) === '복사', '복사 창은 제목과 버튼이 "복사"다');
+  await pick('정수기', 'CP-100');
+  t = await pre();
+  ok(/원본은 그대로/.test(t) && /복사본을 볼 수 있는 그룹: 전체팀/.test(t), '복사 안내: 원본은 그대로, 복사본을 볼 수 있는 그룹이 보인다');
+  await clearW(); await confirmMv();
+  const w2 = await writes(), ins = w2.filter(x => x.t === 'documents' && x.k === 'insert').flatMap(x => x.a);
+  ok(ins.length === 1 && ins[0].model_id === 'm3' && ins[0].title === '휴가 신청' && ins[0].content === '휴가 신청 방법입니다. 여기에 내용' && ins[0].id !== 'd2', '문서가 새 번호로, 내용 그대로 복사된다');
+  ok((await counts()).includes('그룹웨어(휴가 신청)') && (await counts()).includes('CP-100(필터 교체/휴가 신청)'), '화면: 원본(그룹웨어)은 그대로 있고 정수기 › CP-100에 복사본이 생겼다');
 
-  console.log('[모델 복사]');
-  await clearW();
-  await modelRow('그룹웨어').locator('button:has-text("⧉ 복사")').click(); await page.waitForSelector('#modal-mv.open');
-  await page.selectOption('#mv-target', { label: (await page.$$eval('#mv-target option', l => l.map(o => o.textContent))).find(x => x.includes('사무행정')) });
-  ok(/원본은 그대로/.test(await preText()), '복사 안내: 원본은 그대로 두고 복사본을 만든다');
-  await confirmMv();
-  const w2 = await writes();
-  const mIns = w2.find(x => x.t === 'models' && x.k === 'insert'), dIns = w2.filter(x => x.t === 'documents' && x.k === 'insert').flatMap(x => x.a);
-  ok(mIns && mIns.a.product_id === 'p1' && mIns.a.name === '그룹웨어', '새 모델이 사무행정에 만들어진다 (같은 이름이 없으면 이름 그대로)');
-  ok(dIns.length === 2 && dIns.every(d => d.model_id === mIns.a.id) && dIns.some(d => d.title === '결재 방법' && d.content.includes('[[그림:abcdefgh1234.webp|결재 메뉴]]')), '문서 2건이 새 번호로 복사되고, 사진 자리표를 포함한 내용이 그대로다');
-  ok(new Set(dIns.map(d => d.id)).size === 2 && !dIns.some(d => ['d1', 'd2'].includes(d.id)), '복사된 문서 번호는 원본과 다르다');
-  ok((await tree()).join('|') === '사무행정:ERP(0),그룹웨어(2)|정수기:CP-100(1),ERP(0),그룹웨어(2)|비데:', '화면: 정수기의 원본은 그대로, 사무행정에 복사본이 생겼다');
-  await clearW();
-  await modelRow('그룹웨어').nth(1).locator('button:has-text("⧉ 복사")').click(); await page.waitForSelector('#modal-mv.open');
-  await page.selectOption('#mv-target', { label: (await page.$$eval('#mv-target option', l => l.map(o => o.textContent))).find(x => x.includes('사무행정')) });
-  ok(/복사본 이름은 "그룹웨어 \(복사\)"/.test((await preText()).replace(/\s+/g, ' ')), '같은 이름이 이미 있으면 복사본 이름은 "그룹웨어 (복사)"가 된다');
-  await page.evaluate(() => { window.__failNext = 'documents.insert'; });
-  await page.click('#mv-ok'); await page.waitForTimeout(500);
+  console.log('[여러 모델·제품군에서 한꺼번에]');
+  await check('필터 교체'); await check('결재 방법');
+  await mvOpenBtn('move'); await page.waitForSelector('#modal-mv.open');
+  ok((await page.textContent('#mv-src')).includes('선택한 문서 2건') && (await page.textContent('#mv-src')).includes('정수기 › CP-100 — 1건') && (await page.textContent('#mv-src')).includes('정수기 › ERP — 1건'), '여러 모델에서 고른 문서의 출처가 모두 나온다');
+  await pick('정수기', 'CP-100');
+  ok(/이미 이 모델에 있는 문서 1건은 제외/.test(await pre()), '대상 모델에 이미 있는 문서는 제외된다고 알려준다');
+  await pick('사무행정', 'ERP');
+  t = await pre();
+  ok(/"정수기"의 문서 2건 — 지금 보는 그룹: 전체팀\s*→ 이동 후 보는 그룹: 행정팀, 전체팀/.test(t), '사무행정으로 옮기면 전체팀 → 행정팀·전체팀으로 넓어지는 것을 보여준다');
+  await clearW(); await confirmMv();
   const w3 = await writes();
-  ok(/복사를 취소/.test(await page.textContent('#toast')) && w3.some(x => x.t === 'documents' && x.k === 'delete') && w3.some(x => x.t === 'models' && x.k === 'delete'), '문서 복사 중 오류가 나면 만든 것을 지우고 취소한다');
-  ok((await tree()).join('|').startsWith('사무행정:ERP(0),그룹웨어(2)|'), '그때 화면에는 반쪽짜리 복사본이 남지 않는다');
+  ok(w3.filter(x => x.k === 'update' && x.a.model_id === 'm2').length === 2, '두 문서 모두 사무행정 › ERP(m2)로 옮겨진다');
+  ok((await counts()).includes('ERP(필터 교체/결재 방법)'), '화면에도 반영된다');
+
+  console.log('[이미 그 모델에 있는 경우 / 저장 실패]');
+  await uncheckAll(); await check('필터 교체');
+  await mvOpenBtn('move'); await page.waitForSelector('#modal-mv.open'); await pick('사무행정', 'ERP');
+  ok(/모두 이미 이 모델에 있습니다/.test(await pre()) && await page.$eval('#mv-ok', b => b.disabled), '선택한 문서가 전부 이미 그 모델에 있으면 경고하고 실행 버튼이 잠긴다');
+  await pick('정수기', 'CP-100');
+  await page.evaluate(() => { window.__failNext = 'documents.update'; });
+  await page.click('#mv-ok'); await page.waitForTimeout(500);
+  ok(/0건만 이동하고 저장 오류로 멈췄습니다/.test(await page.textContent('#toast')) && (await counts()).includes('ERP(필터 교체/결재 방법)'), 'DB 저장이 실패하면 그 문서는 옮기지 않고 화면도 그대로다');
+  await uncheckAll(); await check('필터 교체');
+  await mvOpenBtn('copy'); await page.waitForSelector('#modal-mv.open'); await pick('정수기', 'CP-100');
+  await page.evaluate(() => { window.__failNext = 'documents.insert'; });
+  const before = await counts();
+  await page.click('#mv-ok'); await page.waitForTimeout(500);
+  ok(/복사를 취소/.test(await page.textContent('#toast')) && (await counts()) === before, '복사 저장이 실패하면 취소하고 화면에 복사본이 남지 않는다');
   await page.evaluate(() => closeModal('modal-mv'));
 
-  console.log('[모델 이동: 끌어서 놓기]');
-  await page.click('#sort-mode-btn'); await page.waitForTimeout(300);
-  ok(/모델 줄을 다른 제품군의 모델 위나 제품군 위로 끌어/.test(await page.textContent('#sort-mode-guide')), '순서 변경 모드 안내에 제품군 간 이동이 적혀 있다');
-  await clearW();
-  await modelRow('CP-100').dragTo(modelRow('ERP').first());   // 같은 제품군이 아닌 모델(사무행정 ERP) 위로
-  await page.waitForSelector('#modal-mv.open', { timeout: 5000 });
-  ok(/사무행정/.test(await page.textContent('#mv-target').catch(() => '') + await page.$eval('#mv-target', s => s.selectedOptions[0].textContent)), '다른 제품군의 모델 위에 놓으면 이동 확인 창이 그 제품군을 선택한 채 열린다');
-  await confirmMv();
-  ok((await tree()).join('|').startsWith('사무행정:CP-100(1),ERP(0),그룹웨어(2)|'), '놓은 모델 앞에 끼워 넣어진다 (사무행정: CP-100, ERP, 그룹웨어)');
-  await clearW();
-  await modelRow('CP-100').dragTo(page.locator('.cat-block').nth(2).locator('.cat-hdr'));   // 비데(빈 제품군) 머리 위로
-  await page.waitForSelector('#modal-mv.open', { timeout: 5000 });
-  ok(/하나도 없어/.test(await preText()), '빈 제품군(비데) 위에 놓아도 확인 창이 열리고 접근 그룹 경고가 뜬다');
-  await page.click('#modal-mv .btn-ghost'); await page.waitForTimeout(150);
-  ok((await writes()).length === 0 && (await tree()).join('|').startsWith('사무행정:CP-100(1)'), '확인 창에서 취소하면 그대로다');
-  // 같은 제품군 안의 순서 변경은 예전처럼 확인 창 없이
-  await clearW();
-  await modelRow('그룹웨어').nth(0).dragTo(modelRow('CP-100').nth(0));
-  await page.waitForTimeout(500);
-  const w4 = await writes();
-  ok(!(await page.isVisible('#modal-mv')) && w4.some(x => x.t === 'models' && 'sort_order' in x.a) && (await tree())[0].startsWith('사무행정:그룹웨어') , '같은 제품군 안에서 순서만 바꾸는 끌기는 확인 창 없이 저장된다');
-  await page.click('#sort-mode-btn');
-
-  console.log('[문서 이동]');
-  await page.evaluate(() => openDocInputModal(0, 0));          // 사무행정 첫 모델
-  await page.waitForSelector('#modal-doc-input.open');
-  const firstModel = await page.evaluate(() => products[0].models[0].name);
-  const docBtns = await page.$$('#existing-docs-list button:has-text("↔ 이동")');
-  ok(docBtns.length === (await page.evaluate(() => products[0].models[0].docs.length)) && docBtns.length >= 1, '문서 입력창의 등록된 문서마다 「↔ 이동」 버튼이 있다 (' + firstModel + ')');
-  await page.evaluate(() => { const i = products[0].models[0].docs.length; openDocInputModal(0, products[0].models.findIndex(m => m.name === '그룹웨어')); });
-  await page.waitForSelector('#existing-docs-list .doc-card');
-  await clearW();
-  await page.locator('#existing-docs-list .doc-card', { hasText: '휴가 신청' }).locator('button:has-text("↔ 이동")').click();
-  await page.waitForSelector('#modal-mv.open');
-  const dOpts = await page.$$eval('#mv-target option', l => l.map(o => o.textContent));
-  ok(dOpts.length >= 3 && !dOpts.some(x => x.includes('사무행정 › 그룹웨어')) && dOpts.some(x => x.includes('정수기 › ERP')) && dOpts.some(x => x.includes('사무행정 › CP-100')), '문서 이동 선택지: 현재 모델은 빠지고 모든 제품군의 모델이 나온다');
-  await page.selectOption('#mv-target', { label: dOpts.find(x => x.includes('사무행정 › CP-100')) });
-  ok(/같은 제품군 안에서의 이동이라/.test(await preText()), '같은 제품군 안의 문서 이동은 접근 그룹이 그대로라고 안내한다');
-  await page.selectOption('#mv-target', { label: dOpts.find(x => x.includes('정수기 › ERP')) });
-  const dt = (await preText()).replace(/\s+/g, ' ');
-  ok(/지금 이 문서를 볼 수 있는 그룹: 행정팀, 전체팀/.test(dt) && /이동 후 볼 수 있는 그룹: 전체팀/.test(dt), '다른 제품군으로 옮기면 보는 그룹이 어떻게 바뀌는지 보여준다');
-  await confirmMv();
-  const w5 = await writes();
-  ok(w5.some(x => x.t === 'documents' && x.k === 'update' && x.a.model_id === 'm4' && x.m.id), '문서의 모델만 DB에서 바뀐다 (documents.model_id)');
-  ok((await page.$$('#existing-docs-list .doc-card')).length === 1 && !(await page.textContent('#existing-docs-list')).includes('휴가 신청'), '입력창의 문서 목록에서 옮긴 문서가 빠진다');
-  ok(await page.evaluate(() => products.find(p => p.name === '정수기').models.find(m => m.name === 'ERP').docs.length) === 1, '정수기 ERP 모델에 문서 1건이 생겼다');
-
-  const realErrs = errs.filter(e => !/\{message: fail\}/.test(e));   // 일부러 실패시킨 저장의 로그는 제외
+  const realErrs = errs.filter(e => !/\{message: fail\}/.test(e));
   ok(realErrs.length === 0, '페이지 오류 없음(의도한 저장 실패 로그 제외)' + (realErrs.length ? ' ' + JSON.stringify(realErrs) : ''));
   await browser.close(); srv.close();
   console.log('\n통과 ' + pass + ' / 실패 ' + fail);

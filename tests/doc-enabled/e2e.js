@@ -19,7 +19,7 @@ const FIXTURE = {
 };
 const STUB = `(function(){
  const FX=${JSON.stringify(FIXTURE)}; window.__writes=[]; window.__failNext=null;
- const rec=(t,k,a,m)=>{ window.__writes.push({t,k,a,m}); const f=window.__failNext; if(f&&f===t+'.'+k){window.__failNext=null; return Promise.resolve({error:{message:'fail'}});} return Promise.resolve({error:null}); };
+ const rec=(t,k,a,m)=>{ window.__writes.push({t,k,a,m}); const f=window.__failNext; if(f&&f===t+'.'+k){window.__failNext=null; return Promise.resolve({error:{message:'fail'}});} return new Promise(r=>setTimeout(()=>r({error:null}),window.__delay||0)); };
  function mk(t){ const q={}; ['select','order','eq','neq','in','gte','limit','is','range'].forEach(k=>q[k]=()=>q);
   q.insert=a=>rec(t,'insert',a); q.upsert=a=>rec(t,'upsert',a); q.update=a=>({match:m=>rec(t,'update',a,m)}); q.delete=()=>({match:m=>rec(t,'delete',null,m),in:()=>rec(t,'delete',null)});
   q.then=(res,rej)=>Promise.resolve({data:(FX[t]||[]).slice(),error:null,count:0}).then(res,rej); return q; }
@@ -73,6 +73,25 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await a.locator('#existing-docs-list .doc-card', { hasText: '휴가 신청' }).locator('.dl-eye').click(); await a.waitForTimeout(300);
   ok((await writes()).some(x => x.a && x.a.enabled === false && x.m.id === 'd2') && await a.locator('#existing-docs-list .doc-card', { hasText: '휴가 신청' }).evaluate(e => e.classList.contains('off')), '문서 입력창에서도 끄고 켤 수 있다 (흐리게 표시)');
   ok(a.errs.length === 0, '관리자 화면 페이지 오류 없음' + (a.errs.length ? JSON.stringify(a.errs) : ''));
+
+  console.log('[눈 아이콘: 화면 유지 + 작업 중 표시]');
+  const k = await mkPage(); await login(k, 'admin'); await k.waitForSelector('#screen-admin.active', { timeout: 8000 });
+  await k.evaluate(() => showPanel('docs'));
+  await k.locator('.cat-hdr').first().click();
+  await k.evaluate(() => { _docOpen.add('0-0'); renderDocTree(); });
+  await k.waitForSelector('#cm-0.open .dl-doc .dl-eye');
+  const nOpen = () => k.evaluate(() => ({ cat: document.getElementById('cm-0').classList.contains('open'), docs: !!document.querySelector('#cm-0 .model-docs.open'), chev: document.getElementById('cv-0').classList.contains('open') }));
+  await k.evaluate(() => { window.__delay = 900; });
+  const eye = k.locator('#cm-0 .dl-doc .dl-eye').first();
+  await eye.click(); await k.waitForTimeout(450);
+  ok(await k.locator('#busy-bar.on').count() === 1 && await k.locator('#busy-pill.on').isVisible(), '저장하는 동안 화면 위 막대와 "작업 중입니다…" 표시가 나온다');
+  ok(await eye.evaluate(e => e.classList.contains('busy')), '누른 눈 아이콘은 저장되는 동안 빙글빙글 돈다');
+  await k.waitForTimeout(800);
+  const st = await nOpen();
+  ok(st.cat && st.docs && st.chev, '눈 아이콘을 눌러도 펼쳐 둔 제품군·모델 문서 목록이 접히지 않는다');
+  ok(await k.locator('#busy-bar.on').count() === 0 && !(await k.locator('#busy-pill').isVisible()), '저장이 끝나면 작업 중 표시가 사라진다');
+  ok(await k.locator('#cm-0 .dl-doc .dl-eye').first().getAttribute('data-eye') === 'off', '눈 아이콘이 바로 바뀐다');
+  ok(k.errs.length === 0, '페이지 오류 없음' + (k.errs.length ? JSON.stringify(k.errs) : ''));
 
   console.log('[사용자: 모델 선택 / 챗봇 답변]');
   const u = await mkPage(); await login(u, 'u1'); await u.waitForSelector('#screen-chat.active', { timeout: 8000 });

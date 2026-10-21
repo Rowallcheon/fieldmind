@@ -358,7 +358,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dl-doc input{width:16px;height:16px;accent-color:var(--accent);flex:none;cursor:pointer;}
 .dl-doc .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dl-doc .n{font-size:11px;color:var(--text3);flex:none;}
-.dl-all{font-weight:700;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:2px;}
+.dl-all{font-weight:700;flex:1;min-width:0;}
+.dl-allwrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding:2px 0 8px;margin-bottom:2px;position:sticky;top:0;z-index:3;background:var(--bg3);}
+.dl-inline{display:none;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto;}
+.dl-inline .cnt{font-size:12px;font-weight:700;color:var(--accent);margin-right:2px;}
+.dl-inline .btn{padding:5px 10px;font-size:12px;}
 .dl-empty{font-size:12px;color:var(--text3);padding:6px 0;}
 
 /* 관리자 미리보기: 상단 바를 단순화(사용자용 배지/아바타/문의 버튼 숨김) */
@@ -782,6 +786,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <button class="btn btn-ghost btn-sm" onclick="dlSelectAll(true)">전체 선택</button>
           <button class="btn btn-ghost btn-sm" onclick="dlSelectAll(false)">선택 해제</button>
           <button class="btn btn-primary btn-sm" id="dl-btn" onclick="downloadSelectedDocs()" disabled>⬇ 선택 문서 다운로드 (ZIP)</button>
+          <button class="btn btn-danger btn-sm" id="dl-del-btn" onclick="deleteSelectedDocs()" disabled>🗑 선택 문서 삭제</button>
           <button class="btn btn-ghost btn-sm" id="dl-move-btn" onclick="mvOpen('move')" disabled>↔ 선택 문서 이동</button>
           <button class="btn btn-ghost btn-sm" id="dl-copy-btn" onclick="mvOpen('copy')" disabled>⧉ 선택 문서 복사</button>
         </div>
@@ -2559,6 +2564,7 @@ function renderDocTree(){
   const tree = document.getElementById('doc-tree');
   if(!tree) return;
   tree.innerHTML = '';
+  _inlineBars = [];
 
   products.forEach(function(p, pi){
     const td = p.models.reduce(function(a,m){return a+m.docs.length;},0);
@@ -2676,7 +2682,19 @@ function renderDocTree(){
         };
         const allTx = document.createElement('span'); allTx.className='t'; allTx.textContent='이 모델 문서 전체 선택 ('+m.docs.length+'건)';
         allLab.appendChild(allCb); allLab.appendChild(allTx);
-        docsBox.appendChild(allLab);
+        const allWrap = document.createElement('div'); allWrap.className='dl-allwrap';
+        allWrap.appendChild(allLab);
+        /* 체크한 문서가 있으면 바로 여기(오른쪽)에 작업 버튼이 나타남 — 맨 위로 스크롤하지 않아도 됨 */
+        const inl = document.createElement('div'); inl.className='dl-inline';
+        const cnt = document.createElement('span'); cnt.className='cnt'; inl.appendChild(cnt);
+        [['⬇ 선택 문서 다운로드','btn btn-primary btn-sm','dl','downloadSelectedDocs()'],['🗑 삭제','btn btn-danger btn-sm','del','deleteSelectedDocs()'],['⧉ 복사','btn btn-ghost btn-sm','copy',"mvOpen('copy')"],['↔ 이동','btn btn-ghost btn-sm','move',"mvOpen('move')"]].forEach(function(x){
+          const bt = document.createElement('button'); bt.type='button'; bt.className=x[1]; bt.textContent=x[0]; bt.dataset.act=x[2];
+          bt.onclick = new Function(x[3]);
+          inl.appendChild(bt);
+        });
+        allWrap.appendChild(inl);
+        _inlineBars.push({el:inl, cnt:cnt, m:m});
+        docsBox.appendChild(allWrap);
       }
       m.docs.forEach(function(d){
         const lab = document.createElement('label'); lab.className='dl-doc';
@@ -2728,6 +2746,7 @@ function renderDocTree(){
 /* ════════ 문서 선택 다운로드 (ZIP, 텍스트) ════════ */
 const _dlSel = new Set();      // 선택된 문서 (id 또는 객체)
 const _docOpen = new Set();    // 펼쳐진 모델 문서 목록
+let _inlineBars = [];           // 모델별 문서 목록 안쪽 작업 막대 (다운로드/삭제/복사/이동)
 function dlKey(d){ return d.id || d; }
 function dlSelectedDocs(){
   const out=[];
@@ -2740,7 +2759,12 @@ function updateDlBar(){
   const n = dlSelectedDocs().length;
   const c = document.getElementById('dl-count'); if(c) c.textContent='선택 '+n+'건';
   const b = document.getElementById('dl-btn'); if(b) b.disabled = (n===0);
-  ['dl-move-btn','dl-copy-btn'].forEach(function(id){ const x=document.getElementById(id); if(x) x.disabled=(n===0); });
+  ['dl-move-btn','dl-copy-btn','dl-del-btn'].forEach(function(id){ const x=document.getElementById(id); if(x) x.disabled=(n===0); });
+  _inlineBars.forEach(function(b){                         // 모델 안쪽 작업 막대: 그 모델에서 체크한 문서가 있을 때만 보임
+    const mine = b.m.docs.filter(function(d){ return _dlSel.has(dlKey(d)); }).length;
+    b.el.style.display = mine ? 'flex' : 'none';
+    b.cnt.textContent = '선택 '+n+'건'+(mine<n ? ' (다른 모델 포함)' : '');
+  });
 }
 function dlSelectAll(on){
   products.forEach(function(p){ p.models.forEach(function(m){ m.docs.forEach(function(d){
@@ -2884,6 +2908,22 @@ async function mvDone(go){
     if(done<todo.length)showToast('⚠️ '+done+'건만 '+(copy?'복사':'이동')+'하고 저장 오류로 멈췄습니다. 나머지는 그대로 있습니다.','error');
     else showToast('✅ 문서 '+done+'건을 "'+t.p.name+' › '+t.m.name+'"'+(copy?'에 복사했습니다.':'(으)로 옮겼습니다.'),'success');
   }finally{btn.disabled=false;}
+}
+
+/* 체크한 문서 삭제 (DB에서 실제로 삭제) */
+async function deleteSelectedDocs(){
+  const sel=dlSelectedDocs();
+  if(!sel.length){showToast('삭제할 문서를 체크하세요.','error');return;}
+  const list=sel.slice(0,8).map(x=>'· '+x.p.name+' › '+x.m.name+' — '+x.d.title).join('\n')+(sel.length>8?'\n… 외 '+(sel.length-8)+'건':'');
+  if(!confirm('선택한 문서 '+sel.length+'건을 삭제할까요?\n\n'+list+'\n\n삭제하면 챗봇이 더 이상 이 문서를 참고하지 못하며 되돌릴 수 없습니다.'))return;
+  let done=0;
+  for(const x of sel){
+    if(!(await dbDel('documents',{id:x.d.id})))break;                       // 실패하면 거기서 멈춤(지운 것은 그대로 반영)
+    x.m.docs.splice(x.m.docs.indexOf(x.d),1);_dlSel.delete(dlKey(x.d));done++;
+  }
+  renderDocTree();renderDash();updateDlBar();
+  if(done<sel.length)showToast('⚠️ '+done+'건만 삭제하고 저장 오류로 멈췄습니다. 나머지는 그대로 있습니다.','error');
+  else showToast('🗑 문서 '+done+'건을 삭제했습니다.','success');
 }
 
 /* ── 제품군 드래그 ── */
@@ -3142,7 +3182,9 @@ async function saveDocContent(){
 async function delDocContent(idx){
   if(!modalDocRef)return;
   const docs=products[modalDocRef.pi].models[modalDocRef.mi].docs;
-  docs.splice(idx,1);
+  const d=docs[idx]; if(!d) return;
+  if(d.id && !(await dbDel('documents',{id:d.id}))){ showToast('DB 삭제 실패. 문서를 지우지 못했습니다.','error'); return; }   // 예전에는 화면에서만 지워지고 DB에는 남았음
+  docs.splice(idx,1); _dlSel.delete(dlKey(d));
   renderExistingDocs(); renderDocTree(); renderDash();
   showToast('문서가 삭제되었습니다.');
 }

@@ -358,6 +358,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dl-doc input{width:16px;height:16px;accent-color:var(--accent);flex:none;cursor:pointer;}
 .dl-doc .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dl-doc .n{font-size:11px;color:var(--text3);flex:none;}
+.dl-eye{flex:none;display:inline-flex;align-items:center;justify-content:center;width:28px;height:24px;border:0;border-radius:6px;background:transparent;color:var(--accent);cursor:pointer;padding:0;}
+.dl-eye:hover{background:rgba(45,95,143,.12);}
+.dl-eye svg{width:18px;height:18px;}
+.dl-doc.off .t,.dl-doc.off .n,.dl-doc.off .badge{opacity:.45;}
+.dl-doc.off .t{text-decoration:line-through;}
+.dl-doc.off .dl-eye{color:#b3261e;}
+.off-tag{flex:none;font-size:10.5px;font-weight:700;color:#b3261e;border:1px solid #e3b3ae;border-radius:8px;padding:0 6px;background:#fff6f5;}
+.doc-card.off{background:#fafafa;}
+.doc-card.off .doc-card-title,.doc-card.off .doc-card-body{opacity:.5;}
 .dl-all{font-weight:700;flex:1;min-width:0;}
 .dl-allwrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding:2px 0 8px;margin-bottom:2px;position:sticky;top:0;z-index:3;background:var(--bg3);}
 .dl-inline{display:none;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto;}
@@ -1451,7 +1460,7 @@ async function loadAllData() {
         models: sortedM.map(function(m) {
           return { id: m.id, name: m.name,
             docs: dRows.filter(function(d){ return d.model_id===m.id; }).map(function(d) {
-              return { id: d.id, title: d.title, cat: d.cat, content: d.content, date: (d.created_at||'').slice(0,10) };
+              return { id: d.id, title: d.title, cat: d.cat, content: d.content, enabled: d.enabled !== false, date: (d.created_at||'').slice(0,10) };
             })
           };
         })
@@ -1885,13 +1894,14 @@ function populateCatDD(){
   ddm.disabled=true;ddm.classList.remove('has-val');
   document.getElementById('sel-confirm-btn').classList.remove('ready');
 }
+const activeDocs=m=>m.docs.filter(d=>d.enabled!==false);      // 챗봇이 실제로 참고하는 문서 (눈 아이콘으로 '사용 안 함'으로 끈 문서는 제외)
 function onCatChange(){
   const catId=document.getElementById('dd-cat').value;
   const ddm=document.getElementById('dd-model');
   document.getElementById('dd-cat').classList.toggle('has-val',!!catId);
   if(!catId){ddm.innerHTML='<option value="">-- 모델 선택 --</option>';ddm.disabled=true;ddm.classList.remove('has-val');document.getElementById('sel-confirm-btn').classList.remove('ready');return;}
   const p=products.find(x=>x.id===catId);
-  ddm.innerHTML='<option value="">-- 모델 선택 --</option>'+p.models.map(m=>`<option value="${m.id}">${m.name} (문서 ${m.docs.length}건)</option>`).join('');
+  ddm.innerHTML='<option value="">-- 모델 선택 --</option>'+p.models.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
   ddm.disabled=false;ddm.classList.remove('has-val');
   document.getElementById('sel-confirm-btn').classList.remove('ready');
 }
@@ -1914,7 +1924,7 @@ function applySelection(){
 function activateChat(){
   document.getElementById('ctx-cat-chip').textContent=selProduct.icon+' '+selProduct.name;
   document.getElementById('ctx-model-chip').textContent=selModel.name;
-  document.getElementById('ctx-scope-txt').textContent='문서 '+selModel.docs.length+'건';
+  document.getElementById('ctx-scope-txt').textContent='문서 '+activeDocs(selModel).length+'건';
   document.getElementById('ctx-banner').classList.remove('hidden');
   const inp=document.getElementById('chat-inp');
   inp.disabled=false; inp.placeholder='질문을 입력하세요...';
@@ -1936,12 +1946,12 @@ function resetChatState(){
   document.getElementById('chat-body').innerHTML=`<div class="chat-prompt"><div class="chat-prompt-icon">⬆️</div><h2>제품군과 모델을 먼저 선택하세요</h2><p style="font-size:13px;color:var(--text2);margin-top:6px;">위 드롭다운에서 선택 후 <strong style="color:var(--accent);">적용</strong>을 누르면 챗봇이 활성화됩니다.</p></div>`;
 }
 function renderWelcome(){
-  const hasDocs=selModel.docs.length>0;
+  const hasDocs=activeDocs(selModel).length>0;
   document.getElementById('chat-body').innerHTML=`
     <div class="chat-welcome">
       <div class="chat-welcome-icon">${selProduct.icon}</div>
       <h2>${selProduct.name} · ${selModel.name}</h2>
-      <p>${hasDocs?'등록된 '+selModel.docs.length+'건의 문서를 기반으로 답변합니다.':''}</p>
+      <p>${hasDocs?'등록된 '+activeDocs(selModel).length+'건의 문서를 기반으로 답변합니다.':''}</p>
       ${hasDocs?`<div class="quick-btns">
         <button class="quick-btn" onclick="sendQuick('이 모델의 주요 사양을 알려주세요')">📋 주요 사양</button>
         <button class="quick-btn" onclick="sendQuick('에러코드 목록을 알려주세요')">🔧 에러코드</button>
@@ -1969,10 +1979,11 @@ async function sendMsg(){
 
   // 실제 문서 텍스트를 컨텍스트로 구성 (전체 문서 포함)
   let docCtx = '';
-  if(selModel.docs.length > 0){
+  const useDocs = activeDocs(selModel);          // '사용 안 함'(눈 아이콘 꺼짐)으로 설정한 문서는 답변에 쓰지 않음
+  if(useDocs.length > 0){
     // 모든 문서를 순서대로 전부 포함 (잘림 없음)
-    docCtx = selModel.docs.map((d, idx)=>
-      `=== 문서 ${idx+1}/${selModel.docs.length} [${d.cat}] ${d.title} ===\n${d.content}`
+    docCtx = useDocs.map((d, idx)=>
+      `=== 문서 ${idx+1}/${useDocs.length} [${d.cat}] ${d.title} ===\n${d.content}`
     ).join('\n\n---\n\n');
   } else {
     docCtx = '(등록된 문서 없음 — 관리자가 문서를 아직 입력하지 않았습니다)';
@@ -2039,7 +2050,7 @@ ${docCtx}`;
     let refDocs=null;
     if(refMatch){
       const picked=[...new Set((refMatch[1].match(/\d+/g)||[]).map(Number))]
-        .filter(n=>n>=1&&n<=selModel.docs.length).map(n=>selModel.docs[n-1]);
+        .filter(n=>n>=1&&n<=useDocs.length).map(n=>useDocs[n-1]);
       if(picked.length>0) refDocs=picked;
     }
     const refTitles=refDocs?refDocs.map(d=>d.title).join(', '):'—';
@@ -2704,7 +2715,15 @@ function renderDocTree(){
         const bd = document.createElement('span'); bd.className='badge badge-gray'; bd.style.fontSize='10px'; bd.textContent=d.cat||'';
         const tt = document.createElement('span'); tt.className='t'; tt.textContent=d.title;
         const nn = document.createElement('span'); nn.className='n'; nn.textContent=(d.content||'').length+'자';
-        lab.appendChild(cb); lab.appendChild(bd); lab.appendChild(tt); lab.appendChild(nn);
+        lab.appendChild(cb); lab.appendChild(bd); lab.appendChild(tt);
+        if(d.enabled===false){ lab.classList.add('off'); const ot=document.createElement('span'); ot.className='off-tag'; ot.textContent='사용 안 함'; lab.appendChild(ot); }
+        lab.appendChild(nn);
+        const eye = document.createElement('button'); eye.type='button'; eye.className='dl-eye'; eye.dataset.eye=(d.enabled===false?'off':'on');
+        eye.title = d.enabled===false ? '지금은 챗봇이 이 문서를 사용하지 않습니다. 누르면 다시 사용합니다.' : '챗봇이 이 문서를 사용 중입니다. 누르면 사용하지 않도록 끕니다. (문서는 그대로 보관)';
+        eye.setAttribute('aria-label', d.enabled===false ? '문서 사용 켜기' : '문서 사용 끄기');
+        eye.innerHTML = d.enabled===false ? EYE_OFF : EYE_ON;
+        eye.onclick = function(e){ e.preventDefault(); e.stopPropagation(); toggleDocEnabledObj(d); };
+        lab.appendChild(eye);
         docsBox.appendChild(lab);
       });
       syncAll();
@@ -2893,14 +2912,14 @@ async function mvDone(go){
         x.m.docs.splice(x.m.docs.indexOf(x.d),1);t.m.docs.push(x.d);done++;
       }
     }else{
-      const today=new Date().toISOString().slice(0,10),rows=todo.map((x,i)=>({id:'d'+Date.now()+Math.random().toString(36).slice(2,6)+i,model_id:t.m.id,title:x.d.title,cat:x.d.cat,content:x.d.content}));
+      const today=new Date().toISOString().slice(0,10),rows=todo.map((x,i)=>Object.assign({id:'d'+Date.now()+Math.random().toString(36).slice(2,6)+i,model_id:t.m.id,title:x.d.title,cat:x.d.cat,content:x.d.content},x.d.enabled===false?{enabled:false}:{}));
       const inserted=[];let all=true;
       for(let i=0;i<rows.length&&all;i+=10){const part=rows.slice(i,i+10);all=await dbIns('documents',part);if(all)inserted.push(...part);}
       if(!all){                                         // 일부만 복사된 채 남지 않도록 되돌림
         for(const r of inserted)await dbDel('documents',{id:r.id});
         showToast('문서 복사 중 오류가 나 복사를 취소했습니다.','error');return;
       }
-      rows.forEach(r=>t.m.docs.push({id:r.id,title:r.title,cat:r.cat,content:r.content,date:today}));done=rows.length;
+      rows.forEach(r=>t.m.docs.push({id:r.id,title:r.title,cat:r.cat,content:r.content,enabled:r.enabled!==false,date:today}));done=rows.length;
     }
     document.getElementById('modal-mv').classList.remove('open');
     _dlSel.clear();_docOpen.add(products.indexOf(t.p)+'-'+t.p.models.indexOf(t.m));      // 결과를 바로 볼 수 있게 대상 모델의 문서 목록을 펼침
@@ -2908,6 +2927,20 @@ async function mvDone(go){
     if(done<todo.length)showToast('⚠️ '+done+'건만 '+(copy?'복사':'이동')+'하고 저장 오류로 멈췄습니다. 나머지는 그대로 있습니다.','error');
     else showToast('✅ 문서 '+done+'건을 "'+t.p.name+' › '+t.m.name+'"'+(copy?'에 복사했습니다.':'(으)로 옮겼습니다.'),'success');
   }finally{btn.disabled=false;}
+}
+
+/* 문서별 눈 아이콘: 문서는 그대로 등록해 두되 챗봇 답변에는 쓰지 않도록 끄고 켠다 (documents.enabled) */
+const EYE_ON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+async function toggleDocEnabledObj(d){
+  if(!d||!d.id)return;
+  const on=d.enabled===false;                                  // 지금 꺼져 있으면 켜기
+  if(!(await dbUpd('documents',{id:d.id},{enabled:on}))){
+    showToast('DB 저장 실패. 사용 설정을 바꾸지 못했습니다. (문서 사용 설정 SQL이 아직 적용되지 않았을 수 있습니다)','error');return;
+  }
+  d.enabled=on;
+  renderDocTree(); if(modalDocRef&&document.getElementById('modal-doc-input').classList.contains('open'))renderExistingDocs();
+  showToast(on?'👁 챗봇이 이 문서를 다시 사용합니다.':'🙈 챗봇이 이 문서를 사용하지 않습니다. (문서는 그대로 보관됩니다)','success');
 }
 
 /* 체크한 문서 삭제 (DB에서 실제로 삭제) */
@@ -3141,14 +3174,15 @@ function renderExistingDocs(){
   document.getElementById('existing-docs-list').innerHTML=docs.length===0
     ?'<div style="font-size:12px;color:var(--text3);padding:8px 0;">아직 등록된 문서가 없습니다.</div>'
     :docs.map((d,i)=>`
-      <div class="doc-card">
+      <div class="doc-card${d.enabled===false?' off':''}">
         <div class="doc-card-head">
           <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
             <span class="badge badge-gray" style="font-size:10px;flex-shrink:0;">${d.cat}</span>
-            <span class="doc-card-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title}</span>
+            <span class="doc-card-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title}</span>${d.enabled===false?'<span class="off-tag">사용 안 함</span>':''}
           </div>
           <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
             <span style="font-size:11px;color:var(--text3);">${d.content.length}자${docImgList(d.content).length?' · 🖼️'+docImgList(d.content).length:''}</span>
+            <button type="button" class="dl-eye" data-eye="${d.enabled===false?'off':'on'}" title="${d.enabled===false?'지금은 챗봇이 이 문서를 사용하지 않습니다. 누르면 다시 사용합니다.':'챗봇이 이 문서를 사용 중입니다. 누르면 사용하지 않도록 끕니다.'}" onclick="toggleDocEnabledObj(modalDocRef&&products[modalDocRef.pi].models[modalDocRef.mi].docs[${i}])">${d.enabled===false?EYE_OFF:EYE_ON}</button>
             <button class="btn btn-ghost btn-sm" onclick="editDocContent(${i})">✏️ 수정</button>
             <button class="btn btn-danger btn-sm" onclick="delDocContent(${i})">삭제</button>
           </div>

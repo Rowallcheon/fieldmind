@@ -775,7 +775,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <button class="sort-mode-btn" id="sort-mode-btn" onclick="toggleSortMode()">⇅ 순서 변경</button>
         </div>
         <div id="sort-mode-guide" style="display:none;background:rgba(45,95,143,.08);border:1px solid rgba(45,95,143,.25);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--accent);">
-          ☰ 핸들을 드래그해서 순서를 변경하세요. 변경 후 자동 저장됩니다.
+          ☰ 핸들을 드래그해서 순서를 변경하세요. 변경 후 자동 저장됩니다.<br>📦 <b>모델 줄을 다른 제품군의 모델 위나 제품군 위로 끌어 놓으면</b> 그 제품군으로 이동합니다(문서가 모두 따라가고, 이동 전에 접근 그룹을 확인합니다). 끌기가 안 되는 휴대폰에서는 순서 변경을 끄고 각 모델의 「↔ 제품군 이동」 버튼을 쓰세요.
         </div>
         <div class="dl-bar" id="doc-dl-bar">
           <span class="dl-count" id="dl-count">선택 0건</span>
@@ -1097,6 +1097,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 </div>
 
 <!-- 자료실: 글자 입력 / 선택 / 업로드 / 공개범위 / 구성원 -->
+<!-- 문서 관리: 모델 이동/복사, 문서 이동 -->
+<div class="modal-overlay" id="modal-mv"><div class="modal" style="max-width:540px;">
+  <div class="modal-title" id="mv-title">이동</div>
+  <div class="la-movebox" id="mv-src"></div>
+  <div class="form-group" style="margin-top:10px;"><label class="form-label" id="mv-label">옮길 위치</label><select class="form-input" id="mv-target" onchange="mvRender()"></select></div>
+  <div class="la-movebox" id="mv-pre"></div>
+  <div class="modal-actions"><button type="button" class="btn btn-ghost" onclick="mvDone(false)">취소</button><button type="button" class="btn btn-primary" id="mv-ok" onclick="mvDone(true)">이동</button></div>
+</div></div>
 <div class="modal-overlay" id="modal-la-text"><div class="modal" style="max-width:420px;">
   <div class="modal-title" id="lat-title"></div>
   <div class="form-group"><label class="form-label" id="lat-label"></label><input class="form-input" id="lat-input" maxlength="200" autocomplete="off"></div>
@@ -2634,7 +2642,11 @@ function renderDocTree(){
         b2.onclick = (function(a,b){return function(){editModelName(a,b);};})(pi,mi);
         const b3 = document.createElement('button'); b3.className='btn btn-danger btn-sm';  b3.textContent='삭제';
         b3.onclick = (function(a,b){return function(){delModel(a,b);};})(pi,mi);
-        rowR.appendChild(b1); rowR.appendChild(b2); rowR.appendChild(b3);
+        const b4 = document.createElement('button'); b4.className='btn btn-ghost btn-sm';   b4.textContent='↔ 제품군 이동';
+        b4.onclick = (function(a,b){return function(){mvOpen('model-move',a,b);};})(pi,mi);
+        const b5 = document.createElement('button'); b5.className='btn btn-ghost btn-sm';   b5.textContent='⧉ 복사';
+        b5.onclick = (function(a,b){return function(){mvOpen('model-copy',a,b);};})(pi,mi);
+        rowR.appendChild(b1); rowR.appendChild(b2); rowR.appendChild(b4); rowR.appendChild(b5); rowR.appendChild(b3);
       }
 
       /* 문서 목록 토글 버튼 */
@@ -2793,6 +2805,126 @@ function downloadSelectedDocs(){
   showToast('✅ 문서 '+files.length+'건을 ZIP으로 저장합니다.','success');
 }
 
+/* ════ 문서 관리: 모델을 다른 제품군으로 이동·복사, 문서를 다른 모델로 이동 ════
+ * 모델의 문서는 모델에 붙어 있어 모델만 옮기면 내용이 그대로 따라간다.
+ * 사용자 그룹의 접근은 제품군 단위라서, 제품군이 바뀌면 보는 그룹이 달라진다 → 이동 전에 확인 창으로 보여준다. */
+const MV={mode:null,pi:0,mi:0,di:null,insertAt:null};
+const mvGroupsOf=pid=>groups.filter(g=>g.catIds.includes(pid));
+const mvGroupText=pid=>{const g=mvGroupsOf(pid);return g.length?'<b>'+g.map(x=>libEsc(x.name)).join(', ')+'</b>':'<b>(그룹 없음 — 관리자만 볼 수 있음)</b>';};
+function mvOpen(mode,pi,mi,di,opt){
+  opt=opt||{};
+  MV.mode=mode;MV.pi=pi;MV.mi=mi;MV.di=di==null?null:di;MV.insertAt=opt.insertAt==null?null:opt.insertAt;
+  const m=products[pi].models[mi];
+  const sel=document.getElementById('mv-target');
+  if(mode==='doc-move'){
+    const d=m.docs[di];
+    document.getElementById('mv-title').textContent='📄 문서를 다른 모델로 이동';
+    document.getElementById('mv-label').textContent='옮길 모델';
+    document.getElementById('mv-ok').textContent='이동';
+    document.getElementById('mv-src').innerHTML='<div class="row"><b>'+libEsc(d.title)+'</b><div class="path">'+libEsc(products[pi].name+' › '+m.name)+'</div></div>';
+    let h='';
+    products.forEach((p,i)=>p.models.forEach((x,j)=>{if(i===pi&&j===mi)return;h+='<option value="'+i+':'+j+'">'+libEsc(p.icon+' '+p.name+' › '+x.name+' (문서 '+x.docs.length+'건)')+'</option>';}));
+    sel.innerHTML=h;
+    if(!h){showToast('옮길 다른 모델이 없습니다.','error');return;}
+  }else{
+    const copy=mode==='model-copy';
+    document.getElementById('mv-title').textContent=copy?'⧉ 모델을 다른 제품군에 복사':'↔ 모델을 다른 제품군으로 이동';
+    document.getElementById('mv-label').textContent=copy?'복사해 둘 제품군':'옮길 제품군';
+    document.getElementById('mv-ok').textContent=copy?'복사':'이동';
+    document.getElementById('mv-src').innerHTML='<div class="row"><b>'+libEsc(m.name)+'</b> · 문서 '+m.docs.length+'건<div class="path">'+libEsc(products[pi].icon+' '+products[pi].name)+'</div></div>';
+    let h='';
+    products.forEach((p,i)=>{if(i===pi)return;h+='<option value="'+i+'">'+libEsc(p.icon+' '+p.name+' (모델 '+p.models.length+'개)')+'</option>';});
+    sel.innerHTML=h;
+    if(!h){showToast('다른 제품군이 없습니다. 먼저 제품군을 추가하세요.','error');return;}
+    if(opt.targetPi!=null)sel.value=String(opt.targetPi);
+  }
+  mvRender();
+  document.getElementById('modal-mv').classList.add('open');
+}
+function mvTarget(){
+  const v=document.getElementById('mv-target').value;
+  if(MV.mode==='doc-move'){const [i,j]=v.split(':').map(Number);return {pi:i,mi:j};}
+  return {pi:Number(v)};
+}
+function mvCopyName(base,tp){          // 복사본 이름: 같은 이름이 있으면 " (복사)", " (복사 2)" …
+  const names=new Set(products[tp].models.map(x=>x.name));
+  if(!names.has(base))return base;
+  let n=base+' (복사)',k=2;while(names.has(n))n=base+' (복사 '+(k++)+')';
+  return n;
+}
+function mvRender(){
+  const t=mvTarget(),m=products[MV.pi].models[MV.mi],box=document.getElementById('mv-pre'),ok=document.getElementById('mv-ok');
+  let h='',blocked=false;
+  if(MV.mode==='doc-move'){
+    const d=m.docs[MV.di],tm=products[t.pi].models[t.mi],sameP=t.pi===MV.pi;
+    h+='<div class="row">→ <b>'+libEsc(products[t.pi].name+' › '+tm.name)+'</b></div>';
+    if(sameP)h+='<div class="info">같은 제품군 안에서의 이동이라 <b>사용자 그룹의 접근 권한은 그대로</b>입니다.</div>';
+    else{
+      h+='<div class="row">지금 이 문서를 볼 수 있는 그룹: '+mvGroupText(products[MV.pi].id)+'</div><div class="row">이동 후 볼 수 있는 그룹: '+mvGroupText(products[t.pi].id)+'</div>';
+      h+=mvGroupsOf(products[t.pi].id).length?'<div class="warn">⚠️ 제품군이 달라 <b>이동 후에는 새 제품군을 볼 수 있는 그룹만</b> 이 문서를 보게 됩니다.</div>':'<div class="warn">⚠️ 새 제품군을 볼 수 있는 그룹이 <b>하나도 없어</b> 일반 사용자에게는 보이지 않습니다. (그룹 관리에서 제품군을 추가하세요)</div>';
+    }
+    if(tm.docs.some(x=>x.title===d.title&&x.cat===d.cat))h+='<div class="info">이동할 모델에 같은 제목·분류의 문서가 이미 있습니다. 그대로 이동은 되지만 중복되어 보일 수 있습니다.</div>';
+  }else{
+    const copy=MV.mode==='model-copy',tp=products[t.pi];
+    h+='<div class="row">→ <b>'+libEsc(tp.icon+' '+tp.name)+'</b></div>';
+    const dup=tp.models.some(x=>x.name===m.name);
+    if(copy){
+      h+='<div class="info">원본은 그대로 두고, 문서 '+m.docs.length+'건을 포함한 <b>복사본</b>을 만듭니다.'+(dup?' 같은 이름이 있어 복사본 이름은 <b>"'+libEsc(mvCopyName(m.name,t.pi))+'"</b>가 됩니다.':'')+' (사진은 같은 파일을 함께 사용합니다)</div>';
+      h+='<div class="row">복사본을 볼 수 있는 그룹: '+mvGroupText(tp.id)+'</div>';
+    }else{
+      h+='<div class="row">문서 '+m.docs.length+'건이 모두 그대로 따라갑니다.</div>';
+      h+='<div class="row">지금 이 모델을 볼 수 있는 그룹: '+mvGroupText(products[MV.pi].id)+'</div><div class="row">이동 후 볼 수 있는 그룹: '+mvGroupText(tp.id)+'</div>';
+      if(dup){h+='<div class="warn">⛔ 이동할 제품군에 같은 이름("'+libEsc(m.name)+'")의 모델이 이미 있습니다. 모델 이름을 먼저 바꿔 주세요.</div>';blocked=true;}
+    }
+    if(!blocked)h+=mvGroupsOf(tp.id).length?'<div class="warn">⚠️ 사용자 그룹의 접근은 제품군 단위라서, 이동 후에는 <b>새 제품군을 볼 수 있는 그룹</b>만 이 '+(copy?'복사본':'모델')+'을 보게 됩니다.</div>':'<div class="warn">⚠️ 새 제품군을 볼 수 있는 그룹이 <b>하나도 없어</b> 일반 사용자에게는 보이지 않습니다. (그룹 관리에서 제품군을 추가하세요)</div>';
+  }
+  box.innerHTML=h;ok.disabled=blocked;ok.style.opacity=blocked?'.5':'';
+}
+async function mvDone(ok){
+  if(!ok){document.getElementById('modal-mv').classList.remove('open');return;}
+  const t=mvTarget(),m=products[MV.pi].models[MV.mi],btn=document.getElementById('mv-ok');
+  if(btn.disabled)return;
+  btn.disabled=true;
+  try{
+    if(MV.mode==='doc-move'){
+      const d=m.docs[MV.di],tm=products[t.pi].models[t.mi];
+      if(!(await dbUpd('documents',{id:d.id},{model_id:tm.id}))){showToast('DB 저장 실패. 이동하지 않았습니다.','error');return;}
+      m.docs.splice(MV.di,1);tm.docs.push(d);
+      document.getElementById('modal-mv').classList.remove('open');
+      renderExistingDocs();renderDocTree();renderDash();
+      showToast('✅ 문서를 "'+tm.name+'"(으)로 옮겼습니다.','success');
+    }else if(MV.mode==='model-move'){
+      const tp=products[t.pi];
+      if(tp.models.some(x=>x.name===m.name)){showToast('이동할 제품군에 같은 이름의 모델이 있습니다.','error');return;}
+      if(!(await dbUpd('models',{id:m.id},{product_id:tp.id,sort_order:tp.models.length}))){showToast('DB 저장 실패. 이동하지 않았습니다.','error');return;}
+      const from=products[MV.pi];
+      from.models.splice(MV.mi,1);
+      const at=MV.insertAt==null?tp.models.length:Math.min(MV.insertAt,tp.models.length);
+      tp.models.splice(at,0,m);
+      document.getElementById('modal-mv').classList.remove('open');
+      try{await saveModelOrder(t.pi);await saveModelOrder(MV.pi);}catch(e){console.error(e);}
+      _docOpen.clear();_dlSel&&_dlSel.clear&&_dlSel.clear();
+      renderDocTree();renderCatSel();populateCatDD();renderDash();
+      showToast('✅ "'+m.name+'" 모델을 "'+tp.name+'"(으)로 옮겼습니다. (문서 '+m.docs.length+'건 포함)','success');
+    }else{                                         // model-copy
+      const tp=products[t.pi],name=mvCopyName(m.name,t.pi),nid='m'+Date.now()+Math.random().toString(36).slice(2,5);
+      if(!(await dbIns('models',{id:nid,product_id:tp.id,name:name,sort_order:tp.models.length}))){showToast('DB 저장 실패. 복사하지 않았습니다.','error');return;}
+      const copies=m.docs.map((d,i)=>({id:'d'+Date.now()+Math.random().toString(36).slice(2,6)+i,model_id:nid,title:d.title,cat:d.cat,content:d.content}));
+      let all=true;
+      for(let i=0;i<copies.length&&all;i+=10) all=await dbIns('documents',copies.slice(i,i+10));
+      if(!all){                                    // 일부만 복사된 채 남지 않도록 되돌림
+        await dbDel('documents',{model_id:nid});await dbDel('models',{id:nid});
+        showToast('문서 복사 중 오류가 나 복사를 취소했습니다.','error');return;
+      }
+      const today=new Date().toISOString().slice(0,10);
+      tp.models.push({id:nid,name:name,docs:copies.map(c=>({id:c.id,title:c.title,cat:c.cat,content:c.content,date:today}))});
+      document.getElementById('modal-mv').classList.remove('open');
+      renderDocTree();renderCatSel();populateCatDD();renderDash();
+      showToast('✅ "'+tp.name+'"에 "'+name+'" 모델을 복사했습니다. (문서 '+copies.length+'건)','success');
+    }
+  }finally{btn.disabled=false;}
+}
+
 /* ── 제품군 드래그 ── */
 let _dragCatPi = null;
 function catDragStart(e,pi){ _dragCatPi=pi; e.dataTransfer.effectAllowed='move'; e.currentTarget.style.opacity='0.5'; }
@@ -2801,6 +2933,11 @@ function catDragLeave(e){ e.currentTarget.classList.remove('drag-over'); }
 function catDragEnd(e){ e.currentTarget.style.opacity='1'; }
 async function catDrop(e,targetPi){
   e.preventDefault(); e.currentTarget.classList.remove('drag-over');
+  if(_dragModelPi!==null){                       // 모델을 끌어 제품군 위에 놓음 → 그 제품군으로 이동(맨 뒤)
+    const fp=_dragModelPi, fm=_dragModelMi; _dragModelPi=null; _dragModelMi=null;
+    if(fp!==targetPi) mvOpen('model-move',fp,fm,null,{targetPi:targetPi,insertAt:null});
+    return;
+  }
   if(_dragCatPi===null||_dragCatPi===targetPi) return;
   const moved=products.splice(_dragCatPi,1)[0];
   products.splice(targetPi,0,moved);
@@ -2819,7 +2956,11 @@ function modelDragEnd(e){ e.currentTarget.style.opacity='1'; }
 async function modelDrop(e,targetPi,targetMi){
   e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove('drag-over');
   if(_dragModelPi===null||(_dragModelPi===targetPi&&_dragModelMi===targetMi)) return;
-  if(_dragModelPi!==targetPi){ showToast('같은 제품군 내에서만 순서 변경 가능합니다.','error'); return; }
+  if(_dragModelPi!==targetPi){                  // 다른 제품군의 모델 위에 놓음 → 그 제품군으로 이동(그 모델 앞)
+    const fp=_dragModelPi, fm=_dragModelMi; _dragModelPi=null; _dragModelMi=null;
+    mvOpen('model-move',fp,fm,null,{targetPi:targetPi,insertAt:targetMi});
+    return;
+  }
   const moved=products[_dragModelPi].models.splice(_dragModelMi,1)[0];
   products[targetPi].models.splice(targetMi,0,moved);
   _dragModelPi=null; _dragModelMi=null;
@@ -3017,6 +3158,7 @@ function renderExistingDocs(){
           <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
             <span style="font-size:11px;color:var(--text3);">${d.content.length}자${docImgList(d.content).length?' · 🖼️'+docImgList(d.content).length:''}</span>
             <button class="btn btn-ghost btn-sm" onclick="editDocContent(${i})">✏️ 수정</button>
+            <button class="btn btn-ghost btn-sm" onclick="mvOpen('doc-move',modalDocRef.pi,modalDocRef.mi,${i})">↔ 이동</button>
             <button class="btn btn-danger btn-sm" onclick="delDocContent(${i})">삭제</button>
           </div>
         </div>

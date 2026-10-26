@@ -1109,6 +1109,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <span>입력된 글자 수: <span id="char-count">0</span>자</span>
         <span>권장: 500자 이상</span>
       </div>
+      <!-- 맨 아래 저장 버튼의 복사본: 내용 입력 바로 아래에서 저장/수정 저장 (아래 버튼과 항상 같은 동작·글자) -->
+      <div style="display:flex;justify-content:flex-end;margin-top:8px;"><button type="button" class="btn btn-primary" id="doc-save-btn-top">📝 저장</button></div>
     </div>
 
     <!-- 기존 문서 목록 -->
@@ -3236,6 +3238,15 @@ function renderExistingDocs(){
       </div>`).join('');
 }
 
+/* 문서 입력창 안쪽 저장 버튼: 맨 아래 버튼(저장 ↔ 수정 저장으로 바뀜)을 그대로 따라간다 */
+(function(){
+  const bottom=document.querySelector('#modal-doc-input .modal-actions .btn-primary'),top=document.getElementById('doc-save-btn-top');
+  if(!bottom||!top)return;
+  top.onclick=function(){bottom.click();};
+  const sync=function(){top.textContent=bottom.textContent;top.disabled=bottom.disabled;};
+  new MutationObserver(sync).observe(bottom,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:['disabled']});
+  sync();
+})();
 async function saveDocContent(){
   if(!modalDocRef)return;
   const title=document.getElementById('doc-input-title').value.trim();

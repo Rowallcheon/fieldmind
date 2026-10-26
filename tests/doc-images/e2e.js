@@ -137,6 +137,14 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(dialogs.length === 1 && /설명이 없습니다/.test(dialogs[0]), '설명이 비었으면 저장 전에 확인창이 뜬다');
   ok(!(await page.evaluate(() => window.__writes.some(w => w.t === 'documents'))), '확인창에서 취소하면 저장되지 않는다');
 
+  // 내용 입력 바로 아래 저장 버튼: 맨 아래 버튼과 같은 동작·같은 글자
+  ok(await page.$eval('#doc-save-btn-top', e => e.textContent.trim()) === (await page.$eval('#modal-doc-input .modal-actions .btn-primary', e => e.textContent.trim())), '내용 입력 아래에 저장 버튼이 하나 더 있고 글자가 맨 아래 버튼과 같다');
+  dialogs.length = 0; await page.click('#doc-save-btn-top'); await page.waitForTimeout(300);
+  ok(dialogs.length === 1 && /설명이 없습니다/.test(dialogs[0]) && !(await page.evaluate(() => window.__writes.some(w => w.t === 'documents'))), '위쪽 저장 버튼을 눌러도 같은 저장 절차(확인창)가 실행된다');
+  await page.evaluate(() => { document.querySelector('#modal-doc-input .modal-actions .btn-primary').textContent = '✅ 수정 저장'; }); await page.waitForTimeout(100);
+  ok(await page.$eval('#doc-save-btn-top', e => e.textContent.trim()) === '✅ 수정 저장', '맨 아래 버튼이 "수정 저장"으로 바뀌면 위쪽 버튼도 따라 바뀐다');
+  await page.evaluate(() => { document.querySelector('#modal-doc-input .modal-actions .btn-primary').textContent = '📝 저장'; });
+
   // 설명 입력 후 저장 (설명 칸에 커서가 있으므로 바로 입력)
   await page.click('#doc-editor .de-cap');
   await page.keyboard.type('결재 메뉴 위치 (화면 상단 가운데)');

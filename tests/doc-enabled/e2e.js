@@ -82,7 +82,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await k.waitForSelector('#cm-0.open .dl-doc .dl-eye');
   const nOpen = () => k.evaluate(() => ({ cat: document.getElementById('cm-0').classList.contains('open'), docs: !!document.querySelector('#cm-0 .model-docs.open'), chev: document.getElementById('cv-0').classList.contains('open') }));
   await k.evaluate(() => { window.__delay = 900; });
-  const eye = k.locator('#cm-0 .dl-doc .dl-eye').first();
+  const eye = k.locator('#cm-0 .dl-doc', { hasText: '결재 방법' }).locator('.dl-eye');
   await eye.click(); await k.waitForTimeout(450);
   ok(await k.locator('#busy-bar.on').count() === 1 && await k.locator('#busy-pill.on').isVisible(), '저장하는 동안 화면 위 막대와 "작업 중입니다…" 표시가 나온다');
   ok(await eye.evaluate(e => e.classList.contains('busy')), '누른 눈 아이콘은 저장되는 동안 빙글빙글 돈다');
@@ -90,7 +90,23 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   const st = await nOpen();
   ok(st.cat && st.docs && st.chev, '눈 아이콘을 눌러도 펼쳐 둔 제품군·모델 문서 목록이 접히지 않는다');
   ok(await k.locator('#busy-bar.on').count() === 0 && !(await k.locator('#busy-pill').isVisible()), '저장이 끝나면 작업 중 표시가 사라진다');
-  ok(await k.locator('#cm-0 .dl-doc .dl-eye').first().getAttribute('data-eye') === 'off', '눈 아이콘이 바로 바뀐다');
+  ok(await k.locator('#cm-0 .dl-doc', { hasText: '결재 방법' }).locator('.dl-eye').getAttribute('data-eye') === 'off', '눈 아이콘이 바로 바뀐다');
+  console.log('[문서 정렬: 최신순 / 오래된순]');
+  await k.evaluate(() => { window.__delay = 0; products[0].models[0].docs.forEach((d, i) => { d.ts = '2026-01-0' + (i + 1) + 'T00:00:00Z'; }); renderDocTree(); });
+  const titles = () => k.$eval('#cm-0 .model-docs', b => [...b.querySelectorAll('.dl-doc:not(.dl-all) .t')].map(e => e.textContent.trim()));
+  const orig = await k.evaluate(() => products[0].models[0].docs.map(d => d.title));
+  ok(JSON.stringify(await titles()) === JSON.stringify(orig.slice().reverse()), '기본은 최신순이다 (가장 나중에 등록한 문서가 맨 위): ' + (await titles()).join(' | ') + ' / 원래: ' + orig.join(' | '));
+  ok(await k.locator('.doc-sort-btn').first().textContent() === '↓ 최신순', '정렬 버튼이 "↓ 최신순"으로 표시된다');
+  await k.locator('.doc-sort-btn').first().click(); await k.waitForTimeout(150);
+  ok(JSON.stringify(await titles()) === JSON.stringify(orig) && await k.locator('.doc-sort-btn').first().textContent() === '↑ 오래된순', '버튼을 누르면 오래된순으로 바뀌고 버튼 글자도 바뀐다');
+  ok(JSON.stringify(await k.evaluate(() => products[0].models[0].docs.map(d => d.title))) === JSON.stringify(orig), '정렬은 화면 표시만 바꾸며 문서 원래 순서(챗봇 문서 번호)는 그대로다');
+  await k.evaluate(() => { openDocInputModal(0, 0); });
+  await k.waitForSelector('#modal-doc-input.open');
+  const mt = await k.$$eval('#existing-docs-list .doc-card-title', l => l.map(e => e.textContent.trim()));
+  ok(JSON.stringify(mt) === JSON.stringify(orig), '문서 입력창의 등록된 문서 목록도 같은 순서를 따른다');
+  await k.locator('#existing-docs-section .doc-sort-btn').click(); await k.waitForTimeout(150);
+  ok(JSON.stringify(await k.$$eval('#existing-docs-list .doc-card-title', l => l.map(e => e.textContent.trim()))) === JSON.stringify(orig.slice().reverse()), '문서 입력창의 버튼으로도 순서를 바꿀 수 있다');
+  await k.evaluate(() => closeModal('modal-doc-input'));
   ok(k.errs.length === 0, '페이지 오류 없음' + (k.errs.length ? JSON.stringify(k.errs) : ''));
 
   console.log('[사용자: 모델 선택 / 챗봇 답변]');

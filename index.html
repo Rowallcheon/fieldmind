@@ -797,7 +797,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
         <div class="sec-hdr">
           <div class="sec-title">제품군 · 모델 트리</div>
-          <button class="sort-mode-btn" id="sort-mode-btn" onclick="toggleSortMode()">⇅ 순서 변경</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="sort-mode-btn doc-sort-btn" type="button" onclick="toggleDocSort()" title="문서 목록을 최신순/오래된순으로 바꿉니다">↓ 최신순</button>
+            <button class="sort-mode-btn" id="sort-mode-btn" onclick="toggleSortMode()">⇅ 순서 변경</button>
+          </div>
         </div>
         <div id="sort-mode-guide" style="display:none;background:rgba(45,95,143,.08);border:1px solid rgba(45,95,143,.25);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--accent);">
           ☰ 핸들을 드래그해서 순서를 변경하세요. 변경 후 자동 저장됩니다.
@@ -1115,7 +1118,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
     <!-- 기존 문서 목록 -->
     <div id="existing-docs-section" style="margin-top:4px;">
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text2);">등록된 문서 <span id="existing-doc-count" style="color:var(--accent);">0</span>건</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text2);display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>등록된 문서 <span id="existing-doc-count" style="color:var(--accent);">0</span>건</span><button class="sort-mode-btn doc-sort-btn" type="button" onclick="toggleDocSort()" title="문서 목록을 최신순/오래된순으로 바꿉니다">↓ 최신순</button></div>
       <div id="existing-docs-list"></div>
     </div>
 
@@ -1497,7 +1500,7 @@ async function loadAllData() {
         models: sortedM.map(function(m) {
           return { id: m.id, name: m.name,
             docs: dRows.filter(function(d){ return d.model_id===m.id; }).map(function(d) {
-              return { id: d.id, title: d.title, cat: d.cat, content: d.content, enabled: d.enabled !== false, date: (d.created_at||'').slice(0,10) };
+              return { id: d.id, title: d.title, cat: d.cat, content: d.content, enabled: d.enabled !== false, ts: d.created_at||'', date: (d.created_at||'').slice(0,10) };
             })
           };
         })
@@ -2746,7 +2749,7 @@ function renderDocTree(){
         _inlineBars.push({el:inl, cnt:cnt, m:m});
         docsBox.appendChild(allWrap);
       }
-      m.docs.forEach(function(d){
+      docsOrdered(m.docs).forEach(function(o){ const d=o.d;
         const lab = document.createElement('label'); lab.className='dl-doc';
         const cb = document.createElement('input'); cb.type='checkbox'; cb.checked = _dlSel.has(dlKey(d));
         docCbs.push(cb);
@@ -2797,6 +2800,7 @@ function renderDocTree(){
     block.appendChild(catModels);
     tree.appendChild(block);
   });
+  syncDocSortBtns();
   updateDlBar();
 }
 
@@ -2959,7 +2963,7 @@ async function mvDone(go){
         for(const r of inserted)await dbDel('documents',{id:r.id});
         showToast('문서 복사 중 오류가 나 복사를 취소했습니다.','error');return;
       }
-      rows.forEach(r=>t.m.docs.push({id:r.id,title:r.title,cat:r.cat,content:r.content,enabled:r.enabled!==false,date:today}));done=rows.length;
+      rows.forEach(r=>t.m.docs.push({id:r.id,title:r.title,cat:r.cat,content:r.content,enabled:r.enabled!==false,ts:new Date().toISOString(),date:today}));done=rows.length;
     }
     document.getElementById('modal-mv').classList.remove('open');
     _dlSel.clear();_docOpen.add(products.indexOf(t.p)+'-'+t.p.models.indexOf(t.m));      // 결과를 바로 볼 수 있게 대상 모델의 문서 목록을 펼침
@@ -3214,13 +3218,33 @@ function selectDocCat(cat){
 
 // 글자 수 카운트
 
+/* 문서 목록 표시 순서: 기본은 최근 등록한 문서가 맨 위(최신순). 화면 표시만 바꾸며 문서 배열 순서(챗봇 문서 번호)는 그대로 */
+let _docSortNew = true;
+try{ _docSortNew = localStorage.getItem('docSortNew') !== '0'; }catch(e){}
+function docsOrdered(docs){
+  const arr = docs.map(function(d,i){ const t = d.ts ? Date.parse(d.ts) : NaN; return {d:d, i:i, t:isNaN(t)?0:t}; });
+  arr.sort(function(a,b){ return (a.t-b.t) || (a.i-b.i); });          // 오래된 순(같으면 등록 순서)
+  if(_docSortNew) arr.reverse();
+  return arr;
+}
+function syncDocSortBtns(){
+  document.querySelectorAll('.doc-sort-btn').forEach(function(b){ b.textContent = _docSortNew ? '↓ 최신순' : '↑ 오래된순'; });
+}
+function toggleDocSort(){
+  _docSortNew = !_docSortNew;
+  try{ localStorage.setItem('docSortNew', _docSortNew?'1':'0'); }catch(e){}
+  syncDocSortBtns();
+  const sy = window.scrollY;
+  renderDocTree(); if(modalDocRef) renderExistingDocs();
+  window.scrollTo(0, sy);
+}
 function renderExistingDocs(){
   if(!modalDocRef)return;
   const docs=products[modalDocRef.pi].models[modalDocRef.mi].docs;
   document.getElementById('existing-doc-count').textContent=docs.length;
   document.getElementById('existing-docs-list').innerHTML=docs.length===0
     ?'<div style="font-size:12px;color:var(--text3);padding:8px 0;">아직 등록된 문서가 없습니다.</div>'
-    :docs.map((d,i)=>`
+    :docsOrdered(docs).map(({d,i})=>`
       <div class="doc-card${d.enabled===false?' off':''}">
         <div class="doc-card-head">
           <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
@@ -3236,6 +3260,7 @@ function renderExistingDocs(){
         </div>
         <div class="doc-card-body">${docTextPlain(d.content).slice(0,120).replace(/\n/g,' ')}${docTextPlain(d.content).length>120?'...':''}</div>
       </div>`).join('');
+  syncDocSortBtns();
 }
 
 /* 문서 입력창 안쪽 저장 버튼: 맨 아래 버튼(저장 ↔ 수정 저장으로 바뀜)을 그대로 따라간다 */
@@ -3259,7 +3284,7 @@ async function saveDocContent(){
   await dbIns('documents',{id:docId,model_id:modelId,title,cat:currentDocCat,content});
   products[modalDocRef.pi].models[modalDocRef.mi].docs.push({
     id:docId, title, cat:currentDocCat, content,
-    date:new Date().toISOString().slice(0,10)
+    ts:new Date().toISOString(), date:new Date().toISOString().slice(0,10)
   });
   document.getElementById('doc-input-title').value='';
   setDocContent('');

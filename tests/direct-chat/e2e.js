@@ -81,6 +81,19 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   const r2 = u.reqs.filter(x => x.isRoute);
   ok(r2.length === 1 && r2[0].req.contents.map(c => c.parts[0].text).join('|').includes('어느 모델의 사용설명서인가요') && r2[0].req.contents.at(-1).parts[0].text === 'CP-X501', '버튼을 누르면 그 말이 답으로 전달되고, 이전 되묻기 대화를 이어서 해석한다');
   ok(/X501 설명입니다/.test(await u.textContent('#chat-body')), '선택 후 답변이 나온다');
+  // 2-2) 모델마다 다른 질문(에러코드 등)인데 모델을 안 말함 → 먼저 어느 모델인지 묻기
+  u.reqs.length = 0; u.route_reply = () => JSON.stringify({ action: 'ask_model', question: '어느 제품·모델인가요?' });
+  await ask(u, '에러 04번 뭐야?');
+  ok(u.reqs.filter(x => !x.isRoute).length === 0 && /어느 제품·모델인가요/.test(await u.textContent('.msg.bot:last-child')) && /모델명을 직접 입력/.test(await u.textContent('.msg.bot:last-child')), '모델마다 다른 질문인데 모델을 말하지 않으면 답하지 않고 먼저 어느 모델인지 묻는다');
+  ok((await u.$$eval('.msg.bot:last-child .quick-btn', l => l.map(b => b.textContent.trim()))).join() === '🗂️ 지국_행정용,💧 정수기', '제품군 선택 버튼이 함께 나온다');
+  ok(await u.evaluate(() => chatLogs[0].q !== '에러 04번 뭐야?' || chatLogs[0].ok !== false), '모델을 되묻는 것은 "못 찾음 실패"로 기록되지 않는다');
+  await u.click('.msg.bot:last-child .quick-btn:has-text("정수기")'); await u.waitForTimeout(150);
+  u.reqs.length = 0; u.answer = 'PS의 E-04는 입수 점검입니다.\n[[참조: 1]]';
+  await u.click('.msg.bot:last-child .quick-btn:has-text("CP-PS")'); await u.waitForTimeout(800);
+  const a22 = u.reqs.filter(x => !x.isRoute);
+  ok(a22.length === 1 && a22[0].sys.includes('PPP') && !a22[0].sys.includes('XXX') && a22[0].req.contents.map(c => c.parts[0].text).join('|').includes('에러 04번 뭐야?') && a22[0].req.contents.map(c => c.parts[0].text).join('|').includes('정수기 > CP-PS'), '모델을 고르면 원래 질문("에러 04번 뭐야?")에 그 모델 문서로 답한다');
+  ok(/PS의 E-04는 입수 점검입니다/.test(await u.textContent('#chat-body')), '답변이 나온다');
+  ok(/모델마다 다른 질문이면|ask_model/.test(r1[0].sys) && /반드시 ask_model/.test(r1[0].sys), '문서 고르기 지침에 "모델별 질문은 모델부터 물어라"가 들어 있다');
   // 3) 못 찾음(unknown) → 제품군/모델 고르기
   u.reqs.length = 0; u.route_reply = () => '{"action":"unknown"}';
   await ask(u, '아무말 대잔치');

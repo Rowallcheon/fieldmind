@@ -3,6 +3,7 @@ const http = require('http'), fs = require('fs'), path = require('path');
 let chromium; try { ({ chromium } = require('playwright')); } catch (e) { ({ chromium } = require('/opt/node22/lib/node_modules/playwright')); }
 const PORT = 54343, BASE = 'http://127.0.0.1:' + PORT, INDEX = path.join(__dirname, '..', '..', 'index.html');
 const srv = http.createServer((req, res) => { if (req.url.split('?')[0] === '/') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); return res.end(fs.readFileSync(INDEX)); } res.statusCode = 404; res.end(); });
+const OUT = path.join(__dirname, 'out'); fs.mkdirSync(OUT, { recursive: true });
 const BIG = (t) => t + ' ' + '가'.repeat(50000);          // 두 모델만으로 80,000자를 넘기게
 const FIXTURE = {
   users: [{ id: 'admin', pw: '1234', name: '관리자', role: 'admin', status: 'active' }, { id: 'u1', pw: '1234', name: '바로', role: 'user', status: 'active' },
@@ -73,36 +74,52 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   u.reqs.length = 0;
   u.route_reply = () => JSON.stringify({ action: 'ask', question: '어느 모델의 사용설명서인가요?', options: ['CP-X501', 'CP-PS'] });
   await ask(u, '사용설명서 알려줘');
-  ok(/어느 모델의 사용설명서인가요/.test(await u.textContent('.msg.bot:last-child')) && (await u.$$eval('.msg.bot:last-child .quick-btn', l => l.map(b => b.textContent))).join() === 'CP-X501,CP-PS', '모호하면 되묻고 선택 버튼(보기)을 보여 준다');
+  ok(/어느 모델의 사용설명서인가요/.test(await u.textContent('.msg.bot:last-child')) && (await u.$$eval('.msg.bot:last-child .dc-opt b', l => l.map(b => b.textContent))).join() === 'CP-X501,CP-PS', '모호하면 되묻고 선택 버튼(보기)을 보여 준다');
   u.route_reply = sys => JSON.stringify({ action: 'select', docs: [numOf(sys, '정수기 > CP-X501 | 사용설명서 | CP-X501 사용설명서')] });
   u.answer = 'X501 설명입니다.\n[[참조: 1]]';
   u.reqs.length = 0;
-  await u.click('.msg.bot:last-child .quick-btn:has-text("CP-X501")'); await u.waitForTimeout(700);
+  await u.click('.msg.bot:last-child .dc-opt:has-text("CP-X501")'); await u.waitForTimeout(700);
   const r2 = u.reqs.filter(x => x.isRoute);
   ok(r2.length === 1 && r2[0].req.contents.map(c => c.parts[0].text).join('|').includes('어느 모델의 사용설명서인가요') && r2[0].req.contents.at(-1).parts[0].text === 'CP-X501', '버튼을 누르면 그 말이 답으로 전달되고, 이전 되묻기 대화를 이어서 해석한다');
   ok(/X501 설명입니다/.test(await u.textContent('#chat-body')), '선택 후 답변이 나온다');
   // 2-2) 모델마다 다른 질문(에러코드 등)인데 모델을 안 말함 → 먼저 어느 모델인지 묻기
   u.reqs.length = 0; u.route_reply = () => JSON.stringify({ action: 'ask_model', question: '어느 제품·모델인가요?' });
   await ask(u, '에러 04번 뭐야?');
-  ok(u.reqs.filter(x => !x.isRoute).length === 0 && /어느 제품·모델인가요/.test(await u.textContent('.msg.bot:last-child')) && /모델명을 직접 입력/.test(await u.textContent('.msg.bot:last-child')), '모델마다 다른 질문인데 모델을 말하지 않으면 답하지 않고 먼저 어느 모델인지 묻는다');
-  ok((await u.$$eval('.msg.bot:last-child .quick-btn', l => l.map(b => b.textContent.trim()))).join() === '🗂️ 지국_행정용,💧 정수기', '제품군 선택 버튼이 함께 나온다');
+  ok(u.reqs.filter(x => !x.isRoute).length === 0 && /어느 제품·모델인가요/.test(await u.textContent('.msg.bot:last-child')) && /직접 입력해도 됩니다/.test(await u.textContent('.msg.bot:last-child .dc-card')), '모델마다 다른 질문인데 모델을 말하지 않으면 답하지 않고 먼저 어느 모델인지 묻는다');
+  ok((await u.$$eval('.msg.bot:last-child .dc-opt b', l => l.map(b => b.textContent.trim()))).join() === '🗂️ 지국_행정용,💧 정수기', '제품군 선택 버튼이 함께 나온다');
   ok(await u.evaluate(() => chatLogs[0].q !== '에러 04번 뭐야?' || chatLogs[0].ok !== false), '모델을 되묻는 것은 "못 찾음 실패"로 기록되지 않는다');
-  await u.click('.msg.bot:last-child .quick-btn:has-text("정수기")'); await u.waitForTimeout(150);
+  await u.click('.msg.bot:last-child .dc-opt:has-text("정수기")'); await u.waitForTimeout(150);
   u.reqs.length = 0; u.answer = 'PS의 E-04는 입수 점검입니다.\n[[참조: 1]]';
-  await u.click('.msg.bot:last-child .quick-btn:has-text("CP-PS")'); await u.waitForTimeout(800);
+  await u.click('.msg.bot:last-child .dc-opt:has-text("CP-PS")'); await u.waitForTimeout(800);
   const a22 = u.reqs.filter(x => !x.isRoute);
   ok(a22.length === 1 && a22[0].sys.includes('PPP') && !a22[0].sys.includes('XXX') && a22[0].req.contents.map(c => c.parts[0].text).join('|').includes('에러 04번 뭐야?') && a22[0].req.contents.map(c => c.parts[0].text).join('|').includes('정수기 > CP-PS'), '모델을 고르면 원래 질문("에러 04번 뭐야?")에 그 모델 문서로 답한다');
   ok(/PS의 E-04는 입수 점검입니다/.test(await u.textContent('#chat-body')), '답변이 나온다');
   ok(/모델마다 다른 질문이면|ask_model/.test(r1[0].sys) && /반드시 ask_model/.test(r1[0].sys), '문서 고르기 지침에 "모델별 질문은 모델부터 물어라"가 들어 있다');
+  // 2-3) 제품군은 말했고 모델만 안 말함 → 그 제품군의 모델을 전부(개수 제한 없이) 카드로 보여 주기
+  await u.evaluate(() => { const p = products.find(x => x.id === 'p2'); for(let i = 1; i <= 20; i++) p.models.push({ id: 'mx' + i, name: 'CP-T' + String(i).padStart(2, '0'), docs: [{ id: 'dx' + i, title: 'T' + i, cat: '기타', content: 'T본문 ' + i, enabled: true }] }); });
+  u.reqs.length = 0; u.route_reply = () => JSON.stringify({ action: 'ask_model', question: '어떤 정수기 모델의 필터 개수를 알고 싶으신가요?', product: '정수기' });
+  await ask(u, '정수기 필터 몇개야?');
+  const mopt = await u.$$eval('.msg.bot:last-child .dc-opt b', l => l.map(b => b.textContent.trim()));
+  ok(/어떤 정수기 모델의 필터 개수/.test(await u.textContent('.msg.bot:last-child')) && mopt.length === 22 && mopt.includes('CP-T20') && mopt.includes('CP-PS'), '제품군을 이미 말했으면 그 제품군의 모델을 전부 보여 준다 (22개 모두, 앞 몇 개만이 아님)');
+  ok(/정수기 모델 · 22개/.test(await u.textContent('.msg.bot:last-child .dc-head')) && await u.locator('.msg.bot:last-child .dc-head input').count() === 1, '카드 머리글에 개수가 나오고, 선택지가 많으면 검색창이 생긴다');
+  await u.fill('.msg.bot:last-child .dc-head input', 'T1'); await u.waitForTimeout(100);
+  ok((await u.$$eval('.msg.bot:last-child .dc-opt', l => l.filter(b => b.style.display !== 'none').length)) === 11, '검색하면 일치하는 모델만 남는다 (T1, T10~T19)');
+  await u.fill('.msg.bot:last-child .dc-head input', '');
+  ok(await u.$eval('.msg.bot:last-child .dc-list', e => getComputedStyle(e).overflowY) === 'auto', '목록이 길면 카드 안에서 스크롤된다');
+  await u.screenshot({ path: path.join(OUT, 'choice.png') });
+  u.reqs.length = 0; u.answer = 'T07 답변입니다.\n[[참조: 1]]';
+  await u.click('.msg.bot:last-child .dc-opt:has-text("CP-T07")'); await u.waitForTimeout(700);
+  ok(u.reqs.filter(x => !x.isRoute).length === 1 && u.reqs.filter(x => !x.isRoute)[0].sys.includes('T본문 7') && /T07 답변입니다/.test(await u.textContent('#chat-body')) && await u.locator('.dc-card.done').count() >= 1, '고르면 그 모델 문서로 답하고 카드는 선택 완료 상태가 된다');
+  await u.evaluate(() => { const p = products.find(x => x.id === 'p2'); p.models = p.models.filter(m => !m.id.startsWith('mx')); });
   // 3) 못 찾음(unknown) → 제품군/모델 고르기
   u.reqs.length = 0; u.route_reply = () => '{"action":"unknown"}';
   await ask(u, '아무말 대잔치');
-  ok(/제품군을 골라/.test(await u.textContent('.msg.bot:last-child')) && (await u.$$eval('.msg.bot:last-child .quick-btn', l => l.map(b => b.textContent.trim()))).join() === '🗂️ 지국_행정용,💧 정수기', 'AI가 못 알아듣거나 없는 내용이면 자동으로 제품군 선택이 나온다');
+  ok(/제품군을 골라/.test(await u.textContent('.msg.bot:last-child')) && (await u.$$eval('.msg.bot:last-child .dc-opt b', l => l.map(b => b.textContent.trim()))).join() === '🗂️ 지국_행정용,💧 정수기', 'AI가 못 알아듣거나 없는 내용이면 자동으로 제품군 선택이 나온다');
   ok(await u.evaluate(() => chatLogs[0].ok === false), '못 찾은 질문은 관리자 로그에 "실패"로 남는다');
-  await u.click('.msg.bot:last-child .quick-btn:has-text("정수기")'); await u.waitForTimeout(200);
-  ok((await u.$$eval('.msg.bot:last-child .quick-btn', l => l.map(b => b.textContent.trim()))).join() === 'CP-X501,CP-PS,← 다른 제품군', '제품군을 누르면 그 제품군의 모델 선택이 나온다');
+  await u.click('.msg.bot:last-child .dc-opt:has-text("정수기")'); await u.waitForTimeout(200);
+  ok((await u.$$eval('.msg.bot:last-child .dc-opt b', l => l.map(b => b.textContent.trim()))).join() === 'CP-X501,CP-PS', '제품군을 누르면 그 제품군의 모델 선택이 나온다');
   u.reqs.length = 0; u.answer = 'PS 답변입니다.\n[[참조: 1, 2]]';
-  await u.click('.msg.bot:last-child .quick-btn:has-text("CP-PS")'); await u.waitForTimeout(800);
+  await u.click('.msg.bot:last-child .dc-opt:has-text("CP-PS")'); await u.waitForTimeout(800);
   const a3 = u.reqs.filter(x => !x.isRoute);
   ok(a3.length === 1 && a3[0].sys.includes('PPP') && a3[0].sys.includes('FLOW') && !a3[0].sys.includes('XXX') && a3[0].sys.includes('제품군 "정수기" > 모델 "CP-PS"'), '모델을 고르면 그 모델 문서 전체로 같은 질문에 다시 답한다');
   ok(/PS 답변입니다/.test(await u.textContent('#chat-body')) && /정수기 > CP-PS/.test(await u.textContent('#chat-body')), '고른 범위가 대화에 표시되고 답변이 나온다');

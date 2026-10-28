@@ -89,6 +89,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 /* CHAT */
 #screen-chat{background:var(--bg);}
+.dc-card{margin-top:12px;border:1px solid var(--border);border-radius:14px;background:var(--bg2);overflow:hidden;text-align:left;}
+.dc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text2);}
+.dc-head input{flex:1;max-width:190px;min-width:0;padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px;font-family:var(--font);color:var(--text);}
+.dc-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:8px;padding:10px;max-height:340px;overflow-y:auto;}
+.dc-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);cursor:pointer;font-size:13px;font-family:var(--font);text-align:left;color:var(--text);transition:border-color .15s,background .15s,transform .1s;}
+.dc-opt:hover{border-color:var(--accent);background:var(--accent-dim);}
+.dc-opt:active{transform:scale(.98);}
+.dc-num{flex:none;width:24px;height:24px;border-radius:7px;background:var(--accent-dim);color:var(--accent);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.dc-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.dc-txt b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dc-txt small{font-size:11px;color:var(--text3);}
+.dc-opt.picked{border-color:var(--accent);background:var(--accent-dim);}
+.dc-opt.picked .dc-num{background:var(--accent);color:#fff;}
+.dc-card.done .dc-opt:not(.picked){opacity:.4;}
+.dc-card.done .dc-opt,.dc-card.done .dc-back{pointer-events:none;}
+.dc-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);}
+.dc-back{border:0;background:transparent;color:var(--accent);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;padding:2px 0;}
+.dc-empty{grid-column:1/-1;padding:14px;text-align:center;font-size:12px;color:var(--text3);}
 .direct-mode .select-bar{display:none;}   /* 바로 채팅: 제품군·모델 선택 줄 숨김 */
 .select-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;}
 .sel-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;}
@@ -2059,16 +2077,35 @@ function directActivate(){
       <p>${ents.length ? '열람 가능한 ' + ents.length + '건의 문서에서 찾아 답변합니다. 모델이나 제품명을 함께 말씀해 주시면 더 정확합니다.' : '현재 열람할 수 있는 문서가 없습니다. 관리자에게 문의하세요.'}</p>
     </div>`;
 }
-function directChips(items, onPick){        // 마지막 챗봇 말풍선 아래에 눌러서 고르는 버튼 줄
+/* 되묻기 선택 카드: 마지막 챗봇 말풍선 아래에 번호 붙은 선택지를 전부 보여 주고, 많으면 검색창과 스크롤을 제공 */
+function directChips(items, onPick, o){
+  o = o || {};
   const body = document.getElementById('chat-body'), bub = body.querySelector('.msg.bot:last-child .msg-bubble');
   if(!bub) return;
-  const box = document.createElement('div'); box.className = 'quick-btns'; box.style.marginTop = '10px';
-  items.forEach(it => {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'quick-btn'; b.textContent = it.label;
-    b.onclick = () => { box.querySelectorAll('button').forEach(x => { x.disabled = true; }); onPick(it); };
-    box.appendChild(b);
+  const card = document.createElement('div'); card.className = 'dc-card';
+  const head = document.createElement('div'); head.className = 'dc-head';
+  const ht = document.createElement('span'); ht.textContent = (o.head || '선택해 주세요') + ' · ' + items.length + '개'; head.appendChild(ht);
+  const list = document.createElement('div'); list.className = 'dc-list';
+  const btns = items.map((it, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'dc-opt';
+    b.innerHTML = '<span class="dc-num">' + (i + 1) + '</span><span class="dc-txt"><b></b>' + (it.sub ? '<small></small>' : '') + '</span>';
+    b.querySelector('b').textContent = it.label; b.title = it.label;
+    if(it.sub) b.querySelector('small').textContent = it.sub;
+    b.onclick = () => { b.classList.add('picked'); card.classList.add('done'); onPick(it); };
+    list.appendChild(b); return b;
   });
-  bub.appendChild(box); body.scrollTop = body.scrollHeight;
+  if(items.length > 10){
+    const f = document.createElement('input'); f.type = 'search'; f.placeholder = '검색'; f.setAttribute('aria-label', '선택지 검색');
+    const empty = document.createElement('div'); empty.className = 'dc-empty'; empty.textContent = '일치하는 항목이 없습니다.'; empty.style.display = 'none'; list.appendChild(empty);
+    f.oninput = () => { const q = f.value.trim().toLowerCase(); let n = 0; btns.forEach((b, i) => { const hit = !q || items[i].label.toLowerCase().includes(q); b.style.display = hit ? '' : 'none'; if(hit) n++; }); empty.style.display = n ? 'none' : ''; };
+    head.appendChild(f);
+  }
+  card.appendChild(head); card.appendChild(list);
+  const foot = document.createElement('div'); foot.className = 'dc-foot';
+  const hint = document.createElement('span'); hint.textContent = '눌러서 고르거나, 아래 입력창에 직접 입력해도 됩니다.'; foot.appendChild(hint);
+  if(o.back){ const bk = document.createElement('button'); bk.type = 'button'; bk.className = 'dc-back'; bk.textContent = o.back.label; bk.onclick = () => { card.classList.add('done'); o.back.fn(); }; foot.appendChild(bk); }
+  card.appendChild(foot);
+  bub.appendChild(card); body.scrollTop = body.scrollHeight;
 }
 function directScopeOf(items){
   const models = [...new Set(items.map(e => e.m.name))];
@@ -2081,9 +2118,9 @@ async function directRoute(text){
   if(ents.reduce((a, e) => a + (e.d.content || '').length, 0) <= DIRECT_ALL_LIMIT) return {kind: 'select', scope: directScopeOf(ents)};
   const index = ents.map(e => e.n + ' | ' + e.p.name + ' > ' + e.m.name + ' | ' + (e.d.cat || '') + ' | ' + e.d.title).join('\n');
   const sys = `당신은 문서 검색 도우미입니다. 아래 [문서 목록]에서 사용자의 마지막 질문(이전 대화 포함)에 답하는 데 필요한 문서를 고르세요. 반드시 JSON 한 개만 출력하세요.
-출력 형식: {"action":"select|ask_model|ask|unknown","docs":[문서번호,...],"question":"","options":[]}
+출력 형식: {"action":"select|ask_model|ask|unknown","docs":[문서번호,...],"question":"","product":"","options":[]}
 - select: 답에 필요한 문서 번호를 가능성 높은 순서로 최대 ${DIRECT_PICK_MAX}개. 사용자가 제품·모델을 말했으면 그 모델의 문서만 고르세요. 모델과 상관없이 답할 수 있는 질문이면 select 하세요.
-- ask_model: 에러코드, 사양, 부품·소모품, 점검·교체·설치 방법, 사용설명서, 유로도처럼 **제품(모델)마다 내용이 달라지는 질문**인데 사용자가 제품명·모델명을 말하지 않았고 이전 대화에서도 정해지지 않았으며, 목록에서 그 주제의 문서가 둘 이상의 모델에 있을 때. "에러 04번"처럼 모든 모델에 같은 번호가 있고 뜻이 비슷해 보여도 모델마다 원인·조치가 다르므로, 추측해서 select 하지 말고 반드시 ask_model 하세요. question에는 "어느 제품·모델인가요?"처럼 짧게 쓰세요(선택지는 화면이 따로 보여 줍니다). 사용자가 모델명을 이미 말했거나(이전 대화 포함) 직접 모델을 고른 뒤라면 ask_model 하지 말고 select 하세요. 행정·업무 절차처럼 모델과 무관한 질문도 select 하세요.
+- ask_model: 에러코드, 사양, 부품·소모품, 점검·교체·설치 방법, 사용설명서, 유로도처럼 **제품(모델)마다 내용이 달라지는 질문**인데 사용자가 제품명·모델명을 말하지 않았고 이전 대화에서도 정해지지 않았으며, 목록에서 그 주제의 문서가 둘 이상의 모델에 있을 때. "에러 04번"처럼 모든 모델에 같은 번호가 있고 뜻이 비슷해 보여도 모델마다 원인·조치가 다르므로, 추측해서 select 하지 말고 반드시 ask_model 하세요. 제품군·모델을 묻는 되묻기는 ask가 아니라 항상 ask_model로 하세요(제품군·모델 선택지는 화면이 목록 전체를 자동으로 보여 줍니다). question에는 "어느 제품·모델인가요?"처럼 짧게 쓰고, 사용자가 제품군(예: 정수기)은 이미 말했지만 모델은 말하지 않았다면 product에 [문서 목록]에 있는 그 제품군 이름을 그대로 쓰세요(모르면 빈 문자열). 사용자가 모델명을 이미 말했거나(이전 대화 포함) 직접 모델을 고른 뒤라면 ask_model 하지 말고 select 하세요. 행정·업무 절차처럼 모델과 무관한 질문도 select 하세요.
 - ask: 모델 외의 이유로 질문이 모호할 때(주제가 여러 가지로 해석되는 등)만 사용. question에 한국어로 짧게 되묻는 말, options에 목록에 실제 있는 제품군·모델·주제 이름으로 선택지 2~6개. 이전 대화에서 이미 되물었고 사용자가 대답했다면 다시 되묻지 말고 select 하세요.
 - unknown: 목록의 어떤 문서와도 관련이 없거나, 질문을 알아들을 수 없을 때.
 음성인식 오류나 띄어쓰기·표기 차이는 의미 중심으로 해석하세요.
@@ -2102,9 +2139,12 @@ ${index}`;
   let j = null;
   try{ j = JSON.parse((data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/^```(?:json)?|```$/g, '').trim()); }catch(e){}
   if(!j || typeof j !== 'object') return {kind: 'fallback'};
-  if(j.action === 'ask_model') return {kind: 'pick', text: String(j.question || '')};
+  if(j.action === 'ask_model'){
+    const pn = String(j.product || '').trim(), pr = pn && directProducts().find(p => p.name === pn && p.models.some(m => activeDocs(m).length));
+    return {kind: 'pick', text: String(j.question || ''), product: pr || null};
+  }
   if(j.action === 'ask' && j.question){
-    const opts = (Array.isArray(j.options) ? j.options : []).map(String).filter(Boolean).slice(0, 6);
+    const opts = (Array.isArray(j.options) ? j.options : []).map(String).filter(Boolean).slice(0, 12);
     return {kind: 'ask', text: String(j.question), options: opts};
   }
   if(j.action === 'select'){
@@ -2119,19 +2159,18 @@ ${index}`;
 function showDirectFallback(text, intro){
   appendMsg('bot', intro || '질문과 맞는 내용을 찾지 못했어요. 먼저 제품군을 골라 주세요. 고르신 모델의 문서에서 다시 찾아 드릴게요.', null);
   const prods = directProducts().filter(p => p.models.some(m => activeDocs(m).length));
-  directChips(prods.map(p => ({label: p.icon + ' ' + p.name, p})), it => directFallbackModels(text, it.p));
+  directChips(prods.map(p => ({label: p.icon + ' ' + p.name, sub: '모델 ' + p.models.filter(m => activeDocs(m).length).length + '개', p})), it => directFallbackModels(text, it.p), {head: '제품군'});
 }
-function directFallbackModels(text, p){
-  appendMsg('bot', '"' + p.name + '" 중 어떤 모델인가요?', null);
-  const ms = p.models.filter(m => activeDocs(m).length);
-  directChips(ms.map(m => ({label: m.name, m})).concat([{label: '← 다른 제품군', back: true}]), it => {
-    if(it.back){ showDirectFallback(text); return; }
+function directFallbackModels(text, p, intro){
+  appendMsg('bot', intro || '"' + p.name + '" 중 어떤 모델인가요?', null);
+  const ms = p.models.filter(m => activeDocs(m).length);       // 모델은 개수와 상관없이 전부 보여 줌
+  directChips(ms.map(m => ({label: m.name, sub: '문서 ' + activeDocs(m).length + '건', m})), it => {
     const m = it.m, items = activeDocs(m).map(d => ({d, p, m}));
     const scope = {direct: false, items, head: '현재 선택: 제품군 "' + p.name + '" > 모델 "' + m.name + '"', ctxTitle: '[' + m.name + ' 등록 문서 내용]', cat: p.name, model: m.name};
     appendMsg('user', p.name + ' > ' + m.name, null);
     chatHistory.push({role:'user', content:'(선택한 제품·모델: ' + p.name + ' > ' + m.name + ')', cat:'전체 검색', model:'전체 문서', time:Date.now()});   // 이어지는 질문에서도 이 모델로 해석
     runAnswer(text, appendTyping(), scope);
-  });
+  }, {head: p.icon + ' ' + p.name + ' 모델', back: {label: '← 다른 제품군', fn: () => showDirectFallback(text)}});
 }
 
 async function sendMsg(){
@@ -2162,13 +2201,18 @@ async function sendMsg(){
       if(r.kind==='ask'){                                   // 모호함 → 되묻기 (대화 기록에 남겨 다음 답을 이어서 해석)
         removeTyping(tid);
         appendMsg('bot',r.text,null);
-        if(r.options.length) directChips(r.options.map(o=>({label:o})), it=>{ document.getElementById('chat-inp').value=it.label; sendMsg(); });
+        if(r.options.length) directChips(r.options.map(o=>({label:o})), it=>{ document.getElementById('chat-inp').value=it.label; sendMsg(); }, {head:'선택지'});
         chatHistory.push({role:'assistant',content:r.text,time:Date.now()});
         if(ttsEnabled) speakText(r.text);
         else if(handsfreeMode) setTimeout(()=>startListeningHF(),1000);
         return;
       }
-      if(r.kind==='pick'){ removeTyping(tid); showDirectFallback(text, (r.text ? r.text + ' ' : '제품·모델마다 내용이 달라서, 어느 제품·모델인지 먼저 알려 주세요. ') + '아래에서 고르거나 모델명을 직접 입력하셔도 됩니다.'); return; }   // 모델별로 다른 질문 → 모델부터 확인 (로그에는 남기지 않음)
+      if(r.kind==='pick'){
+        removeTyping(tid);
+        if(r.product) directFallbackModels(text, r.product, (r.text || '어떤 ' + r.product.name + ' 모델의 내용을 알고 싶으신가요?'));      // 제품군은 이미 말했으면 그 제품군의 모델 전부
+        else showDirectFallback(text, r.text || '제품·모델마다 내용이 달라서, 어느 제품·모델인지 먼저 알려 주세요.');
+        return;
+      }   // 모델별로 다른 질문 → 모델부터 확인 (로그에는 남기지 않음)
       if(r.kind==='fallback'){ removeTyping(tid); await directLogFail(text); showDirectFallback(text); return; }
       scope=r.scope;
     }catch(e){ await directError(e,tid,text); return; }

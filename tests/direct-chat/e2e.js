@@ -126,6 +126,26 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await a.evaluate(() => saveEditGroup()); await a.waitForTimeout(300);
   const w3 = await a.evaluate(() => window.__writes.filter(x => x.t === 'groups' && x.k === 'update'));
   ok(w3.length === 1 && w3[0].a.direct_chat === false && w3[0].m.id === 'g1', '체크를 풀고 저장하면 direct_chat=false로 저장된다');
+  console.log('[관리자: 회원 정보에서 그룹 권한 수정]');
+  await a.evaluate(() => { openMember('u1'); });
+  const mg = () => a.$$eval('#me-group-checkboxes label', l => l.map(e => ({ t: e.textContent.trim(), c: e.querySelector('input').checked })));
+  const g0 = await mg();
+  ok(g0.length === 5 && g0.filter(x => x.c).map(x => x.t).join() === '전체검색팀', '회원 정보에 그룹 체크박스가 보이고 현재 속한 그룹만 체크되어 있다 (' + g0.map(x => x.t + (x.c ? '✔' : '')).join(' / ') + ')');
+  ok(/사용 가능한 제품군: 지국_행정용, 정수기/.test(await a.textContent('#me-group-summary')), '체크한 그룹으로 사용 가능한 제품군이 표시된다');
+  await a.evaluate(() => { window.__writes.length = 0; }); await a.evaluate(() => saveMember()); await a.waitForTimeout(300);
+  ok(!(await a.evaluate(() => window.__writes.some(w => w.t === 'group_members'))), '그룹을 건드리지 않고 저장하면 그룹 기록은 바뀌지 않는다');
+  await a.evaluate(() => { openMember('u1'); });
+  await a.evaluate(() => { window.__writes.length = 0; const c = [...document.querySelectorAll('#me-group-checkboxes input')]; c.find(x => x.value === 'g1').checked = false; c.find(x => x.value === 'g2').checked = true; });
+  await a.evaluate(() => saveMember()); await a.waitForTimeout(400);
+  const gw = await a.evaluate(() => window.__writes.filter(w => w.t === 'group_members'));
+  ok(gw.some(w => w.k === 'delete' && w.m.group_id === 'g1' && w.m.user_id === 'u1') && gw.some(w => w.k === 'insert' && w.a.group_id === 'g2' && w.a.user_id === 'u1') && gw.length === 2, '그룹 하나는 제거하고 다른 그룹은 추가한 것만 저장된다');
+  ok(await a.evaluate(() => groups.find(g => g.id === 'g1').memberIds.includes('u1') === false && groups.find(g => g.id === 'g2').memberIds.includes('u1')), '화면 데이터에도 바로 반영된다');
+  ok(/추가 1건 · 제거 1건/.test(await a.textContent('#toast')), '저장 안내에 추가/제거 건수가 나온다');
+  await a.evaluate(() => { openMember('u1'); });
+  ok((await mg()).filter(x => x.c).map(x => x.t).join() === '일반팀', '다시 열면 바뀐 그룹이 체크되어 있다');
+  await a.evaluate(() => { window.__failNext = 'group_members.delete'; const c = [...document.querySelectorAll('#me-group-checkboxes input')]; c.find(x => x.value === 'g2').checked = false; });
+  await a.evaluate(() => saveMember()); await a.waitForTimeout(400);
+  ok(/그룹 권한 1건을 바꾸지 못했습니다/.test(await a.textContent('#toast')) && await a.evaluate(() => groups.find(g => g.id === 'g2').memberIds.includes('u1')), '그룹 저장이 실패하면 안내하고 화면 데이터는 바꾸지 않는다');
   ok(a.errs.length === 0, '관리자 화면 페이지 오류 없음' + (a.errs.length ? JSON.stringify(a.errs) : ''));
 
   await browser.close(); srv.close();

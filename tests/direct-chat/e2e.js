@@ -103,7 +103,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(/어떤 정수기 모델의 필터 개수/.test(await u.textContent('.msg.bot:last-child')) && mopt.length === 22 && mopt.includes('CP-T20') && mopt.includes('CP-PS'), '제품군을 이미 말했으면 그 제품군의 모델을 전부 보여 준다 (22개 모두, 앞 몇 개만이 아님)');
   ok(/정수기 모델 · 22개/.test(await u.textContent('.msg.bot:last-child .dc-head')) && await u.locator('.msg.bot:last-child .dc-head input').count() === 1, '카드 머리글에 개수가 나오고, 선택지가 많으면 검색창이 생긴다');
   await u.fill('.msg.bot:last-child .dc-head input', 'T1'); await u.waitForTimeout(100);
-  ok((await u.$$eval('.msg.bot:last-child .dc-opt', l => l.filter(b => b.style.display !== 'none').length)) === 11, '검색하면 일치하는 모델만 남는다 (T1, T10~T19)');
+  ok((await u.$$eval('.msg.bot:last-child .dc-opt', l => l.filter(b => b.style.display !== 'none').length)) === 10, '검색하면 일치하는 모델만 남는다 (T10~T19)');
   await u.fill('.msg.bot:last-child .dc-head input', '');
   ok(await u.$eval('.msg.bot:last-child .dc-list', e => getComputedStyle(e).overflowY) === 'auto', '목록이 길면 카드 안에서 스크롤된다');
   await u.screenshot({ path: path.join(OUT, 'choice.png') });

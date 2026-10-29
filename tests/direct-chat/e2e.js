@@ -162,14 +162,19 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(tl.slice(0, iReady).every(x => x.cardOp === 0), '순서 1-2: 로딩 화면이 있는 동안 로그인 카드는 숨겨져 있다 (애니메이션이 가려진 채 지나가지 않는다)');
   const iFade = tl.findIndex(x => x.ov === 'flex' && x.ovOp < 0.9);
   ok(iFade > iDark && iFade < iReady, '순서 2: 데이터를 다 불러오면 로딩 화면이 부드럽게 밝아진다');
-  ok(!tl.slice(0, iReady).some(x => x.anim === 'mo-rise'), '순서 3: 화면이 밝아지기 전에는 등장 애니메이션이 시작되지 않는다');
-  ok(tl[iReady].ov === 'none' && tl.slice(iReady).some(x => x.anim === 'mo-rise' && x.cardOp < 1) || tl.slice(iReady).some(x => x.anim === 'mo-rise'), '순서 3: 로딩 화면이 사라진 직후 로그인 카드 등장 애니메이션이 시작된다');
+  ok(!tl.slice(0, iReady).some(x => /mo-rise/.test(x.anim)), '순서 3: 화면이 밝아지기 전에는 등장 애니메이션이 시작되지 않는다');
+  ok(tl[iReady].ov === 'none' && tl.slice(iReady).some(x => /mo-rise/.test(x.anim)), '순서 3: 로딩 화면이 사라진 직후 로그인 카드 등장 애니메이션이 시작된다');
 
   const an = sel => m1.$eval(sel, e => getComputedStyle(e).animationName);
-  ok(await an('#screen-login .login-card') === 'mo-rise' && /mo-float1/.test(await an('.lg-g1')) && /mo-float2/.test(await an('.lg-g2')) && /mo-float3/.test(await an('.lg-g3')), '로그인 화면: 카드가 떠오르고 배경 빛 3개가 천천히 움직인다');
+  ok(/mo-rise/.test(await an('#screen-login .login-card')) && /mo-float1/.test(await an('.lg-g1')) && /mo-float2/.test(await an('.lg-g2')) && /mo-float3/.test(await an('.lg-g3')), '로그인 화면: 카드가 떠오르고 배경 빛 3개가 천천히 움직인다');
+  const bg = await m1.evaluate(() => ({ bubs: document.querySelectorAll('.lg-bub').length, waves: document.querySelectorAll('.lg-wave').length, sparks: document.querySelectorAll('.lg-spark').length, bub: getComputedStyle(document.querySelector('.lg-bub')).animationName, w1: getComputedStyle(document.querySelector('.lg-w1')).animationName, w2: getComputedStyle(document.querySelector('.lg-w2')).animationName, sp: getComputedStyle(document.querySelector('.lg-spark')).animationName, run: getComputedStyle(document.querySelector('.lg-bub')).animationPlayState, op: getComputedStyle(document.querySelector('.lg-bg')).opacity }));
+  ok(bg.bubs >= 12 && bg.waves === 3 && bg.sparks >= 6 && bg.bub === 'mo-bubble' && bg.w1 === 'mo-wave' && bg.w2 === 'mo-wave-r' && bg.sp === 'mo-twinkle' && bg.run === 'running', '로그인 배경: 물방울이 떠오르고, 파도 3겹이 흐르고, 별이 반짝인다 (' + JSON.stringify(bg) + ')');
+  ok(await an('#screen-login .login-btn') !== undefined && await m1.$eval('#screen-login .login-btn', e => getComputedStyle(e, '::after').animationName) === 'mo-glint', '로그인 버튼 위로 빛이 주기적으로 스쳐 지나간다');
   ok(await an('#screen-login .login-logo-icon') === 'mo-pop', '로그인 화면: 로고가 통통 튀며 나타난다');
   await m1.fill('#login-id', 'nobody'); await m1.fill('#login-pw', 'x'); await m1.click('.login-btn'); await m1.waitForTimeout(120);
-  ok(await m1.$eval('#screen-login .login-card', e => e.classList.contains('shake') && getComputedStyle(e).animationName === 'mo-shake'), '로그인에 실패하면 카드가 살짝 흔들린다');
+  ok(await m1.$eval('#screen-login .login-card', e => e.classList.contains('shake') && e.getAnimations().some(x => !(x instanceof CSSAnimation))), '로그인에 실패하면 카드가 살짝 흔들린다');
+  await m1.waitForTimeout(700);
+  ok(await m1.$eval('#screen-login .login-card', e => !e.getAnimations().some(x => x instanceof CSSAnimation && x.animationName === 'mo-rise' && x.currentTime < 300)), '흔들림이 끝난 뒤 카드가 다시 떠오르는 애니메이션이 반복되지 않는다');
   await m1.fill('#login-id', 'u2'); await m1.fill('#login-pw', '1234'); await m1.click('.login-btn'); await m1.waitForSelector('#screen-chat.active'); await m1.waitForTimeout(100);
   ok(await an('#screen-chat > .select-bar') === 'mo-rise' && await an('#screen-chat > .chat-body') === 'mo-fade' && await an('#screen-chat > .bnav') === 'mo-rise', '로그인 후 채팅 화면: 선택 줄·대화 영역·아래 메뉴가 차례로 나타난다');
   ok(await an('.chat-prompt') === 'mo-rise' && await an('.cp-tile') === 'mo-pop', '안내 화면과 아이콘 타일이 부드럽게 나타난다');
@@ -180,8 +185,12 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(await an('.msg.user') === 'mo-msg-user' && await an('.msg.bot:not([id])') === 'mo-msg-bot', '질문·답변 말풍선이 아래에서 살짝 올라오며 나타난다');
   ok(m1.errs.length === 0, '움직임 효과 페이지 오류 없음' + (m1.errs.length ? JSON.stringify(m1.errs) : ''));
   const m2 = await mkPage({ reducedMotion: 'reduce' }); await m2.goto(BASE + '/'); await m2.waitForTimeout(300);
-  ok(await m2.$eval('#screen-login .login-card', e => getComputedStyle(e).animationName) === 'none' && await m2.$eval('.lg-g1', e => getComputedStyle(e).animationName) === 'none', '기기의 "움직임 줄이기" 설정이 켜져 있으면 모든 움직임이 꺼진다');
+  ok(await m2.$eval('#screen-login .login-card', e => getComputedStyle(e).animationName) === 'none' && await m2.$eval('.lg-g1', e => getComputedStyle(e).animationName) === 'none' && await m2.$eval('.lg-bub', e => getComputedStyle(e).animationName) === 'none' && await m2.$eval('.lg-w1', e => getComputedStyle(e).animationName) === 'none', '기기의 "움직임 줄이기" 설정이 켜져 있으면 모든 움직임(물방울·파도 포함)이 꺼진다');
   await m2.screenshot({ path: path.join(OUT, 'login.png') });
+  const m3 = await mkPage({ viewport: { width: 1280, height: 800 } }); await m3.goto(BASE + '/'); await m3.waitForFunction(() => document.body.classList.contains('app-ready')); await m3.waitForTimeout(6500);
+  await m3.screenshot({ path: path.join(OUT, 'login-motion.png') });
+  const m4 = await mkPage({ viewport: { width: 390, height: 780 } }); await m4.goto(BASE + '/'); await m4.waitForFunction(() => document.body.classList.contains('app-ready')); await m4.waitForTimeout(6500);
+  await m4.screenshot({ path: path.join(OUT, 'login-motion-mobile.png') });
 
   console.log('[관리자: 그룹 설정]');
   const a = await mkPage(); await a.goto(BASE + '/'); await a.waitForTimeout(600); await a.fill('#login-id', 'admin'); await a.fill('#login-pw', '1234'); await a.click('.login-btn'); await a.waitForSelector('#screen-admin.active', { timeout: 8000 });

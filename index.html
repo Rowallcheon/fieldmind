@@ -77,7 +77,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 /* LOGIN */
 #screen-login{align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden;}
 #screen-login::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(45,95,143,.08) 0%,transparent 70%);top:-200px;left:50%;transform:translateX(-50%);pointer-events:none;}
-.login-card{width:100%;max-width:400px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:36px 32px;position:relative;z-index:1;}
+.login-card{width:100%;max-width:400px;background:rgba(255,255,255,.86);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.85);box-shadow:0 20px 60px rgba(22,39,58,.18);border-radius:16px;padding:36px 32px;position:relative;z-index:1;}
 .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
 .login-logo-icon{width:46px;height:46px;background:var(--accent);border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px;}
 .login-logo-text{font-size:21px;white-space:nowrap;font-weight:900;letter-spacing:-.5px;}
@@ -111,6 +111,25 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dc-empty{grid-column:1/-1;padding:14px;text-align:center;font-size:12px;color:var(--text3);}
 body .msg-bubble{font-family:var(--font-chat);}   /* 챗봇 질문·답변은 기존 글씨체(Noto Sans KR) 유지, 나머지 화면은 Pretendard */
 /* ── 움직임 효과: 짧은 페이드·떠오름만 사용. 기기의 "움직임 줄이기" 설정이 켜져 있으면 전부 꺼짐 ── */
+/* 로그인 배경: 물방울·파도·반짝임 (정수기 이미지). 처음 로딩이 끝난 뒤(body.app-ready)에 시작 */
+.lg-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;transition:opacity 1.4s ease;}
+body:not(.app-ready) .lg-bg{opacity:0;}
+body:not(.app-ready) .lg-bg *{animation-play-state:paused !important;}
+.lg-wave{position:absolute;left:0;bottom:0;width:200%;background-repeat:repeat-x;background-size:50% 100%;}
+.lg-w1{height:170px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 160' preserveAspectRatio='none'%3E%3Cpath d='M0 70 Q360 0 720 70 T1440 70 V160 H0 Z' fill='%23ffffff' fill-opacity='.42'/%3E%3C/svg%3E");}
+.lg-w2{height:150px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 160' preserveAspectRatio='none'%3E%3Cpath d='M0 80 Q360 150 720 80 T1440 80 V160 H0 Z' fill='%236fa8dc' fill-opacity='.38'/%3E%3C/svg%3E");}
+.lg-w3{height:120px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 160' preserveAspectRatio='none'%3E%3Cpath d='M0 95 Q360 40 720 95 T1440 95 V160 H0 Z' fill='%232d5f8f' fill-opacity='.22'/%3E%3C/svg%3E");}
+.lg-bub{position:absolute;bottom:-90px;left:var(--x);width:var(--s);height:var(--s);border-radius:50%;opacity:0;background:radial-gradient(circle at 30% 28%,rgba(255,255,255,.95) 0,rgba(255,255,255,.4) 20%,rgba(255,255,255,.1) 58%,rgba(255,255,255,0) 100%);border:1px solid rgba(255,255,255,.6);box-shadow:inset 0 0 10px rgba(255,255,255,.4);}
+.lg-spark{position:absolute;width:var(--s);height:var(--s);opacity:.55;}
+.lg-spark svg{width:100%;height:100%;fill:#fff;filter:drop-shadow(0 0 6px rgba(255,255,255,.9));}
+@keyframes mo-wave{to{transform:translateX(-50%);}}
+@keyframes mo-wave-r{from{transform:translateX(-50%);}to{transform:translateX(0);}}
+@keyframes mo-bubble{0%{transform:translate(0,0) scale(.6);opacity:0;}12%{opacity:.95;}50%{transform:translate(calc(var(--sw) * 1px),-55vh) scale(1);}88%{opacity:.8;}100%{transform:translate(calc(var(--sw) * -.6px),-118vh) scale(1.12);opacity:0;}}
+@keyframes mo-twinkle{0%,100%{transform:scale(.55) rotate(0);opacity:.15;}50%{transform:scale(1.15) rotate(25deg);opacity:1;}}
+@keyframes mo-hue{from{filter:blur(70px) hue-rotate(0deg);}to{filter:blur(70px) hue-rotate(18deg);}}
+@keyframes mo-glow{0%,100%{box-shadow:0 20px 60px rgba(22,39,58,.18);}50%{box-shadow:0 24px 72px rgba(70,140,215,.38);}}   /* 카드 크기·위치는 그대로, 둘레 빛만 천천히 숨쉼 */
+@keyframes mo-glint{0%{transform:translateX(-120%) skewX(-18deg);}60%,100%{transform:translateX(260%) skewX(-18deg);}}
+.login-btn{position:relative;overflow:hidden;}
 @keyframes mo-rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
 @keyframes mo-fade{from{opacity:0;}to{opacity:1;}}
 @keyframes mo-pop{0%{opacity:0;transform:scale(.78);}60%{opacity:1;transform:scale(1.07);}100%{opacity:1;transform:scale(1);}}
@@ -120,20 +139,25 @@ body .msg-bubble{font-family:var(--font-chat);}   /* 챗봇 질문·답변은 �
 @keyframes mo-float2{0%{transform:translate(0,0) scale(1.1);}100%{transform:translate(-80px,-70px) scale(.92);}}
 @keyframes mo-float3{0%{transform:translate(0,0) scale(.95);}100%{transform:translate(-60px,50px) scale(1.2);}}
 @keyframes mo-spark{0%,100%{transform:scale(1) rotate(0);}45%{transform:scale(1.2) rotate(14deg);}}
-@keyframes mo-shake{0%,100%{transform:translateX(0);}18%{transform:translateX(-9px);}36%{transform:translateX(8px);}54%{transform:translateX(-6px);}72%{transform:translateX(4px);}}
 .lg-glow{position:absolute;border-radius:50%;pointer-events:none;filter:blur(70px);}
-.lg-g1{width:440px;height:440px;background:#fff;opacity:.6;top:-140px;left:-120px;}
-.lg-g2{width:400px;height:400px;background:#6fa8dc;opacity:.45;bottom:-150px;right:-90px;}
-.lg-g3{width:300px;height:300px;background:#ffe08a;opacity:.38;top:38%;left:64%;}
+.lg-g1{width:480px;height:480px;background:#fff;opacity:.7;top:-150px;left:-130px;}
+.lg-g2{width:440px;height:440px;background:#5fa0dc;opacity:.55;bottom:-160px;right:-100px;}
+.lg-g3{width:340px;height:340px;background:#ffe08a;opacity:.45;top:36%;left:62%;}
 body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}   /* 처음 로딩 화면이 보이는 동안은 '작업 중' 알림을 따로 띄우지 않음 */
 @media (prefers-reduced-motion:no-preference){
   /* 처음 데이터 불러오는 동안은 로그인 화면 요소를 숨겨 두었다가(어두운 로딩 화면 뒤), 화면이 밝아진 뒤 등장 효과로 나타남 */
+  .lg-w1{animation:mo-wave 18s linear infinite;}
+  .lg-w2{animation:mo-wave-r 24s linear infinite;}
+  .lg-w3{animation:mo-wave 13s linear infinite;}
+  .lg-bub{animation:mo-bubble var(--d) var(--dl) ease-in-out infinite backwards;}
+  .lg-spark{animation:mo-twinkle var(--d) var(--dl) ease-in-out infinite;}
+  body.app-ready #screen-login.active .login-btn::after{content:'';position:absolute;top:0;bottom:0;left:0;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);animation:mo-glint 4.5s 1.6s ease-in-out infinite;}
   body:not(.app-ready) #screen-login .login-card{opacity:0;}
   body:not(.app-ready) .lg-glow{opacity:0;}
-  body.app-ready .lg-g1{animation:mo-float1 17s ease-in-out infinite alternate,mo-fade 1.6s ease backwards;}
-  body.app-ready .lg-g2{animation:mo-float2 21s ease-in-out infinite alternate,mo-fade 1.6s .15s ease backwards;}
-  body.app-ready .lg-g3{animation:mo-float3 19s ease-in-out infinite alternate,mo-fade 1.6s .3s ease backwards;}
-  body.app-ready #screen-login.active .login-card{animation:mo-rise .7s cubic-bezier(.2,.7,.2,1) backwards;}
+  body.app-ready .lg-g1{animation:mo-float1 12s ease-in-out infinite alternate,mo-fade 1.6s ease backwards,mo-hue 14s ease-in-out infinite alternate;}
+  body.app-ready .lg-g2{animation:mo-float2 15s ease-in-out infinite alternate,mo-fade 1.6s .15s ease backwards,mo-hue 17s ease-in-out infinite alternate-reverse;}
+  body.app-ready .lg-g3{animation:mo-float3 13s ease-in-out infinite alternate,mo-fade 1.6s .3s ease backwards,mo-hue 11s ease-in-out infinite alternate;}
+  body.app-ready #screen-login.active .login-card{animation:mo-rise .7s cubic-bezier(.2,.7,.2,1) backwards,mo-glow 6s 1.2s ease-in-out infinite;}
   body.app-ready #screen-login.active .login-card > :nth-child(n+2){animation:mo-rise .6s cubic-bezier(.2,.7,.2,1) backwards;}
   body.app-ready #screen-login.active .login-card > :nth-child(2){animation-delay:.22s;}
   body.app-ready #screen-login.active .login-card > :nth-child(3){animation-delay:.3s;}
@@ -141,7 +165,6 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
   body.app-ready #screen-login.active .login-card > :nth-child(6){animation-delay:.46s;}
   body.app-ready #screen-login.active .login-logo-icon{animation:mo-pop .8s .25s cubic-bezier(.2,.8,.3,1.2) backwards;}
   body.app-ready #screen-login.active .login-logo-icon svg{animation:mo-spark 1.2s .95s ease-in-out 1;}
-  body.app-ready #screen-login.active .login-card.shake{animation:mo-shake .45s ease-in-out;}
   /* 로그인 후 채팅 화면: 위에서 아래로 차례로 나타남 */
   #screen-chat.active > *{animation:mo-fade .5s ease backwards;}
   #screen-chat.active > .select-bar{animation:mo-rise .5s .08s cubic-bezier(.2,.7,.2,1) backwards;}
@@ -164,7 +187,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
   .dc-card{animation:mo-rise .4s cubic-bezier(.2,.7,.2,1) backwards;}
   .dc-opt{animation:mo-fade .35s ease backwards;animation-delay:calc(var(--i,0) * 30ms + 100ms);}
 }
-@media (max-width:640px){.lg-glow{animation:none !important;}}   /* 작은 화면(휴대폰)에서는 배경 빛을 고정 → 배터리·속도 보호 */
+@media (max-width:640px){.lg-glow{animation:none !important;}.lg-bub:nth-of-type(n+9){display:none;}}   /* 작은 화면(휴대폰)에서는 배경 빛을 고정 → 배터리·속도 보호 */
 .direct-mode .select-bar{display:none;}   /* 바로 채팅: 제품군·모델 선택 줄 숨김 */
 .select-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;}
 .sel-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;}
@@ -607,6 +630,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 <!-- LOGIN -->
 <div id="screen-login" class="screen active">
   <div class="lg-glow lg-g1"></div><div class="lg-glow lg-g2"></div><div class="lg-glow lg-g3"></div>
+  <div class="lg-bg" aria-hidden="true"><div class="lg-wave lg-w1"></div><div class="lg-wave lg-w2"></div><div class="lg-wave lg-w3"></div><i class="lg-bub" style="--x:6%;--s:26px;--d:14.2s;--dl:1.8s;--sw:44"></i><i class="lg-bub" style="--x:14%;--s:44px;--d:11.5s;--dl:9.9s;--sw:-40"></i><i class="lg-bub" style="--x:22%;--s:18px;--d:14.7s;--dl:0.7s;--sw:30"></i><i class="lg-bub" style="--x:31%;--s:58px;--d:13.1s;--dl:1.0s;--sw:18"></i><i class="lg-bub" style="--x:40%;--s:32px;--d:11.7s;--dl:1.1s;--sw:18"></i><i class="lg-bub" style="--x:48%;--s:22px;--d:11.6s;--dl:6.8s;--sw:-28"></i><i class="lg-bub" style="--x:57%;--s:48px;--d:17.3s;--dl:7.0s;--sw:-40"></i><i class="lg-bub" style="--x:65%;--s:16px;--d:16.8s;--dl:4.8s;--sw:-28"></i><i class="lg-bub" style="--x:72%;--s:38px;--d:11.5s;--dl:10.3s;--sw:-16"></i><i class="lg-bub" style="--x:80%;--s:28px;--d:15.2s;--dl:6.5s;--sw:30"></i><i class="lg-bub" style="--x:88%;--s:52px;--d:14.1s;--dl:9.8s;--sw:-28"></i><i class="lg-bub" style="--x:94%;--s:20px;--d:12.0s;--dl:6.9s;--sw:-28"></i><i class="lg-bub" style="--x:36%;--s:14px;--d:14.7s;--dl:6.6s;--sw:-40"></i><i class="lg-bub" style="--x:60%;--s:34px;--d:16.6s;--dl:7.4s;--sw:18"></i><span class="lg-spark" style="left:12%;top:18%;--s:16px;--d:3.4s;--dl:0s"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z"/></svg></span><span class="lg-spark" style="left:86%;top:14%;--s:22px;--d:4.2s;--dl:1.1s"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z"/></svg></span><span class="lg-spark" style="left:24%;top:70%;--s:14px;--d:3.8s;--dl:2.3s"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z"/></svg></span><span class="lg-spark" style="left:78%;top:62%;--s:18px;--d:4.6s;--dl:0.6s"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z"/></svg></span><span class="lg-spark" style="left:50%;top:10%;--s:12px;--d:3.2s;--dl:1.8s"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z"/></svg></span><span class="lg-spark" style="left:92%;top:44%;--s:14px;--d:3.9s;--dl:2.9s"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z"/></svg></span><span class="lg-spark" style="left:6%;top:46%;--s:12px;--d:4.4s;--dl:0.3s"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z"/></svg></span></div>
   <div class="login-card">
     <div class="login-logo"><div class="login-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div><div class="login-logo-text"><b class="wm5" aria-label="CUCKOO ProGuide">cuckoo <em>progu<i class="wm5-dot">ı</i>de</em></b></div></div>
     <div class="form-group"><label class="form-label">아이디</label><input class="form-input" id="login-id" type="text" placeholder="아이디 입력" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
@@ -1862,7 +1886,7 @@ function updateHFBanner(state){
 async function setVoiceStatus(msg){const el=document.getElementById('voice-status');if(el)el.textContent=msg;}
 
 /* ════════ AUTH ════════ */
-function loginShake(){const c=document.querySelector('#screen-login .login-card');if(!c)return;c.classList.remove('shake');void c.offsetWidth;c.classList.add('shake');setTimeout(()=>c.classList.remove('shake'),500);}   // 로그인 실패 때 카드가 살짝 흔들림
+function loginShake(){const c=document.querySelector('#screen-login .login-card');if(!c)return;c.classList.add('shake');setTimeout(()=>c.classList.remove('shake'),500);if(c.animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches)c.animate([{transform:'translateX(0)'},{transform:'translateX(-9px)'},{transform:'translateX(8px)'},{transform:'translateX(-6px)'},{transform:'translateX(4px)'},{transform:'translateX(0)'}],{duration:450,easing:'ease-in-out'});}   // 로그인 실패 때 카드가 살짝 흔들림
 async function doLogin(){
   const id=document.getElementById('login-id').value.trim();
   const pw=document.getElementById('login-pw').value;

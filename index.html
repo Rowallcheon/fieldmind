@@ -110,6 +110,57 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dc-back{border:0;background:transparent;color:var(--accent);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;padding:2px 0;}
 .dc-empty{grid-column:1/-1;padding:14px;text-align:center;font-size:12px;color:var(--text3);}
 body .msg-bubble{font-family:var(--font-chat);}   /* 챗봇 질문·답변은 기존 글씨체(Noto Sans KR) 유지, 나머지 화면은 Pretendard */
+/* ── 움직임 효과: 짧은 페이드·떠오름만 사용. 기기의 "움직임 줄이기" 설정이 켜져 있으면 전부 꺼짐 ── */
+@keyframes mo-rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+@keyframes mo-fade{from{opacity:0;}to{opacity:1;}}
+@keyframes mo-pop{0%{opacity:0;transform:scale(.78);}60%{opacity:1;transform:scale(1.07);}100%{opacity:1;transform:scale(1);}}
+@keyframes mo-msg-bot{from{opacity:0;transform:translateY(10px) scale(.985);}to{opacity:1;transform:none;}}
+@keyframes mo-msg-user{from{opacity:0;transform:translateY(8px) scale(.97);}to{opacity:1;transform:none;}}
+@keyframes mo-float1{0%{transform:translate(0,0) scale(1);}100%{transform:translate(90px,60px) scale(1.18);}}
+@keyframes mo-float2{0%{transform:translate(0,0) scale(1.1);}100%{transform:translate(-80px,-70px) scale(.92);}}
+@keyframes mo-float3{0%{transform:translate(0,0) scale(.95);}100%{transform:translate(-60px,50px) scale(1.2);}}
+@keyframes mo-spark{0%,100%{transform:scale(1) rotate(0);}45%{transform:scale(1.2) rotate(14deg);}}
+@keyframes mo-shake{0%,100%{transform:translateX(0);}18%{transform:translateX(-9px);}36%{transform:translateX(8px);}54%{transform:translateX(-6px);}72%{transform:translateX(4px);}}
+.lg-glow{position:absolute;border-radius:50%;pointer-events:none;filter:blur(70px);}
+.lg-g1{width:440px;height:440px;background:#fff;opacity:.6;top:-140px;left:-120px;}
+.lg-g2{width:400px;height:400px;background:#6fa8dc;opacity:.45;bottom:-150px;right:-90px;}
+.lg-g3{width:300px;height:300px;background:#ffe08a;opacity:.38;top:38%;left:64%;}
+@media (prefers-reduced-motion:no-preference){
+  .lg-g1{animation:mo-float1 17s ease-in-out infinite alternate;}
+  .lg-g2{animation:mo-float2 21s ease-in-out infinite alternate;}
+  .lg-g3{animation:mo-float3 19s ease-in-out infinite alternate;}
+  #screen-login.active .login-card{animation:mo-rise .7s cubic-bezier(.2,.7,.2,1) backwards;}
+  #screen-login.active .login-card > :nth-child(n+2){animation:mo-rise .6s cubic-bezier(.2,.7,.2,1) backwards;}
+  #screen-login.active .login-card > :nth-child(2){animation-delay:.22s;}
+  #screen-login.active .login-card > :nth-child(3){animation-delay:.3s;}
+  #screen-login.active .login-card > :nth-child(4),#screen-login.active .login-card > :nth-child(5){animation-delay:.38s;}
+  #screen-login.active .login-card > :nth-child(6){animation-delay:.46s;}
+  #screen-login.active .login-logo-icon{animation:mo-pop .8s .25s cubic-bezier(.2,.8,.3,1.2) backwards;}
+  #screen-login.active .login-logo-icon svg{animation:mo-spark 1.2s .95s ease-in-out 1;}
+  #screen-login .login-card.shake{animation:mo-shake .45s ease-in-out;}
+  /* 로그인 후 채팅 화면: 위에서 아래로 차례로 나타남 */
+  #screen-chat.active > *{animation:mo-fade .5s ease backwards;}
+  #screen-chat.active > .select-bar{animation:mo-rise .5s .08s cubic-bezier(.2,.7,.2,1) backwards;}
+  #screen-chat.active > .ctx-banner{animation:mo-fade .5s .12s ease backwards;}
+  #screen-chat.active > .chat-body{animation:mo-fade .6s .16s ease backwards;}
+  #screen-chat.active > div[style*="max-width"]{animation:mo-rise .6s .26s cubic-bezier(.2,.7,.2,1) backwards;}
+  #screen-chat.active > .bnav{animation:mo-rise .5s .32s cubic-bezier(.2,.7,.2,1) backwards;}
+  /* 대화 */
+  .msg.bot{animation:mo-msg-bot .38s cubic-bezier(.2,.7,.2,1) backwards;}
+  .msg.user{animation:mo-msg-user .3s cubic-bezier(.2,.7,.2,1) backwards;}
+  .chat-welcome,.chat-prompt{animation:mo-rise .55s cubic-bezier(.2,.7,.2,1) backwards;}
+  .cp-tile,.chat-welcome-icon{animation:mo-pop .7s .15s cubic-bezier(.2,.8,.3,1.2) backwards;}
+  .quick-btns .quick-btn{animation:mo-rise .45s cubic-bezier(.2,.7,.2,1) backwards;}
+  .quick-btns .quick-btn:nth-child(1){animation-delay:.2s;}
+  .quick-btns .quick-btn:nth-child(2){animation-delay:.27s;}
+  .quick-btns .quick-btn:nth-child(3){animation-delay:.34s;}
+  .quick-btns .quick-btn:nth-child(4){animation-delay:.41s;}
+  .cp-steps span{animation:mo-rise .5s .35s cubic-bezier(.2,.7,.2,1) backwards;}
+  .cp-steps span:last-of-type{animation-delay:.45s;}
+  .dc-card{animation:mo-rise .4s cubic-bezier(.2,.7,.2,1) backwards;}
+  .dc-opt{animation:mo-fade .35s ease backwards;animation-delay:calc(var(--i,0) * 30ms + 100ms);}
+}
+@media (max-width:640px){.lg-glow{animation:none !important;}}   /* 작은 화면(휴대폰)에서는 배경 빛을 고정 → 배터리·속도 보호 */
 .direct-mode .select-bar{display:none;}   /* 바로 채팅: 제품군·모델 선택 줄 숨김 */
 .select-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;}
 .sel-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;}
@@ -551,6 +602,7 @@ body .msg-bubble{font-family:var(--font-chat);}   /* 챗봇 질문·답변은 �
 
 <!-- LOGIN -->
 <div id="screen-login" class="screen active">
+  <div class="lg-glow lg-g1"></div><div class="lg-glow lg-g2"></div><div class="lg-glow lg-g3"></div>
   <div class="login-card">
     <div class="login-logo"><div class="login-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div><div class="login-logo-text"><b class="wm5" aria-label="CUCKOO ProGuide">cuckoo <em>progu<i class="wm5-dot">ı</i>de</em></b></div></div>
     <div class="form-group"><label class="form-label">아이디</label><input class="form-input" id="login-id" type="text" placeholder="아이디 입력" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
@@ -1788,6 +1840,7 @@ function updateHFBanner(state){
 async function setVoiceStatus(msg){const el=document.getElementById('voice-status');if(el)el.textContent=msg;}
 
 /* ════════ AUTH ════════ */
+function loginShake(){const c=document.querySelector('#screen-login .login-card');if(!c)return;c.classList.remove('shake');void c.offsetWidth;c.classList.add('shake');setTimeout(()=>c.classList.remove('shake'),500);}   // 로그인 실패 때 카드가 살짝 흔들림
 async function doLogin(){
   const id=document.getElementById('login-id').value.trim();
   const pw=document.getElementById('login-pw').value;
@@ -1800,8 +1853,8 @@ async function doLogin(){
   // DB에서 인증
   if(users.length===0) await loadAllData();
   const u=users.find(x=>x.id===id&&x.pw===pw);
-  if(!u){err.style.display='block';err.textContent='아이디 또는 비밀번호가 올바르지 않습니다.';return;}
-  if(u.status==='inactive'){err.style.display='block';err.textContent='비활성화된 계정입니다.';return;}
+  if(!u){err.style.display='block';err.textContent='아이디 또는 비밀번호가 올바르지 않습니다.';loginShake();return;}
+  if(u.status==='inactive'){err.style.display='block';err.textContent='비활성화된 계정입니다.';loginShake();return;}
   currentUser=u;
   libLogin(id,pw);   // 자료실 토큰 자동 발급 (뒤에서 실행, 실패해도 챗봇에는 영향 없음)
   // 마지막 로그인 시각 기록 (실패해도 로그인 자체엔 영향 없도록 별도 처리)
@@ -2119,7 +2172,7 @@ function directChips(items, onPick, o){
   const ht = document.createElement('span'); ht.textContent = (o.head || '선택해 주세요') + ' · ' + items.length + '개'; head.appendChild(ht);
   const list = document.createElement('div'); list.className = 'dc-list';
   const btns = items.map((it, i) => {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'dc-opt';
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'dc-opt'; b.style.setProperty('--i', Math.min(i, 14));
     b.innerHTML = '<span class="dc-num">' + (i + 1) + '</span><span class="dc-txt"><b></b>' + (it.sub ? '<small></small>' : '') + '</span>';
     b.querySelector('b').textContent = it.label; b.title = it.label;
     if(it.sub) b.querySelector('small').textContent = it.sub;

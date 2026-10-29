@@ -33,8 +33,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
 (async () => {
   await new Promise(r => srv.listen(PORT, r));
   const browser = await chromium.launch();
-  const mkPage = async () => {
-    const page = await (await browser.newContext({ viewport: { width: 1200, height: 1500 } })).newPage();
+  const mkPage = async (o) => {
+    const page = await (await browser.newContext(Object.assign({ viewport: { width: 1200, height: 1500 } }, o || {}))).newPage();
     const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR|\{message: fail\}/.test(m.text())) errs.push('console: ' + m.text()); });
     page.reqs = []; page.route_reply = () => '{"action":"unknown"}'; page.answer = '답변입니다. [[참조: 1]]';
     await page.route('**/*', r => { const u = r.request().url();
@@ -151,6 +151,26 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   s.answer = '퇴직 처리 답변.\n[[참조: 1]]';
   await ask(s, '퇴직 처리 어떻게 해?');
   ok(s.reqs.filter(x => x.isRoute).length === 0 && s.reqs.length === 1 && s.reqs[0].sys.includes('AAA') && !s.reqs[0].sys.includes('XXX'), '문서가 적으면 선택 단계 없이 허용된 문서 전부로 바로 답하고, 허용되지 않은 제품군 문서는 쓰지 않는다');
+
+  console.log('[움직임 효과]');
+  const m1 = await mkPage(); await m1.goto(BASE + '/'); await m1.waitForTimeout(300);
+  const an = sel => m1.$eval(sel, e => getComputedStyle(e).animationName);
+  ok(await an('#screen-login .login-card') === 'mo-rise' && await an('.lg-g1') === 'mo-float1' && await an('.lg-g2') === 'mo-float2' && await an('.lg-g3') === 'mo-float3', '로그인 화면: 카드가 떠오르고 배경 빛 3개가 천천히 움직인다');
+  ok(await an('#screen-login .login-logo-icon') === 'mo-pop', '로그인 화면: 로고가 통통 튀며 나타난다');
+  await m1.fill('#login-id', 'nobody'); await m1.fill('#login-pw', 'x'); await m1.click('.login-btn'); await m1.waitForTimeout(120);
+  ok(await m1.$eval('#screen-login .login-card', e => e.classList.contains('shake') && getComputedStyle(e).animationName === 'mo-shake'), '로그인에 실패하면 카드가 살짝 흔들린다');
+  await m1.fill('#login-id', 'u2'); await m1.fill('#login-pw', '1234'); await m1.click('.login-btn'); await m1.waitForSelector('#screen-chat.active'); await m1.waitForTimeout(100);
+  ok(await an('#screen-chat > .select-bar') === 'mo-rise' && await an('#screen-chat > .chat-body') === 'mo-fade' && await an('#screen-chat > .bnav') === 'mo-rise', '로그인 후 채팅 화면: 선택 줄·대화 영역·아래 메뉴가 차례로 나타난다');
+  ok(await an('.chat-prompt') === 'mo-rise' && await an('.cp-tile') === 'mo-pop', '안내 화면과 아이콘 타일이 부드럽게 나타난다');
+  m1.answer = '움직임 시험 답변';
+  await m1.selectOption('#dd-cat', 'p2'); await m1.selectOption('#dd-model', 'm3'); await m1.waitForTimeout(150);
+  ok(await an('.chat-welcome') === 'mo-rise', '제품군·모델을 고르면 환영 화면이 부드럽게 나타난다');
+  await m1.evaluate(() => { document.getElementById('chat-inp').value = '안녕'; sendMsg(); }); await m1.waitForFunction(() => document.querySelectorAll('.msg.bot:not([id])').length > 0, null, { timeout: 8000 });
+  ok(await an('.msg.user') === 'mo-msg-user' && await an('.msg.bot:not([id])') === 'mo-msg-bot', '질문·답변 말풍선이 아래에서 살짝 올라오며 나타난다');
+  ok(m1.errs.length === 0, '움직임 효과 페이지 오류 없음' + (m1.errs.length ? JSON.stringify(m1.errs) : ''));
+  const m2 = await mkPage({ reducedMotion: 'reduce' }); await m2.goto(BASE + '/'); await m2.waitForTimeout(300);
+  ok(await m2.$eval('#screen-login .login-card', e => getComputedStyle(e).animationName) === 'none' && await m2.$eval('.lg-g1', e => getComputedStyle(e).animationName) === 'none', '기기의 "움직임 줄이기" 설정이 켜져 있으면 모든 움직임이 꺼진다');
+  await m2.screenshot({ path: path.join(OUT, 'login.png') });
 
   console.log('[관리자: 그룹 설정]');
   const a = await mkPage(); await a.goto(BASE + '/'); await a.waitForTimeout(600); await a.fill('#login-id', 'admin'); await a.fill('#login-pw', '1234'); await a.click('.login-btn'); await a.waitForSelector('#screen-admin.active', { timeout: 8000 });

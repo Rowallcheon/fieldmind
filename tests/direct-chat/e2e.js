@@ -129,6 +129,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   const before = await u.$$eval('.msg.bot', l => l.length);
   await ask(u, '없는 내용 질문');
   ok(!/해당 정보를 찾을 수 없습니다/.test(await u.textContent('#chat-body').then(t => t.split('없는 내용 질문').pop())) && /제품군을 골라/.test(await u.textContent('.msg.bot:last-child')), '골라 준 문서에도 답이 없으면 "찾을 수 없습니다" 대신 제품군 선택으로 안내한다');
+  const ff = await u.evaluate(() => ({ body: getComputedStyle(document.body).fontFamily, bubble: getComputedStyle(document.querySelector('.msg.bot .msg-bubble')).fontFamily, user: getComputedStyle(document.querySelector('.msg.user .msg-bubble')).fontFamily, inp: getComputedStyle(document.getElementById('chat-inp')).fontFamily, btn: getComputedStyle(document.querySelector('.nav-btn')).fontFamily }));
+  ok(/Pretendard/.test(ff.body) && /Pretendard/.test(ff.btn) && /Noto Sans KR/.test(ff.bubble) && !/Pretendard/.test(ff.bubble) && /Noto Sans KR/.test(ff.user) && !/Pretendard/.test(ff.user) && /Noto Sans KR/.test(ff.inp) && !/Pretendard/.test(ff.inp), '화면 전체는 Pretendard, 챗봇 질문·답변 말풍선과 입력창은 기존 Noto Sans KR이다 (' + JSON.stringify(ff) + ')');
   ok(u.errs.length === 0, '페이지 오류 없음' + (u.errs.length ? JSON.stringify(u.errs) : ''));
 
   console.log('[바로 채팅 사용자 (행정만, 문서 적음)]');

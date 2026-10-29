@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%232d5f8f'/%3E%3Cpath d='M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z' fill='%23fff'/%3E%3Cpath d='M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z' fill='%23ffd54a'/%3E%3C/svg%3E">
 <title>CUCKOO ProGuide — 현장 기술 지원</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Noto+Sans+KR:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap');
 :root{
@@ -14,7 +16,7 @@
   --accent:#2d5f8f;--accent-dim:rgba(45,95,143,.1);
   --danger:#f85149;--success:#3fb950;--info:#58a6ff;--warn:#d29922;
   --radius:10px;--radius-sm:6px;
-  --font:'Noto Sans KR',sans-serif;--mono:'IBM Plex Mono',monospace;
+  --font:'Pretendard Variable','Pretendard','Noto Sans KR',sans-serif;--font-chat:'Noto Sans KR',sans-serif;--mono:'IBM Plex Mono',monospace;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
@@ -107,6 +109,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dc-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);}
 .dc-back{border:0;background:transparent;color:var(--accent);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;padding:2px 0;}
 .dc-empty{grid-column:1/-1;padding:14px;text-align:center;font-size:12px;color:var(--text3);}
+body .msg-bubble{font-family:var(--font-chat);}   /* 챗봇 질문·답변은 기존 글씨체(Noto Sans KR) 유지, 나머지 화면은 Pretendard */
 .direct-mode .select-bar{display:none;}   /* 바로 채팅: 제품군·모델 선택 줄 숨김 */
 .select-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;}
 .sel-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;}
@@ -187,7 +190,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 @keyframes tbd{0%,60%,100%{transform:translateY(0);opacity:.3;}30%{transform:translateY(-6px);opacity:1;}}
 .chat-foot{border-top:1px solid var(--border);background:var(--bg2);padding:12px 16px;max-width:720px;width:100%;margin:0 auto;align-self:stretch;}
 .chat-inp-row{display:flex;gap:8px;align-items:flex-end;}
-.chat-inp{flex:1;background:#ffffff;border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-size:14px;font-family:var(--font);color:var(--text);outline:none;resize:none;max-height:120px;min-height:44px;transition:border-color .2s;line-height:1.5;}
+.chat-inp{flex:1;background:#ffffff;border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-size:14px;font-family:var(--font-chat);color:var(--text);outline:none;resize:none;max-height:120px;min-height:44px;transition:border-color .2s;line-height:1.5;}
 .chat-inp:focus{border-color:var(--accent);}
 .chat-inp:disabled{opacity:.4;cursor:not-allowed;}
 .send-btn{width:44px;height:44px;flex-shrink:0;background:var(--accent);border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .1s,opacity .2s;}

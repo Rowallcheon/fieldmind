@@ -125,19 +125,23 @@ body .msg-bubble{font-family:var(--font-chat);}   /* 챗봇 질문·답변은 �
 .lg-g1{width:440px;height:440px;background:#fff;opacity:.6;top:-140px;left:-120px;}
 .lg-g2{width:400px;height:400px;background:#6fa8dc;opacity:.45;bottom:-150px;right:-90px;}
 .lg-g3{width:300px;height:300px;background:#ffe08a;opacity:.38;top:38%;left:64%;}
+body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}   /* 처음 로딩 화면이 보이는 동안은 '작업 중' 알림을 따로 띄우지 않음 */
 @media (prefers-reduced-motion:no-preference){
-  .lg-g1{animation:mo-float1 17s ease-in-out infinite alternate;}
-  .lg-g2{animation:mo-float2 21s ease-in-out infinite alternate;}
-  .lg-g3{animation:mo-float3 19s ease-in-out infinite alternate;}
-  #screen-login.active .login-card{animation:mo-rise .7s cubic-bezier(.2,.7,.2,1) backwards;}
-  #screen-login.active .login-card > :nth-child(n+2){animation:mo-rise .6s cubic-bezier(.2,.7,.2,1) backwards;}
-  #screen-login.active .login-card > :nth-child(2){animation-delay:.22s;}
-  #screen-login.active .login-card > :nth-child(3){animation-delay:.3s;}
-  #screen-login.active .login-card > :nth-child(4),#screen-login.active .login-card > :nth-child(5){animation-delay:.38s;}
-  #screen-login.active .login-card > :nth-child(6){animation-delay:.46s;}
-  #screen-login.active .login-logo-icon{animation:mo-pop .8s .25s cubic-bezier(.2,.8,.3,1.2) backwards;}
-  #screen-login.active .login-logo-icon svg{animation:mo-spark 1.2s .95s ease-in-out 1;}
-  #screen-login .login-card.shake{animation:mo-shake .45s ease-in-out;}
+  /* 처음 데이터 불러오는 동안은 로그인 화면 요소를 숨겨 두었다가(어두운 로딩 화면 뒤), 화면이 밝아진 뒤 등장 효과로 나타남 */
+  body:not(.app-ready) #screen-login .login-card{opacity:0;}
+  body:not(.app-ready) .lg-glow{opacity:0;}
+  body.app-ready .lg-g1{animation:mo-float1 17s ease-in-out infinite alternate,mo-fade 1.6s ease backwards;}
+  body.app-ready .lg-g2{animation:mo-float2 21s ease-in-out infinite alternate,mo-fade 1.6s .15s ease backwards;}
+  body.app-ready .lg-g3{animation:mo-float3 19s ease-in-out infinite alternate,mo-fade 1.6s .3s ease backwards;}
+  body.app-ready #screen-login.active .login-card{animation:mo-rise .7s cubic-bezier(.2,.7,.2,1) backwards;}
+  body.app-ready #screen-login.active .login-card > :nth-child(n+2){animation:mo-rise .6s cubic-bezier(.2,.7,.2,1) backwards;}
+  body.app-ready #screen-login.active .login-card > :nth-child(2){animation-delay:.22s;}
+  body.app-ready #screen-login.active .login-card > :nth-child(3){animation-delay:.3s;}
+  body.app-ready #screen-login.active .login-card > :nth-child(4),body.app-ready #screen-login.active .login-card > :nth-child(5){animation-delay:.38s;}
+  body.app-ready #screen-login.active .login-card > :nth-child(6){animation-delay:.46s;}
+  body.app-ready #screen-login.active .login-logo-icon{animation:mo-pop .8s .25s cubic-bezier(.2,.8,.3,1.2) backwards;}
+  body.app-ready #screen-login.active .login-logo-icon svg{animation:mo-spark 1.2s .95s ease-in-out 1;}
+  body.app-ready #screen-login.active .login-card.shake{animation:mo-shake .45s ease-in-out;}
   /* 로그인 후 채팅 화면: 위에서 아래로 차례로 나타남 */
   #screen-chat.active > *{animation:mo-fade .5s ease backwards;}
   #screen-chat.active > .select-bar{animation:mo-rise .5s .08s cubic-bezier(.2,.7,.2,1) backwards;}
@@ -1576,17 +1580,35 @@ let chatLogs = [];
 let inquiries = [];
 let groups = []; // {id, name, catIds:[], memberIds:[]}
 
+/* 처음 데이터를 불러오는 동안은 어두운 로딩 화면 → 다 불러오면 부드럽게 밝아지고(0.4초) → 그 다음에 화면 등장 효과가 시작됨
+   (body.app-ready 가 붙은 뒤에만 등장 효과가 나온다. 반환값은 밝아지기가 끝나면 완료되는 Promise) */
+let _loadOvT = null;
 function showLoadingOverlay(show) {
   var el = document.getElementById('db-loading');
   if (!el) {
     el = document.createElement('div');
     el.id = 'db-loading';
-    el.style.cssText = 'position:fixed;inset:0;background:rgba(13,17,23,.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(13,17,23,.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:1;transition:opacity .4s ease;';
     el.innerHTML = '<div style="width:38px;height:38px;border:3px solid #30363d;border-top-color:#2d5f8f;border-radius:50%;animation:dbspin .8s linear infinite;"></div><div style="font-size:14px;color:#8b949e;">데이터 불러오는 중...</div><style>@keyframes dbspin{to{transform:rotate(360deg)}}</style>';
     document.body.appendChild(el);
   }
-  el.style.display = show ? 'flex' : 'none';
+  clearTimeout(_loadOvT);
+  if (show) {
+    document.body.classList.add('db-loading');
+    el.style.display = 'flex'; void el.offsetWidth; el.style.opacity = '1';
+    return Promise.resolve();
+  }
+  el.style.opacity = '0';                                   // 밝아지는 중
+  return new Promise(function(resolve){
+    _loadOvT = setTimeout(function(){
+      el.style.display = 'none';
+      document.body.classList.remove('db-loading');
+      document.body.classList.add('app-ready');             // 이제부터 화면 등장 효과 시작
+      resolve();
+    }, 420);
+  });
 }
+setTimeout(function(){ document.body.classList.add('app-ready'); }, 12000);   // 혹시 로딩이 끝나지 않아도 효과가 영영 안 나오는 일이 없도록
 
 async function loadAllData() {
   showLoadingOverlay(true);
@@ -1674,7 +1696,7 @@ async function loadAllData() {
     console.error('loadAllData:', e);
     // 치명적 오류여도 로딩 화면은 반드시 제거
   }
-  showLoadingOverlay(false);
+  await showLoadingOverlay(false);
 }
 
 /* session */

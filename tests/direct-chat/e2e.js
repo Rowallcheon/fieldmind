@@ -153,9 +153,20 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(s.reqs.filter(x => x.isRoute).length === 0 && s.reqs.length === 1 && s.reqs[0].sys.includes('AAA') && !s.reqs[0].sys.includes('XXX'), '문서가 적으면 선택 단계 없이 허용된 문서 전부로 바로 답하고, 허용되지 않은 제품군 문서는 쓰지 않는다');
 
   console.log('[움직임 효과]');
-  const m1 = await mkPage(); await m1.goto(BASE + '/'); await m1.waitForTimeout(300);
+  const m1 = await mkPage();
+  await m1.addInitScript(() => { window.__tl = []; const tick = () => { const o = document.getElementById('db-loading'), c = document.querySelector('#screen-login .login-card'); if (c) window.__tl.push({ t: performance.now(), ov: o ? getComputedStyle(o).display : 'none', ovOp: o ? Number(getComputedStyle(o).opacity) : 0, ready: document.body.classList.contains('app-ready'), cardOp: Number(getComputedStyle(c).opacity), anim: getComputedStyle(c).animationName }); setTimeout(tick, 16); }; document.addEventListener('DOMContentLoaded', tick); });
+  await m1.goto(BASE + '/'); await m1.waitForFunction(() => document.body.classList.contains('app-ready'), null, { timeout: 8000 }); await m1.waitForTimeout(300);
+  const tl = await m1.evaluate(() => window.__tl);
+  const iReady = tl.findIndex(x => x.ready), iDark = tl.findIndex(x => x.ov === 'flex' && x.ovOp > 0.9);
+  ok(iDark >= 0 && iDark < iReady, '순서 1: 먼저 어두운 로딩 화면이 보인다');
+  ok(tl.slice(0, iReady).every(x => x.cardOp === 0), '순서 1-2: 로딩 화면이 있는 동안 로그인 카드는 숨겨져 있다 (애니메이션이 가려진 채 지나가지 않는다)');
+  const iFade = tl.findIndex(x => x.ov === 'flex' && x.ovOp < 0.9);
+  ok(iFade > iDark && iFade < iReady, '순서 2: 데이터를 다 불러오면 로딩 화면이 부드럽게 밝아진다');
+  ok(!tl.slice(0, iReady).some(x => x.anim === 'mo-rise'), '순서 3: 화면이 밝아지기 전에는 등장 애니메이션이 시작되지 않는다');
+  ok(tl[iReady].ov === 'none' && tl.slice(iReady).some(x => x.anim === 'mo-rise' && x.cardOp < 1) || tl.slice(iReady).some(x => x.anim === 'mo-rise'), '순서 3: 로딩 화면이 사라진 직후 로그인 카드 등장 애니메이션이 시작된다');
+
   const an = sel => m1.$eval(sel, e => getComputedStyle(e).animationName);
-  ok(await an('#screen-login .login-card') === 'mo-rise' && await an('.lg-g1') === 'mo-float1' && await an('.lg-g2') === 'mo-float2' && await an('.lg-g3') === 'mo-float3', '로그인 화면: 카드가 떠오르고 배경 빛 3개가 천천히 움직인다');
+  ok(await an('#screen-login .login-card') === 'mo-rise' && /mo-float1/.test(await an('.lg-g1')) && /mo-float2/.test(await an('.lg-g2')) && /mo-float3/.test(await an('.lg-g3')), '로그인 화면: 카드가 떠오르고 배경 빛 3개가 천천히 움직인다');
   ok(await an('#screen-login .login-logo-icon') === 'mo-pop', '로그인 화면: 로고가 통통 튀며 나타난다');
   await m1.fill('#login-id', 'nobody'); await m1.fill('#login-pw', 'x'); await m1.click('.login-btn'); await m1.waitForTimeout(120);
   ok(await m1.$eval('#screen-login .login-card', e => e.classList.contains('shake') && getComputedStyle(e).animationName === 'mo-shake'), '로그인에 실패하면 카드가 살짝 흔들린다');

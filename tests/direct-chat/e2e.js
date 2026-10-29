@@ -166,10 +166,19 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(tl[iReady].ov === 'none' && tl.slice(iReady).some(x => /mo-rise/.test(x.anim)), '순서 3: 로딩 화면이 사라진 직후 로그인 카드 등장 애니메이션이 시작된다');
 
   const an = sel => m1.$eval(sel, e => getComputedStyle(e).animationName);
-  ok(/mo-rise/.test(await an('#screen-login .login-card')) && /mo-float1/.test(await an('.lg-g1')) && /mo-float2/.test(await an('.lg-g2')) && /mo-float3/.test(await an('.lg-g3')), '로그인 화면: 카드가 떠오르고 배경 빛 3개가 천천히 움직인다');
-  const bg = await m1.evaluate(() => ({ bubs: document.querySelectorAll('.lg-bub').length, waves: document.querySelectorAll('.lg-wave').length, sparks: document.querySelectorAll('.lg-spark').length, bub: getComputedStyle(document.querySelector('.lg-bub')).animationName, w1: getComputedStyle(document.querySelector('.lg-w1')).animationName, w2: getComputedStyle(document.querySelector('.lg-w2')).animationName, sp: getComputedStyle(document.querySelector('.lg-spark')).animationName, run: getComputedStyle(document.querySelector('.lg-bub')).animationPlayState, op: getComputedStyle(document.querySelector('.lg-bg')).opacity }));
-  ok(bg.bubs >= 12 && bg.waves === 3 && bg.sparks >= 6 && bg.bub === 'mo-bubble' && bg.w1 === 'mo-wave' && bg.w2 === 'mo-wave-r' && bg.sp === 'mo-twinkle' && bg.run === 'running', '로그인 배경: 물방울이 떠오르고, 파도 3겹이 흐르고, 별이 반짝인다 (' + JSON.stringify(bg) + ')');
-  ok(await an('#screen-login .login-btn') !== undefined && await m1.$eval('#screen-login .login-btn', e => getComputedStyle(e, '::after').animationName) === 'mo-glint', '로그인 버튼 위로 빛이 주기적으로 스쳐 지나간다');
+  ok(/mo-rise/.test(await an('#screen-login .login-card')), '로그인 화면: 카드가 떠오른다');
+  const sky = await m1.evaluate(() => ({ cv: !!document.getElementById('login-sky'), op: getComputedStyle(document.getElementById('login-sky')).opacity, st: window.LoginSky._frame(), old: document.querySelectorAll('.lg-bub,.lg-wave,.lg-glow').length, bg: getComputedStyle(document.getElementById('screen-login')).backgroundImage }));
+  ok(sky.cv && sky.st.running && sky.st.stars >= 100 && sky.st.clouds >= 8 && sky.old === 0 && /linear-gradient/.test(sky.bg), '로그인 배경: 별과 구름이 날아오는 하늘(canvas)이 돌아가고, 물방울·파도는 없다 (' + JSON.stringify(sky.st) + ')');
+  // 마우스 방향 따라가기
+  await m1.mouse.move(1150, 400); await m1.waitForTimeout(1400);
+  const camR = await m1.evaluate(() => window.LoginSky._frame().cam);
+  await m1.mouse.move(60, 400); await m1.waitForTimeout(1400);
+  const camL = await m1.evaluate(() => window.LoginSky._frame().cam);
+  ok(camR.x > .5 && camL.x < -.5, '마우스를 오른쪽으로 옮기면 날아가는 방향이 오른쪽으로, 왼쪽으로 옮기면 왼쪽으로 기운다 (' + camR.x.toFixed(2) + ' → ' + camL.x.toFixed(2) + ')');
+  await m1.mouse.move(600, 20); await m1.waitForTimeout(1400);
+  ok((await m1.evaluate(() => window.LoginSky._frame().cam)).y < -.5, '마우스를 위로 옮기면 위쪽으로 기운다');
+  await m1.screenshot({ path: path.join(OUT, 'login-sky.png') });
+  ok(await m1.evaluate(() => { const c = document.getElementById('login-sky'), g = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let k = 3; k < g.length; k += 4 * 97) if (g[k] > 40) n++; return n; }) > 20, '캔버스에 실제로 별·구름이 그려져 있다');
   ok(await an('#screen-login .login-logo-icon') === 'mo-pop', '로그인 화면: 로고가 통통 튀며 나타난다');
   await m1.fill('#login-id', 'nobody'); await m1.fill('#login-pw', 'x'); await m1.click('.login-btn'); await m1.waitForTimeout(120);
   ok(await m1.$eval('#screen-login .login-card', e => e.classList.contains('shake') && e.getAnimations().some(x => !(x instanceof CSSAnimation))), '로그인에 실패하면 카드가 살짝 흔들린다');
@@ -185,7 +194,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(await an('.msg.user') === 'mo-msg-user' && await an('.msg.bot:not([id])') === 'mo-msg-bot', '질문·답변 말풍선이 아래에서 살짝 올라오며 나타난다');
   ok(m1.errs.length === 0, '움직임 효과 페이지 오류 없음' + (m1.errs.length ? JSON.stringify(m1.errs) : ''));
   const m2 = await mkPage({ reducedMotion: 'reduce' }); await m2.goto(BASE + '/'); await m2.waitForTimeout(300);
-  ok(await m2.$eval('#screen-login .login-card', e => getComputedStyle(e).animationName) === 'none' && await m2.$eval('.lg-g1', e => getComputedStyle(e).animationName) === 'none' && await m2.$eval('.lg-bub', e => getComputedStyle(e).animationName) === 'none' && await m2.$eval('.lg-w1', e => getComputedStyle(e).animationName) === 'none', '기기의 "움직임 줄이기" 설정이 켜져 있으면 모든 움직임(물방울·파도 포함)이 꺼진다');
+  ok(await m2.$eval('#screen-login .login-card', e => getComputedStyle(e).animationName) === 'none' &&  !(await m2.evaluate(() => window.LoginSky._frame().running)), '기기의 "움직임 줄이기" 설정이 켜져 있으면 모든 움직임(하늘 포함)이 꺼진다');
   await m2.screenshot({ path: path.join(OUT, 'login.png') });
   const m3 = await mkPage({ viewport: { width: 1280, height: 800 } }); await m3.goto(BASE + '/'); await m3.waitForFunction(() => document.body.classList.contains('app-ready')); await m3.waitForTimeout(6500);
   await m3.screenshot({ path: path.join(OUT, 'login-motion.png') });

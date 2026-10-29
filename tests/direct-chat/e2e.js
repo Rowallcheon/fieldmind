@@ -172,6 +172,12 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   const tg = await m1.evaluate(() => { const e = document.querySelector('.login-tagline'), c = document.querySelector('.login-card'), r = e.getBoundingClientRect(), cr = c.getBoundingClientRect(), cs = getComputedStyle(e); return { text: e.textContent.replace(/\s+/g, ' ').trim(), above: r.bottom < cr.top, centered: Math.abs((r.left + r.right) / 2 - innerWidth / 2) < 4, color: cs.color, anim: cs.animationName, shown: r.height > 0 }; });
   ok(tg.text === 'Every answer, right where you work.' && tg.shown && tg.above && tg.centered && tg.color === 'rgb(255, 255, 255)', '로그인 화면 위쪽에 "Every answer, right where you work." 문구가 가운데 흰 글씨로 고정되어 있다 (' + JSON.stringify(tg) + ')');
   ok(/mo-rise/.test(tg.anim), '문구는 로딩이 끝난 뒤 서서히 떠오르며 나타난다');
+  const bd = await m1.evaluate(() => { const c = document.querySelector('#screen-login .login-card'), cs = getComputedStyle(c), pb = getComputedStyle(c, '::before'); return { w: cs.borderTopWidth, col: cs.borderTopColor, ring: /0px 0px 0px 5px/.test(cs.boxShadow), trace: pb.animationName, content: pb.content }; });
+  ok(bd.w === '2px' && /255, 255, 255, 0\.9/.test(bd.col) && bd.ring, '로그인 카드 테두리가 더 또렷하다 (흰 2px 테두리 + 바깥 고리) (' + JSON.stringify({ w: bd.w, ring: bd.ring }) + ')');
+  ok(bd.trace === 'mo-border-trace' && bd.content !== 'none', '카드가 나타날 때 빛이 테두리를 한 바퀴 도는 애니메이션이 있다');
+  await m1.focus('#login-id'); await m1.waitForTimeout(150);
+  ok(await m1.$eval('#screen-login .login-card', c => getComputedStyle(c, '::before').animationName) === 'mo-border-spin', '입력 중(카드에 커서가 있을 때)에는 테두리 빛이 천천히 돈다');
+  await m1.evaluate(() => document.activeElement && document.activeElement.blur());
   const sky = await m1.evaluate(() => ({ cv: !!document.getElementById('login-sky'), op: getComputedStyle(document.getElementById('login-sky')).opacity, st: window.LoginSky._frame(), old: document.querySelectorAll('.lg-bub,.lg-wave,.lg-glow').length, bg: getComputedStyle(document.getElementById('screen-login')).backgroundImage }));
   ok(sky.cv && sky.st.running && sky.st.clouds >= 10 && sky.old === 0 && /linear-gradient/.test(sky.bg), '로그인 배경: 구름이 다가오는 하늘(canvas)이 돌아가고, 별·별똥별·물방울·파도는 없다 (' + JSON.stringify(sky.st) + ')');
   // 마우스와 상관없이 늘 같은 방향으로 흐른다
@@ -199,6 +205,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(await an('.msg.user') === 'mo-msg-user' && await an('.msg.bot:not([id])') === 'mo-msg-bot', '질문·답변 말풍선이 아래에서 살짝 올라오며 나타난다');
   ok(m1.errs.length === 0, '움직임 효과 페이지 오류 없음' + (m1.errs.length ? JSON.stringify(m1.errs) : ''));
   const m2 = await mkPage({ reducedMotion: 'reduce' }); await m2.goto(BASE + '/'); await m2.waitForTimeout(300);
+  ok(await m2.$eval('#screen-login .login-card', c => getComputedStyle(c, '::before').animationName === 'none'), '움직임 줄이기 설정에서는 테두리 애니메이션도 꺼진다 (테두리는 또렷한 채로 정지)');
   ok(await m2.$eval('.login-tagline', e => getComputedStyle(e).opacity === '1' && getComputedStyle(e).animationName === 'none'), '움직임 줄이기 설정에서도 문구는 정지된 채 그대로 보인다');
   ok(await m2.$eval('#screen-login .login-card', e => getComputedStyle(e).animationName) === 'none' &&  !(await m2.evaluate(() => window.LoginSky._frame().running)), '기기의 "움직임 줄이기" 설정이 켜져 있으면 모든 움직임(하늘 포함)이 꺼진다');
   await m2.screenshot({ path: path.join(OUT, 'login.png') });

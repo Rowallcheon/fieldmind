@@ -77,7 +77,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 /* LOGIN */
 #screen-login{align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden;}
 #screen-login::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(45,95,143,.08) 0%,transparent 70%);top:-200px;left:50%;transform:translateX(-50%);pointer-events:none;}
-.login-card{width:100%;max-width:400px;background:rgba(255,255,255,.86);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.85);box-shadow:0 20px 60px rgba(22,39,58,.18);border-radius:16px;padding:36px 32px;position:relative;z-index:1;}
+.login-card{width:100%;max-width:400px;background:rgba(255,255,255,.86);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:2px solid rgba(255,255,255,.96);box-shadow:0 0 0 5px rgba(255,255,255,.2),0 20px 60px rgba(22,39,58,.2);border-radius:16px;padding:36px 32px;position:relative;z-index:1;}
 .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
 .login-logo-icon{width:46px;height:46px;background:var(--accent);border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px;}
 .login-logo-text{font-size:21px;white-space:nowrap;font-weight:900;letter-spacing:-.5px;}
@@ -117,6 +117,11 @@ body #screen-login{background:linear-gradient(180deg,#2c68b2 0%,#5fa2e2 45%,#bfe
 #login-sky{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.8s ease;}
 body.app-ready #login-sky{opacity:1;}
 body #screen-login.sky3d{background:linear-gradient(180deg,#2c68b2 0%,#5fa2e2 45%,#bfe0f7 80%,#ecf7ff 100%);}
+/* 로그인 카드 테두리: 흰 테두리 + 바깥 고리로 또렷하게, 처음 나타날 때 빛이 테두리를 한 바퀴 돌고, 입력 중에는 테두리 빛이 천천히 돈다 */
+@property --ba{syntax:'<angle>';initial-value:0deg;inherits:false;}
+.login-card::before{content:'';position:absolute;inset:-7px;border-radius:22px;padding:3px;pointer-events:none;opacity:0;background:conic-gradient(from var(--ba),rgba(40,150,255,0) 0deg,rgba(40,150,255,.95) 34deg,#fff 72deg,rgba(40,150,255,.95) 108deg,rgba(40,150,255,0) 150deg,rgba(40,150,255,0) 360deg);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);mask-composite:exclude;filter:drop-shadow(0 0 8px rgba(70,170,255,.9));}
+@keyframes mo-border-trace{0%{--ba:0deg;opacity:0;}12%{opacity:1;}82%{opacity:1;}100%{--ba:360deg;opacity:0;}}
+@keyframes mo-border-spin{from{--ba:0deg;}to{--ba:360deg;}}
 /* 로그인 화면 위쪽 고정 문구 */
 .login-tagline{position:absolute;top:clamp(26px,10vh,96px);left:0;right:0;z-index:1;margin:0 auto;padding:0 20px;max-width:900px;text-align:center;color:#fff;font-size:clamp(19px,3vw,34px);line-height:1.35;font-weight:300;letter-spacing:.05em;text-wrap:balance;text-shadow:0 2px 20px rgba(10,50,110,.5),0 0 2px rgba(10,50,110,.25);pointer-events:none;user-select:none;}
 .login-tagline span:first-child{font-weight:600;}
@@ -136,6 +141,8 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 @media (prefers-reduced-motion:no-preference){
   /* 처음 데이터 불러오는 동안은 로그인 화면 요소를 숨겨 두었다가(어두운 로딩 화면 뒤), 화면이 밝아진 뒤 등장 효과로 나타남 */
   body:not(.app-ready) #screen-login .login-card,body:not(.app-ready) .login-tagline{opacity:0;}
+  body.app-ready #screen-login.active .login-card::before{animation:mo-border-trace 2.4s .95s cubic-bezier(.45,.05,.3,1) both;}
+  body.app-ready #screen-login.active .login-card:focus-within::before{opacity:1;animation:mo-border-spin 3.6s linear infinite;}
   body.app-ready #screen-login.active .login-tagline{animation:mo-rise 1.1s .55s cubic-bezier(.2,.7,.2,1) backwards;}
   body.app-ready #screen-login.active .login-card{animation:mo-rise .7s cubic-bezier(.2,.7,.2,1) backwards;}
   body.app-ready #screen-login.active .login-card > :nth-child(n+2){animation:mo-rise .6s cubic-bezier(.2,.7,.2,1) backwards;}

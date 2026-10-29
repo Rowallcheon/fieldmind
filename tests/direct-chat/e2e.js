@@ -168,7 +168,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   const an = sel => m1.$eval(sel, e => getComputedStyle(e).animationName);
   ok(/mo-rise/.test(await an('#screen-login .login-card')), '로그인 화면: 카드가 떠오른다');
   const sky = await m1.evaluate(() => ({ cv: !!document.getElementById('login-sky'), op: getComputedStyle(document.getElementById('login-sky')).opacity, st: window.LoginSky._frame(), old: document.querySelectorAll('.lg-bub,.lg-wave,.lg-glow').length, bg: getComputedStyle(document.getElementById('screen-login')).backgroundImage }));
-  ok(sky.cv && sky.st.running && sky.st.stars >= 100 && sky.st.clouds >= 8 && sky.old === 0 && /linear-gradient/.test(sky.bg), '로그인 배경: 별과 구름이 날아오는 하늘(canvas)이 돌아가고, 물방울·파도는 없다 (' + JSON.stringify(sky.st) + ')');
+  ok(sky.cv && sky.st.running && sky.st.clouds >= 10 && sky.old === 0 && /linear-gradient/.test(sky.bg), '로그인 배경: 구름이 다가오는 하늘(canvas)이 돌아가고, 별·별똥별·물방울·파도는 없다 (' + JSON.stringify(sky.st) + ')');
   // 마우스 방향 따라가기
   await m1.mouse.move(1150, 400); await m1.waitForTimeout(1400);
   const camR = await m1.evaluate(() => window.LoginSky._frame().cam);
@@ -178,7 +178,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await m1.mouse.move(600, 20); await m1.waitForTimeout(1400);
   ok((await m1.evaluate(() => window.LoginSky._frame().cam)).y < -.5, '마우스를 위로 옮기면 위쪽으로 기운다');
   await m1.screenshot({ path: path.join(OUT, 'login-sky.png') });
-  ok(await m1.evaluate(() => { const c = document.getElementById('login-sky'), g = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let k = 3; k < g.length; k += 4 * 97) if (g[k] > 40) n++; return n; }) > 20, '캔버스에 실제로 별·구름이 그려져 있다');
+  ok(await m1.evaluate(() => { const c = document.getElementById('login-sky'), g = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let k = 3; k < g.length; k += 4 * 97) if (g[k] > 40) n++; return n; }) > 20, '캔버스에 실제로 구름이 그려져 있다');
   ok(await an('#screen-login .login-logo-icon') === 'mo-pop', '로그인 화면: 로고가 통통 튀며 나타난다');
   await m1.fill('#login-id', 'nobody'); await m1.fill('#login-pw', 'x'); await m1.click('.login-btn'); await m1.waitForTimeout(120);
   ok(await m1.$eval('#screen-login .login-card', e => e.classList.contains('shake') && e.getAnimations().some(x => !(x instanceof CSSAnimation))), '로그인에 실패하면 카드가 살짝 흔들린다');

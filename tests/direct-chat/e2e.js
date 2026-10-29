@@ -169,9 +169,16 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
 
   const an = sel => m1.$eval(sel, e => getComputedStyle(e).animationName);
   ok(/mo-rise/.test(await an('#screen-login .login-card')), '로그인 화면: 카드가 떠오른다');
-  const tg = await m1.evaluate(() => { const e = document.querySelector('.login-tagline'), c = document.querySelector('.login-card'), r = e.getBoundingClientRect(), cr = c.getBoundingClientRect(), cs = getComputedStyle(e); return { text: e.textContent.replace(/\s+/g, ' ').trim(), above: r.bottom < cr.top, centered: Math.abs((r.left + r.right) / 2 - innerWidth / 2) < 4, color: cs.color, anim: cs.animationName, shown: r.height > 0 }; });
-  ok(tg.text === 'Every answer, right where you work.' && tg.shown && tg.above && tg.centered && tg.color === 'rgb(255, 255, 255)', '로그인 화면 위쪽에 "Every answer, right where you work." 문구가 가운데 흰 글씨로 고정되어 있다 (' + JSON.stringify(tg) + ')');
-  ok(/mo-rise/.test(tg.anim), '문구는 로딩이 끝난 뒤 서서히 떠오르며 나타난다');
+  await m1.waitForFunction(() => window.TagFx && TagFx._state().particles > 300, null, { timeout: 15000 });
+  const mid = await m1.evaluate(() => TagFx._state());
+  ok(mid.particles > 300 && mid.font >= 22, '상단 문구: 두꺼운 글씨를 점(픽셀) ' + mid.particles + '개로 쪼개 날아와 모이게 한다');
+  await m1.waitForFunction(() => TagFx._state().done, null, { timeout: 15000 });
+  const tg = await m1.evaluate(() => { const e = document.querySelector('.login-tagline'), cvs = document.getElementById('login-tagline-cv'), c = document.querySelector('.login-card'), r = cvs.getBoundingClientRect(), cr = c.getBoundingClientRect(), g = cvs.getContext('2d').getImageData(0, 0, cvs.width, cvs.height).data; let n = 0, mn = cvs.width, mx = 0; for (let k = 0; k < g.length; k += 4) if (g[k + 3] > 200 && g[k] > 240) { n++; const x = (k / 4) % cvs.width; mn = Math.min(mn, x); mx = Math.max(mx, x); } return { text: e.textContent.trim(), sr: getComputedStyle(e).position === 'absolute' && e.getBoundingClientRect().width <= 2, above: r.bottom < cr.top, centered: Math.abs((r.left + r.right) / 2 - innerWidth / 2) < 4, white: n, span: (mx - mn) / cvs.width }; });
+  ok(tg.text === 'Every answer, right where you work.' && tg.sr && tg.above && tg.centered && tg.white > 800 && tg.span > .35, '로그인 화면 위쪽 가운데에 굵은 흰 글씨 "Every answer, right where you work."가 완성되어 있다 (' + JSON.stringify(tg) + ')');
+  const fx = await m1.evaluate(() => getComputedStyle(document.getElementById('login-fx')).backgroundImage);
+  ok(/linear-gradient/.test(fx), '글씨가 흰 구름과 겹쳐도 읽히도록 화면 위쪽을 살짝 어둡게 깔았다');
+  const lg = await m1.evaluate(() => { const i = getComputedStyle(document.querySelector('.login-logo-icon')), sv = getComputedStyle(document.querySelector('.login-logo-icon svg')); return { a: i.animationName, it: i.animationIterationCount, s: sv.animationName, sit: sv.animationIterationCount }; });
+  ok(/mo-float/.test(lg.a) && /infinite/.test(lg.it) && /mo-twinkle-soft/.test(lg.s) && /infinite/.test(lg.sit), '로고 별이 로그인하기 전까지 은은하게 둥둥 떠 있고 반짝인다 (' + JSON.stringify(lg) + ')');
   const bd = await m1.evaluate(() => { const c = document.querySelector('#screen-login .login-card'), cs = getComputedStyle(c), pb = getComputedStyle(c, '::before'); return { w: cs.borderTopWidth, col: cs.borderTopColor, ring: /0px 0px 0px 5px/.test(cs.boxShadow), trace: pb.animationName, content: pb.content }; });
   ok(bd.w === '2px' && /255, 255, 255, 0\.9/.test(bd.col) && bd.ring, '로그인 카드 테두리가 더 또렷하다 (흰 2px 테두리 + 바깥 고리) (' + JSON.stringify({ w: bd.w, ring: bd.ring }) + ')');
   ok(bd.trace === 'mo-border-trace' && bd.content !== 'none', '카드가 나타날 때 빛이 테두리를 한 바퀴 도는 애니메이션이 있다');
@@ -190,7 +197,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(Math.abs(camR.x - camL.x) < .02 && Math.abs(camR.y - camU.y) < .02 && camR.x > .2, '마우스를 어디로 움직여도 구름이 흐르는 방향은 변하지 않는다 (한 방향으로 천천히 흐름: ' + camR.x.toFixed(2) + ', ' + camL.x.toFixed(2) + ')');
   await m1.screenshot({ path: path.join(OUT, 'login-sky.png') });
   ok(await m1.evaluate(() => { const c = document.getElementById('login-sky'), g = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let k = 3; k < g.length; k += 4 * 97) if (g[k] > 40) n++; return n; }) > 20, '캔버스에 실제로 구름이 그려져 있다');
-  ok(await an('#screen-login .login-logo-icon') === 'mo-pop', '로그인 화면: 로고가 통통 튀며 나타난다');
+  ok(/mo-pop/.test(await an('#screen-login .login-logo-icon')), '로그인 화면: 로고가 통통 튀며 나타난다');
   await m1.fill('#login-id', 'nobody'); await m1.fill('#login-pw', 'x'); await m1.click('.login-btn'); await m1.waitForTimeout(120);
   ok(await m1.$eval('#screen-login .login-card', e => e.classList.contains('shake') && e.getAnimations().some(x => !(x instanceof CSSAnimation))), '로그인에 실패하면 카드가 살짝 흔들린다');
   await m1.waitForTimeout(700);
@@ -206,7 +213,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(m1.errs.length === 0, '움직임 효과 페이지 오류 없음' + (m1.errs.length ? JSON.stringify(m1.errs) : ''));
   const m2 = await mkPage({ reducedMotion: 'reduce' }); await m2.goto(BASE + '/'); await m2.waitForTimeout(300);
   ok(await m2.$eval('#screen-login .login-card', c => getComputedStyle(c, '::before').animationName === 'none'), '움직임 줄이기 설정에서는 테두리 애니메이션도 꺼진다 (테두리는 또렷한 채로 정지)');
-  ok(await m2.$eval('.login-tagline', e => getComputedStyle(e).opacity === '1' && getComputedStyle(e).animationName === 'none'), '움직임 줄이기 설정에서도 문구는 정지된 채 그대로 보인다');
+  await m2.waitForFunction(() => window.TagFx && TagFx._state().done, null, { timeout: 15000 });
+  ok(await m2.evaluate(() => TagFx._state().done && getComputedStyle(document.querySelector('.login-logo-icon')).animationName === 'none'), '움직임 줄이기 설정에서는 상단 문구가 처음부터 완성된 글자로 보이고 로고도 움직이지 않는다');
   ok(await m2.$eval('#screen-login .login-card', e => getComputedStyle(e).animationName) === 'none' &&  !(await m2.evaluate(() => window.LoginSky._frame().running)), '기기의 "움직임 줄이기" 설정이 켜져 있으면 모든 움직임(하늘 포함)이 꺼진다');
   await m2.screenshot({ path: path.join(OUT, 'login.png') });
   const m3 = await mkPage({ viewport: { width: 1280, height: 800 } }); await m3.goto(BASE + '/'); await m3.waitForFunction(() => document.body.classList.contains('app-ready')); await m3.waitForTimeout(6500);

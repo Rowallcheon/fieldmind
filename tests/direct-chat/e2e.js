@@ -169,16 +169,19 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
 
   const an = sel => m1.$eval(sel, e => getComputedStyle(e).animationName);
   ok(/mo-rise/.test(await an('#screen-login .login-card')), '로그인 화면: 카드가 떠오른다');
+  const tg = await m1.evaluate(() => { const e = document.querySelector('.login-tagline'), c = document.querySelector('.login-card'), r = e.getBoundingClientRect(), cr = c.getBoundingClientRect(), cs = getComputedStyle(e); return { text: e.textContent.replace(/\s+/g, ' ').trim(), above: r.bottom < cr.top, centered: Math.abs((r.left + r.right) / 2 - innerWidth / 2) < 4, color: cs.color, anim: cs.animationName, shown: r.height > 0 }; });
+  ok(tg.text === 'Every answer, right where you work.' && tg.shown && tg.above && tg.centered && tg.color === 'rgb(255, 255, 255)', '로그인 화면 위쪽에 "Every answer, right where you work." 문구가 가운데 흰 글씨로 고정되어 있다 (' + JSON.stringify(tg) + ')');
+  ok(/mo-rise/.test(tg.anim), '문구는 로딩이 끝난 뒤 서서히 떠오르며 나타난다');
   const sky = await m1.evaluate(() => ({ cv: !!document.getElementById('login-sky'), op: getComputedStyle(document.getElementById('login-sky')).opacity, st: window.LoginSky._frame(), old: document.querySelectorAll('.lg-bub,.lg-wave,.lg-glow').length, bg: getComputedStyle(document.getElementById('screen-login')).backgroundImage }));
   ok(sky.cv && sky.st.running && sky.st.clouds >= 10 && sky.old === 0 && /linear-gradient/.test(sky.bg), '로그인 배경: 구름이 다가오는 하늘(canvas)이 돌아가고, 별·별똥별·물방울·파도는 없다 (' + JSON.stringify(sky.st) + ')');
-  // 마우스 방향 따라가기
-  await m1.mouse.move(1150, 400); await m1.waitForTimeout(1400);
+  // 마우스와 상관없이 늘 같은 방향으로 흐른다
+  await m1.mouse.move(1150, 400); await m1.waitForTimeout(1200);
   const camR = await m1.evaluate(() => window.LoginSky._frame().cam);
-  await m1.mouse.move(60, 400); await m1.waitForTimeout(1400);
+  await m1.mouse.move(60, 400); await m1.waitForTimeout(1200);
   const camL = await m1.evaluate(() => window.LoginSky._frame().cam);
-  ok(camR.x > .5 && camL.x < -.5, '마우스를 오른쪽으로 옮기면 날아가는 방향이 오른쪽으로, 왼쪽으로 옮기면 왼쪽으로 기운다 (' + camR.x.toFixed(2) + ' → ' + camL.x.toFixed(2) + ')');
-  await m1.mouse.move(600, 20); await m1.waitForTimeout(1400);
-  ok((await m1.evaluate(() => window.LoginSky._frame().cam)).y < -.5, '마우스를 위로 옮기면 위쪽으로 기운다');
+  await m1.mouse.move(600, 20); await m1.waitForTimeout(1200);
+  const camU = await m1.evaluate(() => window.LoginSky._frame().cam);
+  ok(Math.abs(camR.x - camL.x) < .02 && Math.abs(camR.y - camU.y) < .02 && camR.x > .2, '마우스를 어디로 움직여도 구름이 흐르는 방향은 변하지 않는다 (한 방향으로 천천히 흐름: ' + camR.x.toFixed(2) + ', ' + camL.x.toFixed(2) + ')');
   await m1.screenshot({ path: path.join(OUT, 'login-sky.png') });
   ok(await m1.evaluate(() => { const c = document.getElementById('login-sky'), g = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let k = 3; k < g.length; k += 4 * 97) if (g[k] > 40) n++; return n; }) > 20, '캔버스에 실제로 구름이 그려져 있다');
   ok(await an('#screen-login .login-logo-icon') === 'mo-pop', '로그인 화면: 로고가 통통 튀며 나타난다');
@@ -196,6 +199,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(await an('.msg.user') === 'mo-msg-user' && await an('.msg.bot:not([id])') === 'mo-msg-bot', '질문·답변 말풍선이 아래에서 살짝 올라오며 나타난다');
   ok(m1.errs.length === 0, '움직임 효과 페이지 오류 없음' + (m1.errs.length ? JSON.stringify(m1.errs) : ''));
   const m2 = await mkPage({ reducedMotion: 'reduce' }); await m2.goto(BASE + '/'); await m2.waitForTimeout(300);
+  ok(await m2.$eval('.login-tagline', e => getComputedStyle(e).opacity === '1' && getComputedStyle(e).animationName === 'none'), '움직임 줄이기 설정에서도 문구는 정지된 채 그대로 보인다');
   ok(await m2.$eval('#screen-login .login-card', e => getComputedStyle(e).animationName) === 'none' &&  !(await m2.evaluate(() => window.LoginSky._frame().running)), '기기의 "움직임 줄이기" 설정이 켜져 있으면 모든 움직임(하늘 포함)이 꺼진다');
   await m2.screenshot({ path: path.join(OUT, 'login.png') });
   const m3 = await mkPage({ viewport: { width: 1280, height: 800 } }); await m3.goto(BASE + '/'); await m3.waitForFunction(() => document.body.classList.contains('app-ready')); await m3.waitForTimeout(6500);

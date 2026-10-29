@@ -174,7 +174,17 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(mid.particles > 300 && mid.font >= 22, '상단 문구: 두꺼운 글씨를 점(픽셀) ' + mid.particles + '개로 쪼개 날아와 모이게 한다');
   await m1.waitForFunction(() => TagFx._state().done, null, { timeout: 15000 });
   const tg = await m1.evaluate(() => { const e = document.querySelector('.login-tagline'), cvs = document.getElementById('login-tagline-cv'), c = document.querySelector('.login-card'), r = cvs.getBoundingClientRect(), cr = c.getBoundingClientRect(), g = cvs.getContext('2d').getImageData(0, 0, cvs.width, cvs.height).data; let n = 0, mn = cvs.width, mx = 0; for (let k = 0; k < g.length; k += 4) if (g[k + 3] > 200 && g[k] > 240) { n++; const x = (k / 4) % cvs.width; mn = Math.min(mn, x); mx = Math.max(mx, x); } return { text: e.textContent.trim(), sr: getComputedStyle(e).position === 'absolute' && e.getBoundingClientRect().width <= 2, above: r.bottom < cr.top, centered: Math.abs((r.left + r.right) / 2 - innerWidth / 2) < 4, white: n, span: (mx - mn) / cvs.width }; });
-  ok(tg.text === 'Every answer, right where you work.' && tg.sr && tg.above && tg.centered && tg.white > 800 && tg.span > .35, '로그인 화면 위쪽 가운데에 굵은 흰 글씨 "Every answer, right where you work."가 완성되어 있다 (' + JSON.stringify(tg) + ')');
+  ok(tg.text === 'Every answer, right where you work.' && tg.sr && tg.above && tg.centered && tg.white > 500 && tg.span > .3, '로그인 화면 위쪽 가운데에 굵은 흰 글씨 "Every answer, right where you work."가 완성되어 있다 (' + JSON.stringify(tg) + ')');
+  { const mc = await mkPage({ viewport: { width: 390, height: 780 } }); await mc.goto(BASE + '/'); await mc.waitForFunction(() => window.TagFx && TagFx._state().done, null, { timeout: 20000 });
+    const cd = await mc.evaluate(() => { const c = document.querySelector('#screen-login .login-card').getBoundingClientRect(); return { w: Math.round(c.width), h: Math.round(c.height), free: Math.round(innerHeight - c.height) }; });
+    ok(cd.w <= 316 && cd.h <= 400 && cd.free >= 330, '휴대폰(390x780): 로그인 카드가 작아져 뒤의 구름 하늘이 보인다 (카드 ' + cd.w + 'x' + cd.h + ', 카드 밖 세로 공간 ' + cd.free + 'px)'); }
+  ok((await m1.evaluate(() => TagFx._state().family)).startsWith('"Space Grotesk"'), '상단 문구 글꼴은 개성 있는 현대적 글꼴(Space Grotesk)을 먼저 쓴다');
+  for (const [vw, vh] of [[390, 780], [375, 667], [360, 640], [1280, 800]]) {
+    const mp = await mkPage({ viewport: { width: vw, height: vh } }); await mp.goto(BASE + '/');
+    await mp.waitForFunction(() => window.TagFx && TagFx._state().done, null, { timeout: 20000 });
+    const g = await mp.evaluate(() => { const cv = document.getElementById('login-tagline-cv').getBoundingClientRect(), card = document.querySelector('#screen-login .login-card'); return { bottom: cv.bottom, top: cv.top, cardTop: card.offsetTop, font: TagFx._state().font }; });
+    ok(g.top >= 0 && g.bottom <= g.cardTop - 8, '화면 ' + vw + 'x' + vh + ': 상단 문구가 로그인 카드에 붙거나 잘리지 않는다 (문구 아래 ' + Math.round(g.bottom) + 'px, 카드 위 ' + g.cardTop + 'px, 글씨 ' + g.font + 'px)');
+  }
   const fx = await m1.evaluate(() => getComputedStyle(document.getElementById('login-fx')).backgroundImage);
   ok(/linear-gradient/.test(fx), '글씨가 흰 구름과 겹쳐도 읽히도록 화면 위쪽을 살짝 어둡게 깔았다');
   const lg = await m1.evaluate(() => { const i = getComputedStyle(document.querySelector('.login-logo-icon')), sv = getComputedStyle(document.querySelector('.login-logo-icon svg')); return { a: i.animationName, it: i.animationIterationCount, s: sv.animationName, sit: sv.animationIterationCount }; });

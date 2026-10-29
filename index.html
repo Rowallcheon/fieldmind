@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Noto+Sans+KR:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Space+Grotesk:wght@500;700&family=Noto+Sans+KR:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap');
 :root{
   --bg:#f6f8fa;--bg2:#ffffff;--bg3:#f0f2f5;--bg4:#e2e5ea;
   --border:#d0d7de;--border2:#b6bdc5;
@@ -88,6 +88,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .login-hint{margin-top:18px;padding:12px 14px;background:var(--bg3);border-radius:var(--radius-sm);border-left:3px solid var(--accent);}
 .login-hint p{font-size:12px;color:var(--text2);line-height:1.7;}
 .login-hint code{color:var(--accent);font-family:var(--mono);}
+/* 휴대폰: 로그인 카드를 작게 줄이고 살짝 비치게 해서 뒤의 구름 하늘이 보이게 */
+@media (max-width:640px){
+  #screen-login{padding:14px;}
+  .login-card{max-width:312px;padding:20px 18px 18px;border-radius:14px;background:rgba(255,255,255,.8);}
+  .login-card::before{border-radius:19px;}
+  .login-logo{gap:8px;margin-bottom:16px;}
+  .login-logo-icon{width:38px;height:38px;border-radius:11px;}
+  .login-logo-text{font-size:18px;}
+  .login-card .form-group{margin-bottom:10px;}
+  .login-card .form-label{font-size:11px;margin-bottom:4px;}
+  .login-card .form-input{padding:8px 11px;font-size:13px;}
+  .login-btn{padding:10px;font-size:14px;}
+}
 
 /* CHAT */
 #screen-chat{background:var(--bg);}
@@ -124,7 +137,7 @@ body #screen-login.sky3d{background:linear-gradient(180deg,#2c68b2 0%,#5fa2e2 45
 @keyframes mo-border-spin{from{--ba:0deg;}to{--ba:360deg;}}
 /* 로그인 화면 위쪽 고정 문구 */
 .login-tagline{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}   /* 화면에는 아래 canvas로 그리고, 이 글은 스크린리더용 */
-#login-tagline-cv{position:absolute;top:clamp(18px,7vh,80px);left:50%;transform:translateX(-50%);z-index:1;pointer-events:none;}
+#login-tagline-cv{position:absolute;top:24px;left:50%;transform:translateX(-50%);z-index:1;pointer-events:none;}
 #login-3d{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0;transition:opacity 2.2s ease;}
 #login-3d.on{opacity:1;}
 #login-fx{position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,rgba(10,48,112,.42) 0%,rgba(10,48,112,.18) 22%,rgba(10,48,112,0) 38%),radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 52%,rgba(8,40,92,.38) 100%);}   /* 위쪽을 살짝 어둡게 해서 상단 문구가 또렷하게 */   /* 필름 같은 가장자리 어둠 */
@@ -2099,19 +2112,24 @@ var GhibliSky = (function(){
    "움직임 줄이기" 설정이면 처음부터 완성된 글자만 보여 준다. 화면에는 canvas로만 보이고, 같은 글은 스크린리더용으로 숨겨져 있다. */
 var TagFx = (function(){
   var LINES = ['Every answer,', 'right where you work.'];
-  var cv, ctx, raf = 0, played = false, done = false, parts = [], t0 = 0, W = 0, H = 0, dpr = 1, fontPx = 40, gen = 0;
+  var cv, ctx, raf = 0, played = false, done = false, parts = [], t0 = 0, W = 0, H = 0, dpr = 1, fontPx = 40, topPx = 0, gen = 0;
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var FAMILY = '"Pretendard Variable","Pretendard","Noto Sans KR",sans-serif';
+  var FAMILY = '"Space Grotesk","Pretendard Variable","Pretendard","Noto Sans KR",sans-serif';       // 기하학적이고 개성 있는 현대적 글꼴 (구글 폰트, 무료)
   function rnd(a, b){ return a + Math.random() * (b - a); }
-  function font(px){ return '800 ' + px + 'px ' + FAMILY; }
+  function font(px){ return '700 ' + px + 'px ' + FAMILY; }
   function layout(){
-    var vw = window.innerWidth, vh = window.innerHeight, c = document.createElement('canvas').getContext('2d');
-    fontPx = Math.max(22, Math.min(46, Math.round(vw * .085))); if(vh < 660) fontPx = Math.round(fontPx * .86);
+    var vw = window.innerWidth, vh = window.innerHeight, c = document.createElement('canvas').getContext('2d'), card = document.querySelector('#screen-login .login-card');
+    fontPx = Math.max(22, Math.min(50, Math.round(vw * .092))); if(vh < 660) fontPx = Math.round(fontPx * .88);
     W = Math.min(940, vw - 16);
-    for(var guard = 0; guard < 12; guard++){ c.font = font(fontPx); var mx = Math.max(c.measureText(LINES[0]).width, c.measureText(LINES[1]).width); if(mx <= W - 16) break; fontPx -= 2; }
-    H = Math.round(fontPx * 1.3 * 2 + 26);
+    var avail = card ? card.offsetTop - 14 : vh * .3;                                 // 로그인 카드 위쪽의 빈 공간: 문구가 카드에 붙거나 잘리지 않게 이 안에 넣는다
+    for(var guard = 0; guard < 24; guard++){
+      c.font = font(fontPx); var mx = Math.max(c.measureText(LINES[0]).width, c.measureText(LINES[1]).width);
+      H = Math.round(fontPx * 1.3 * 2 + 26);
+      if(mx <= W - 16 && (H <= avail || fontPx <= 17)) break; fontPx -= 2;
+    }
+    topPx = Math.max(6, Math.min(84, Math.round((avail - H) * .42)));                // 남는 공간의 위쪽 쪽에 놓음
     dpr = Math.min(window.devicePixelRatio || 1, 2);
-    cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cv.style.top = topPx + 'px'; cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   function drawText(alpha){
     ctx.save(); ctx.globalAlpha = alpha; ctx.font = font(fontPx); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
@@ -2165,7 +2183,7 @@ var TagFx = (function(){
   }
   function leave(){ played = false; done = false; gen++; cancelAnimationFrame(raf); if(ctx && cv) ctx.clearRect(0, 0, W, H); }
   window.addEventListener('resize', function(){ if(played && done && cv){ try{ layout(); finalOnly(); }catch(e){} } });
-  return {play: play, leave: leave, _state: function(){ return {played: played, done: done, particles: parts.length, w: W, h: H, font: fontPx}; }};
+  return {play: play, leave: leave, _state: function(){ return {played: played, done: done, particles: parts.length, w: W, h: H, font: fontPx, top: topPx, family: FAMILY}; }};
 })();
 function loginShake(){const c=document.querySelector('#screen-login .login-card');if(!c)return;c.classList.add('shake');setTimeout(()=>c.classList.remove('shake'),500);if(c.animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches)c.animate([{transform:'translateX(0)'},{transform:'translateX(-9px)'},{transform:'translateX(8px)'},{transform:'translateX(-6px)'},{transform:'translateX(4px)'},{transform:'translateX(0)'}],{duration:450,easing:'ease-in-out'});}   // 로그인 실패 때 카드가 살짝 흔들림
 async function doLogin(){

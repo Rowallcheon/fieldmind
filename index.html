@@ -113,9 +113,14 @@ body .msg-bubble{font-family:var(--font-chat);}   /* 챗봇 질문·답변은 �
 /* ── 움직임 효과: 짧은 페이드·떠오름만 사용. 기기의 "움직임 줄이기" 설정이 켜져 있으면 전부 꺼짐 ── */
 /* 로그인 배경: 물방울·파도·반짝임 (정수기 이미지). 처음 로딩이 끝난 뒤(body.app-ready)에 시작 */
 /* 로그인 배경: 구름 사이를 날아가는 3D 하늘 (canvas, 마우스 방향으로 조종). 처음 로딩이 끝난 뒤(body.app-ready)에 나타나 움직임 시작 */
-body #screen-login{background:radial-gradient(ellipse 80% 50% at 50% 100%,rgba(255,214,186,.75) 0%,rgba(255,214,186,0) 70%),linear-gradient(180deg,#3d6fb3 0%,#6b9fd8 38%,#a9c8ee 68%,#dfe3f5 100%);}
+body #screen-login{background:linear-gradient(180deg,#2c68b2 0%,#5fa2e2 45%,#bfe0f7 80%,#ecf7ff 100%);}
 #login-sky{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.8s ease;}
 body.app-ready #login-sky{opacity:1;}
+body #screen-login.sky3d{background:linear-gradient(180deg,#2c68b2 0%,#5fa2e2 45%,#bfe0f7 80%,#ecf7ff 100%);}
+#login-3d{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0;transition:opacity 2.2s ease;}
+#login-3d.on{opacity:1;}
+#login-fx{position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 52%,rgba(8,40,92,.38) 100%);}   /* 필름 같은 가장자리 어둠 */
+#login-fx::after{content:'';position:absolute;inset:0;opacity:.07;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}   /* 종이·필름 질감 */
 .login-btn{position:relative;overflow:hidden;}
 @keyframes mo-rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
 @keyframes mo-fade{from{opacity:0;}to{opacity:1;}}
@@ -599,6 +604,8 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 <!-- LOGIN -->
 <div id="screen-login" class="screen active">
   <canvas id="login-sky" aria-hidden="true"></canvas>
+  <canvas id="login-3d" aria-hidden="true"></canvas>
+  <div id="login-fx" aria-hidden="true"></div>
   <div class="login-card">
     <div class="login-logo"><div class="login-logo-icon"><svg viewBox="0 0 64 64" width="80%" height="80%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg></div><div class="login-logo-text"><b class="wm5" aria-label="CUCKOO ProGuide">cuckoo <em>progu<i class="wm5-dot">ı</i>de</em></b></div></div>
     <div class="form-group"><label class="form-label">아이디</label><input class="form-input" id="login-id" type="text" placeholder="아이디 입력" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
@@ -1868,7 +1875,7 @@ var LoginSky = (function(){
   /* 구름 그림: 겹친 동그란 덩어리로 뭉게구름 모양을 만들고, 윗면은 환하게·아랫면은 연보라/분홍빛으로 칠해 입체감을 줌 */
   function makeSprites(){
     if(sprites.length) return;
-    var tints = [[170, 165, 225], [235, 175, 200], [150, 185, 235], [245, 195, 175], [175, 170, 230], [160, 200, 240]];
+    var tints = [[140, 172, 220], [150, 180, 228], [130, 168, 222], [155, 185, 225], [138, 170, 218], [148, 182, 230]];
     for(var i = 0; i < 6; i++){
       var W = 640, H = 340, c = document.createElement('canvas'); c.width = W; c.height = H; var g = c.getContext('2d'), base = 262, n = 13 + ((Math.random() * 6) | 0), k, tn = tints[i];
       for(k = 0; k < n; k++){
@@ -1877,8 +1884,8 @@ var LoginSky = (function(){
         gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.72, 'rgba(255,255,255,.97)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
         g.fillStyle = gr; g.beginPath(); g.arc(px, py, r, 0, 6.2832); g.fill();
       }
-      g.globalCompositeOperation = 'source-atop';                 // 아랫면 그림자(비현실적인 파스텔 색)
-      var sh = g.createLinearGradient(0, 110, 0, base + 6); sh.addColorStop(0, 'rgba(' + tn[0] + ',' + tn[1] + ',' + tn[2] + ',0)'); sh.addColorStop(.6, 'rgba(' + tn[0] + ',' + tn[1] + ',' + tn[2] + ',.5)'); sh.addColorStop(1, 'rgba(' + (tn[0] - 30) + ',' + (tn[1] - 30) + ',' + (tn[2] - 10) + ',.85)');
+      g.globalCompositeOperation = 'source-atop';                 // 아랫면 그림자(푸르스름한 회색)
+      var sh = g.createLinearGradient(0, 110, 0, base + 6); sh.addColorStop(0, 'rgba(' + tn[0] + ',' + tn[1] + ',' + tn[2] + ',0)'); sh.addColorStop(.6, 'rgba(' + tn[0] + ',' + tn[1] + ',' + tn[2] + ',.45)'); sh.addColorStop(1, 'rgba(' + (tn[0] - 18) + ',' + (tn[1] - 18) + ',' + (tn[2] - 6) + ',.75)');
       g.fillStyle = sh; g.fillRect(0, 0, W, H);
       var hl = g.createLinearGradient(0, 70, 0, 170); hl.addColorStop(0, 'rgba(255,250,235,.55)'); hl.addColorStop(1, 'rgba(255,250,235,0)'); g.fillStyle = hl; g.fillRect(0, 0, W, H);   // 윗면 햇빛
       g.globalCompositeOperation = 'destination-out';              // 바닥은 평평하게, 살짝 흐려지며 끝남
@@ -1933,9 +1940,155 @@ var LoginSky = (function(){
   function stop(){ running = false; cancelAnimationFrame(raf); }
   function sync(){
     var on = document.body.classList.contains('app-ready') && document.getElementById('screen-login').classList.contains('active') && !document.hidden;
-    if(on) start(); else stop();
+    if(on){ if(window.GhibliSky && GhibliSky.start()){ stop(); } else { document.getElementById('screen-login').classList.remove('sky3d'); start(); } }
+    else { stop(); if(window.GhibliSky) GhibliSky.stop(); }
   }
   return {sync: sync, start: start, stop: stop, _frame: function(){ return {clouds: clouds.length, running: running, cam: {x: cam.x, y: cam.y}}; }};
+})();
+/* ── 로그인 배경(3D): 푸른 하늘 위를 날아가는 뭉게구름 비행 (지브리 풍) ──
+   three.js(WebGL)로 직접 그린다(외부 이미지·모델 없이 코드로만 생성).
+   푸른 하늘 · 하얗고 몽글몽글한 뭉게구름(만화 같은 단계 음영) · 구름 바다 위를 미끄러지듯 나는 시점 · 천천히 흐르는 카메라 워크
+   (낮게 활공 → 천천히 솟아오르며 하늘을 올려다봄 → 살짝 기울어 돌며 구름을 스쳐 감, 손으로 든 듯한 미세한 흔들림과 화각의 숨쉬기).
+   three.js는 로그인 화면이 보일 때 한 번만 불러오며, 못 불러오거나 WebGL을 쓸 수 없으면 기존 2D 구름 하늘(LoginSky)로 대신한다. */
+var GhibliSky = (function(){
+  var THREE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+  var state = 'idle', running = false, raf = 0, last = 0, tm = 3, frames = 0;
+  var cv, scr, renderer, scene, camera, sky, cloudMesh, clouds = [], dummy, mouse = {x: 0, y: 0, tx: 0, ty: 0};
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var SUN = null, SPEED = 9;
+  var SKY_GLSL = [
+    'vec3 skyColor(vec3 d, vec3 sun){',
+    '  float h = clamp(d.y, -0.3, 1.0);',
+    '  vec3 c = mix(vec3(0.84,0.94,0.99), vec3(0.55,0.78,0.96), smoothstep(0.0,0.22,h));',
+    '  c = mix(c, vec3(0.30,0.58,0.90), smoothstep(0.18,0.55,h));',
+    '  c = mix(c, vec3(0.17,0.42,0.78), smoothstep(0.5,1.0,h));',
+    '  float s = max(dot(d, sun), 0.0);',
+    '  c += vec3(1.0,0.96,0.85) * (pow(s,6.0)*0.12 + pow(s,48.0)*0.22);',
+    '  return c;',
+    '}'].join('\n');
+  function rnd(a, b){ return a + Math.random() * (b - a); }
+  function sstep(a, b, x){ x = Math.max(0, Math.min(1, (x - a) / (b - a))); return x * x * (3 - 2 * x); }
+
+  function makeSky(){
+    var m = new THREE.ShaderMaterial({side: THREE.BackSide, depthWrite: false, fog: false, uniforms: {uSun: {value: SUN}},
+      vertexShader: 'varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+      fragmentShader: 'uniform vec3 uSun; varying vec3 vDir;\n' + SKY_GLSL + '\nvoid main(){ gl_FragColor = vec4(skyColor(normalize(vDir), uSun), 1.0); }'});
+    sky = new THREE.Mesh(new THREE.SphereGeometry(1800, 32, 20), m); sky.renderOrder = -2; scene.add(sky);
+  }
+  /* 구름: 겹친 동그란 덩어리 → 뭉게구름. 한 번의 그리기 호출(InstancedMesh)로 전부 그림 */
+  function makeClouds(){
+    var small = (cv.clientWidth || 1000) < 640, defs = [], i, k;
+    function add(n, xr, yr, zr, sr, flat){ for(var q = 0; q < n; q++) defs.push({x: rnd(xr[0], xr[1]), y: rnd(yr[0], yr[1]), z: rnd(zr[0], zr[1]), s: rnd(sr[0], sr[1]), flat: flat}); }
+    add(small ? 30 : 64, [-900, 900], [-8, 8], [-1000, 40], [8, 17], .5);              // 발 아래 구름 바다
+    add(small ? 14 : 40, [-620, 620], [20, 130], [-950, -70], [5, 12], .75);            // 곁을 스쳐 지나는 구름
+    add(small ? 3 : 6, [-1100, 1100], [60, 200], [-1250, -900], [45, 85], .85);         // 멀리 솟은 뭉게구름 탑(적란운)
+    var total = 0;
+    defs.forEach(function(d){
+      var n = 13 + ((Math.random() * 6) | 0), W = rnd(3.2, 4.8); d.sp = [];
+      for(i = 0; i < n; i++){ var u = i / (n - 1), env = Math.sin(u * Math.PI), r = .85 + env * rnd(.8, 1.2); d.sp.push({ox: (u - .5) * W, oy: r * .4 + env * rnd(.1, .7), oz: rnd(-.6, .6), r: r}); }
+      var top = 4 + ((Math.random() * 4) | 0); for(k = 0; k < top; k++){ var uu = rnd(.2, .8), ee = Math.sin(uu * Math.PI), rr = rnd(.7, 1.25) * (.55 + ee * .7); d.sp.push({ox: (uu - .5) * W * .8, oy: rnd(.9, 1.7), oz: rnd(-.5, .5), r: rr}); }
+      total += d.sp.length;
+    });
+    var mat = new THREE.ShaderMaterial({uniforms: {uSun: {value: SUN}},
+      vertexShader: 'varying vec3 vN; varying vec3 vP; void main(){ mat4 im = modelMatrix * instanceMatrix; vec4 wp = im * vec4(position,1.0); vP = wp.xyz; vN = normalize(mat3(im) * normal); gl_Position = projectionMatrix * viewMatrix * wp; }',
+      fragmentShader: 'uniform vec3 uSun; varying vec3 vN; varying vec3 vP;\n' + SKY_GLSL + '\n' + [
+        'void main(){',
+        '  vec3 n = normalize(vN); vec3 V = normalize(cameraPosition - vP);',
+        '  float d = dot(n, uSun), up = n.y;',
+        '  float lit = d*0.75 + up*0.40;',
+        '  vec3 col = vec3(0.63,0.75,0.92);',                                              // 그늘진 면: 푸르스름한 회색 (보라색 아님)
+        '  col = mix(col, vec3(0.85,0.92,0.99), smoothstep(-0.30, -0.12, lit));',
+        '  col = mix(col, vec3(0.97,0.99,1.00), smoothstep(0.10, 0.26, lit));',            // 밝은 면: 새하얀 구름
+        '  col = mix(col, vec3(1.00,0.98,0.93), smoothstep(0.55, 0.72, lit));',            // 햇빛을 정면으로 받는 면: 따뜻한 흰색
+        '  float rim = pow(1.0 - max(dot(n, V), 0.0), 2.6) * max(d + 0.3, 0.0);',
+        '  col += vec3(1.0,0.95,0.80) * rim * 0.55;',
+        '  float dist = length(vP - cameraPosition);',
+        '  vec3 hz = skyColor(normalize(vec3(-V.x, 0.04, -V.z)), uSun);',
+        '  col = mix(col, hz, smoothstep(350.0, 1250.0, dist) * 0.88);',                     // 멀수록 하늘색에 녹아듦
+        '  gl_FragColor = vec4(col, 1.0);',
+        '}'].join('\n')});
+    cloudMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2), mat, total);
+    cloudMesh.frustumCulled = false; cloudMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(cloudMesh);
+    clouds = defs; updateClouds(0);
+  }
+  function updateClouds(dt){
+    var idx = 0;
+    clouds.forEach(function(c){
+      if(c.s < 30) c.z += SPEED * dt;                                                            // 가까운 구름은 다가오고, 멀리 솟은 탑은 거의 제자리
+      else c.z += SPEED * .1 * dt;
+      if(c.z > 90){ c.z = -1050 - rnd(0, 150); c.x = rnd(-800, 800); }
+      c.sp.forEach(function(q){ dummy.position.set(c.x + q.ox * c.s, c.y + q.oy * c.s * .8, c.z + q.oz * c.s); dummy.scale.set(q.r * c.s, q.r * c.s * c.flat, q.r * c.s); dummy.updateMatrix(); cloudMesh.setMatrixAt(idx++, dummy.matrix); });
+    });
+    cloudMesh.instanceMatrix.needsUpdate = true;
+  }
+
+  /* ---------- 지브리 풍 카메라 워크: 세 장면이 서로 부드럽게 이어짐 ---------- */
+  var SHOTS = [
+    function(into, o){ o.pos.set(Math.sin(tm * .05) * 30, 46 + Math.sin(tm * .08) * 4, 0); o.look.set(Math.sin(tm * .04) * 60, 58, -320); o.fov = 56; o.roll = Math.sin(tm * .1) * .02; },                   // 1) 구름 위를 낮게 활공
+    function(into, o){ o.pos.set(-20 + into * 2, 40 + into * 4.2, 0); o.look.set(40, 62 + into * 9, -300); o.fov = 52; o.roll = -.03; },                                                              // 2) 천천히 솟아오르며 하늘을 올려다봄
+    function(into, o){ var a = into * .17; o.pos.set(0, 84, 0); o.look.set(Math.sin(a) * 240, 74 - Math.sin(a) * 12, -Math.cos(a) * 280); o.fov = 58; o.roll = Math.sin(a) * .14; }                      // 3) 살짝 기울어 돌며 구름 사이를 스침
+  ];
+  var SHOT_LEN = [17, 16, 18], TRANS = 4.5, tmpA = null, tmpB = null;
+  function updateCamera(dt){
+    var total = SHOT_LEN[0] + SHOT_LEN[1] + SHOT_LEN[2], u = tm % total, idx = 0, acc = 0;
+    while(idx < 2 && u >= acc + SHOT_LEN[idx]){ acc += SHOT_LEN[idx]; idx++; }
+    var into = u - acc, next = (idx + 1) % 3, w = sstep(SHOT_LEN[idx] - TRANS, SHOT_LEN[idx], into);
+    SHOTS[idx](into, tmpA); SHOTS[next](0, tmpB);
+    var pos = tmpA.pos.clone().lerp(tmpB.pos, w), look = tmpA.look.clone().lerp(tmpB.look, w), fov = tmpA.fov + (tmpB.fov - tmpA.fov) * w, roll = tmpA.roll + (tmpB.roll - tmpA.roll) * w;
+    pos.x += Math.sin(tm * .7) * .6 + Math.sin(tm * 1.9) * .2 + mouse.x * 4; pos.y += Math.sin(tm * .9 + 1) * .5 - mouse.y * 2; pos.z += Math.sin(tm * .6 + 2) * .5;                  // 손으로 든 듯한 미세한 흔들림 + 마우스(아주 약하게)
+    look.x += mouse.x * 26 + Math.sin(tm * .5) * 2; look.y += -mouse.y * 12 + Math.sin(tm * .8 + 2) * 1.2;
+    camera.position.copy(pos); camera.up.set(0, 1, 0); camera.lookAt(look);
+    camera.rotateZ(roll + Math.sin(tm * .31) * .012);
+    camera.fov = fov + Math.sin(tm * .23) * 1.4; camera.updateProjectionMatrix();                                                                                                                // 화각이 숨 쉬듯 미세하게 변함
+    sky.position.copy(camera.position);
+  }
+
+  function resize(){
+    if(!renderer) return; var w = cv.clientWidth, h = cv.clientHeight; if(!w || !h) return;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, w < 640 ? 1 : 1.5)); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  function build(){
+    SUN = new THREE.Vector3(.5, .42, -.75).normalize(); dummy = new THREE.Object3D();
+    tmpA = {pos: new THREE.Vector3(), look: new THREE.Vector3(), fov: 50, roll: 0}; tmpB = {pos: new THREE.Vector3(), look: new THREE.Vector3(), fov: 50, roll: 0};
+    renderer = new THREE.WebGLRenderer({canvas: cv, antialias: true, alpha: false, powerPreference: 'high-performance'});
+    scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(56, 1, .5, 4000);
+    makeSky(); makeClouds(); resize();
+  }
+  function render(dt){
+    tm += dt;
+    mouse.x += (mouse.tx - mouse.x) * Math.min(1, dt * 1.5); mouse.y += (mouse.ty - mouse.y) * Math.min(1, dt * 1.5);
+    updateClouds(dt); updateCamera(dt); renderer.render(scene, camera); frames++;
+    if(frames === 2) cv.classList.add('on');
+  }
+  function tick(ts){
+    if(!running) return;
+    var dt = Math.min(.05, (ts - last) / 1000 || 0); last = ts; render(dt); raf = requestAnimationFrame(tick);
+  }
+  function onMove(e){ var pt = e.touches ? e.touches[0] : e; if(!pt) return; mouse.tx = Math.max(-1, Math.min(1, pt.clientX / innerWidth * 2 - 1)); mouse.ty = Math.max(-1, Math.min(1, pt.clientY / innerHeight * 2 - 1)); }
+  function fail(){ state = 'failed'; if(scr) scr.classList.remove('sky3d'); if(window.LoginSky) LoginSky.sync(); }
+  function boot(){
+    try{
+      cv = document.getElementById('login-3d'); scr = document.getElementById('screen-login');
+      var test = document.createElement('canvas'); if(!(test.getContext('webgl') || test.getContext('experimental-webgl'))) throw new Error('no webgl');
+      build(); state = 'ready'; scr.addEventListener('pointermove', onMove, {passive: true}); window.addEventListener('resize', resize);
+      if(reduce){ tm = 6; render(0); render(0); } else if(window.GhibliSky) GhibliSky.start();
+    }catch(e){ console.warn('3D 배경을 쓸 수 없어 2D 하늘로 대신합니다:', e); fail(); }
+  }
+  function start(){
+    if(state === 'failed') return false;
+    scr = document.getElementById('screen-login'); scr.classList.add('sky3d');
+    if(state === 'idle'){
+      state = 'loading';
+      if(window.THREE){ boot(); }
+      else { var sc = document.createElement('script'); sc.src = THREE_URL; sc.async = true; sc.onload = boot; sc.onerror = fail; document.head.appendChild(sc); }
+      return true;
+    }
+    if(state === 'ready' && !running && !reduce){ running = true; last = performance.now(); raf = requestAnimationFrame(tick); }
+    return true;
+  }
+  function stop(){ running = false; cancelAnimationFrame(raf); }
+  return {_seek: function(t){ if(state !== 'ready') return; tm = t; render(0); }, start: start, stop: stop, failed: function(){ return state === 'failed'; },
+          _state: function(){ return {state: state, running: running, frames: frames, clouds: clouds.length, tm: tm}; }};
 })();
 function loginShake(){const c=document.querySelector('#screen-login .login-card');if(!c)return;c.classList.add('shake');setTimeout(()=>c.classList.remove('shake'),500);if(c.animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches)c.animate([{transform:'translateX(0)'},{transform:'translateX(-9px)'},{transform:'translateX(8px)'},{transform:'translateX(-6px)'},{transform:'translateX(4px)'},{transform:'translateX(0)'}],{duration:450,easing:'ease-in-out'});}   // 로그인 실패 때 카드가 살짝 흔들림
 async function doLogin(){

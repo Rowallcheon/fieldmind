@@ -3,6 +3,7 @@ const http = require('http'), fs = require('fs'), path = require('path');
 let chromium; try { ({ chromium } = require('playwright')); } catch (e) { ({ chromium } = require('/opt/node22/lib/node_modules/playwright')); }
 const PORT = 54343, BASE = 'http://127.0.0.1:' + PORT, INDEX = path.join(__dirname, '..', '..', 'index.html');
 const srv = http.createServer((req, res) => { if (req.url.split('?')[0] === '/') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); return res.end(fs.readFileSync(INDEX)); } res.statusCode = 404; res.end(); });
+const THREE_LOCAL = process.env.THREE_JS_PATH || path.join(__dirname, 'vendor', 'three.min.js');
 const OUT = path.join(__dirname, 'out'); fs.mkdirSync(OUT, { recursive: true });
 const BIG = (t) => t + ' ' + '가'.repeat(50000);          // 두 모델만으로 80,000자를 넘기게
 const FIXTURE = {
@@ -32,17 +33,18 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fail++; console.log('  FAIL ' + m); } };
 (async () => {
   await new Promise(r => srv.listen(PORT, r));
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const mkPage = async (o) => {
     const page = await (await browser.newContext(Object.assign({ viewport: { width: 1200, height: 1500 } }, o || {}))).newPage();
     const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR|\{message: fail\}/.test(m.text())) errs.push('console: ' + m.text()); });
-    page.reqs = []; page.route_reply = () => '{"action":"unknown"}'; page.answer = '답변입니다. [[참조: 1]]';
+    page.three = !!(o && o.three); page.reqs = []; page.route_reply = () => '{"action":"unknown"}'; page.answer = '답변입니다. [[참조: 1]]';
     await page.route('**/*', r => { const u = r.request().url();
       if (u.includes('supabase-js')) return r.fulfill({ contentType: 'application/javascript', body: STUB });
       if (u.includes('generativelanguage.googleapis.com')) {
         const req = JSON.parse(r.request().postData()); const sys = req.system_instruction.parts[0].text; const isRoute = sys.includes('문서 검색 도우미');
         page.reqs.push({ isRoute, sys, req });
         return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: isRoute ? page.route_reply(sys) : page.answer }] } }] }) }); }
+      if (page.three && u.includes('three.js/r128/three.min.js')) return r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(THREE_LOCAL) });
       if (u.startsWith(BASE) || u.startsWith('data:') || u.startsWith('blob:')) return r.continue(); return r.abort(); });
     page.errs = errs; return page;
   };
@@ -200,6 +202,27 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await m3.screenshot({ path: path.join(OUT, 'login-motion.png') });
   const m4 = await mkPage({ viewport: { width: 390, height: 780 } }); await m4.goto(BASE + '/'); await m4.waitForFunction(() => document.body.classList.contains('app-ready')); await m4.waitForTimeout(6500);
   await m4.screenshot({ path: path.join(OUT, 'login-motion-mobile.png') });
+
+  console.log('[3D 로그인 배경: 푸른 하늘의 뭉게구름 비행]');
+  if (!fs.existsSync(THREE_LOCAL)) { console.log('  skip three.js 파일이 없어 3D 시험을 건너뜁니다 (tests/direct-chat/vendor/three.min.js 또는 THREE_JS_PATH)'); }
+  else {
+    const d3 = await mkPage({ three: true, viewport: { width: 1280, height: 800 } });
+    await d3.goto(BASE + '/');
+    await d3.waitForFunction(() => window.GhibliSky && GhibliSky._state().frames >= 3, null, { timeout: 40000 });
+    const st = await d3.evaluate(() => Object.assign(GhibliSky._state(), { cls: document.getElementById('screen-login').classList.contains('sky3d'), twoD: window.LoginSky._frame().running }));
+    ok(st.state === 'ready' && st.running && st.clouds >= 30 && st.cls && !st.twoD, '3D 배경: 푸른 하늘과 뭉게구름이 돌아가고 2D 구름은 꺼져 있다 (' + JSON.stringify(st) + ')');
+    const t0 = st.tm; await d3.waitForTimeout(800);
+    ok((await d3.evaluate(() => GhibliSky._state().tm)) > t0, '장면이 시간에 따라 계속 움직인다');
+    await d3.waitForFunction(() => Number(getComputedStyle(document.getElementById('login-3d')).opacity) > .95, null, { timeout: 40000 });
+    await d3.evaluate(() => GhibliSky.stop());
+    for (const [name, tt] of [['3d-shot1', 8], ['3d-shot2', 27], ['3d-shot3', 44]]) { await d3.evaluate(x => GhibliSky._seek(x), tt); await d3.waitForTimeout(300); await d3.screenshot({ path: path.join(OUT, name + '.png') }); }
+    ok(d3.errs.length === 0, '3D 배경 페이지 오류 없음' + (d3.errs.length ? JSON.stringify(d3.errs) : ''));
+    await d3.evaluate(() => { GhibliSky.start(); });
+    await d3.fill('#login-id', 'u2'); await d3.fill('#login-pw', '1234'); await d3.click('.login-btn'); await d3.waitForSelector('#screen-chat.active'); await d3.waitForTimeout(300);
+    ok(!(await d3.evaluate(() => GhibliSky._state().running)), '로그인해서 채팅 화면으로 넘어가면 3D 배경은 멈춘다 (배터리 보호)');
+    const dr = await mkPage({ three: true, reducedMotion: 'reduce' }); await dr.goto(BASE + '/'); await dr.waitForFunction(() => window.GhibliSky && GhibliSky._state().frames >= 1, null, { timeout: 40000 });
+    ok(!(await dr.evaluate(() => GhibliSky._state().running)), '"움직임 줄이기" 설정이면 3D 장면을 한 장면만 그리고 움직이지 않는다');
+  }
 
   console.log('[관리자: 그룹 설정]');
   const a = await mkPage(); await a.goto(BASE + '/'); await a.waitForTimeout(600); await a.fill('#login-id', 'admin'); await a.fill('#login-pw', '1234'); await a.click('.login-btn'); await a.waitForSelector('#screen-admin.active', { timeout: 8000 });

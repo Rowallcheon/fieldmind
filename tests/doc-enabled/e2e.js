@@ -89,8 +89,26 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await k.waitForTimeout(800);
   const st = await nOpen();
   ok(st.cat && st.docs && st.chev, '눈 아이콘을 눌러도 펼쳐 둔 제품군·모델 문서 목록이 접히지 않는다');
-  ok(await k.locator('#busy-bar.on').count() === 0 && !(await k.locator('#busy-pill').isVisible()), '저장이 끝나면 작업 중 표시가 사라진다');
+  await k.waitForTimeout(1300);   // 끝난 뒤에도 잠깐(약 0.7초) 유지되다가 사라짐
+  ok(await k.locator('#busy-bar.on').count() === 0 && !(await k.locator('#busy-pill').isVisible()), '저장이 끝나고 잠시 뒤 작업 중 표시가 사라진다');
   ok(await k.locator('#cm-0 .dl-doc', { hasText: '결재 방법' }).locator('.dl-eye').getAttribute('data-eye') === 'off', '눈 아이콘이 바로 바뀐다');
+  console.log('[작업 중 표시: 이어지는 작업 사이에 깜박이지 않기]');
+  await k.evaluate(() => { window.__delay = 0; });
+  // 0.4초짜리 작업 3개를 0.15초 간격으로 이어서 실행 → 사이사이에 표시가 꺼지면 안 된다
+  await k.evaluate(() => { window.__samples = []; window.__sampler = setInterval(() => { const p = document.getElementById('busy-pill'), b = document.getElementById('busy-bar'); window.__samples.push({ t: Date.now(), pill: !!(p && p.classList.contains('on')), bar: !!(b && b.classList.contains('on')) }); }, 40); });
+  await k.evaluate(async () => { window.__delay = 400; for (let i = 0; i < 3; i++) { await dbUpd('documents', { id: 'd1' }, { enabled: true }); await new Promise(r => setTimeout(r, 150)); } });
+  await k.waitForTimeout(1800);
+  const smp = await k.evaluate(() => { clearInterval(window.__sampler); return window.__samples; });
+  const firstOn = smp.findIndex(x => x.pill), lastOn = smp.length - 1 - [...smp].reverse().findIndex(x => x.pill);
+  const gaps = smp.slice(firstOn, lastOn + 1).filter(x => !x.pill).length;
+  ok(firstOn >= 0 && gaps === 0, '이어지는 작업 사이에 "작업 중" 알림이 꺼졌다 켜지지 않고 계속 유지된다 (켜진 구간 중 꺼진 순간 ' + gaps + '번)');
+  ok(smp.at(-1).pill === false && smp.at(-1).bar === false, '모든 작업이 끝나고 잠시 뒤에는 알림과 막대가 사라진다');
+  await k.evaluate(() => { window.__delay = 0; window.__writes.length = 0; });
+  await k.evaluate(() => { window.__samples = []; window.__sampler = setInterval(() => { const p = document.getElementById('busy-pill'); window.__samples.push(!!(p && p.classList.contains('on'))); }, 30); });
+  await k.evaluate(async () => { await dbUpd('documents', { id: 'd1' }, { enabled: true }); });
+  await k.waitForTimeout(600);
+  ok(!(await k.evaluate(() => { clearInterval(window.__sampler); return window.__samples.some(x => x); })), '아주 짧은 작업(0.25초 이내)에는 알림이 뜨지 않는다');
+
   console.log('[문서 정렬: 최신순 / 오래된순]');
   await k.evaluate(() => { window.__delay = 0; products[0].models[0].docs.forEach((d, i) => { d.ts = '2026-01-0' + (i + 1) + 'T00:00:00Z'; }); renderDocTree(); });
   const titles = () => k.$eval('#cm-0 .model-docs', b => [...b.querySelectorAll('.dl-doc:not(.dl-all) .t')].map(e => e.textContent.trim()));

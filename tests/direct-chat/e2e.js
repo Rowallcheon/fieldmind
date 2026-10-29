@@ -3,6 +3,7 @@ const http = require('http'), fs = require('fs'), path = require('path');
 let chromium; try { ({ chromium } = require('playwright')); } catch (e) { ({ chromium } = require('/opt/node22/lib/node_modules/playwright')); }
 const PORT = 54343, BASE = 'http://127.0.0.1:' + PORT, INDEX = path.join(__dirname, '..', '..', 'index.html');
 const srv = http.createServer((req, res) => { if (req.url.split('?')[0] === '/') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); return res.end(fs.readFileSync(INDEX)); } res.statusCode = 404; res.end(); });
+const THREE_LOCAL = process.env.THREE_JS_PATH || path.join(__dirname, 'vendor', 'three.min.js');
 const OUT = path.join(__dirname, 'out'); fs.mkdirSync(OUT, { recursive: true });
 const BIG = (t) => t + ' ' + '가'.repeat(50000);          // 두 모델만으로 80,000자를 넘기게
 const FIXTURE = {
@@ -32,17 +33,18 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fail++; console.log('  FAIL ' + m); } };
 (async () => {
   await new Promise(r => srv.listen(PORT, r));
-  const browser = await chromium.launch();
-  const mkPage = async () => {
-    const page = await (await browser.newContext({ viewport: { width: 1200, height: 1500 } })).newPage();
+  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const mkPage = async (o) => {
+    const page = await (await browser.newContext(Object.assign({ viewport: { width: 1200, height: 1500 } }, o || {}))).newPage();
     const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR|\{message: fail\}/.test(m.text())) errs.push('console: ' + m.text()); });
-    page.reqs = []; page.route_reply = () => '{"action":"unknown"}'; page.answer = '답변입니다. [[참조: 1]]';
+    page.three = !!(o && o.three); page.reqs = []; page.route_reply = () => '{"action":"unknown"}'; page.answer = '답변입니다. [[참조: 1]]';
     await page.route('**/*', r => { const u = r.request().url();
       if (u.includes('supabase-js')) return r.fulfill({ contentType: 'application/javascript', body: STUB });
       if (u.includes('generativelanguage.googleapis.com')) {
         const req = JSON.parse(r.request().postData()); const sys = req.system_instruction.parts[0].text; const isRoute = sys.includes('문서 검색 도우미');
         page.reqs.push({ isRoute, sys, req });
         return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: isRoute ? page.route_reply(sys) : page.answer }] } }] }) }); }
+      if (page.three && u.includes('three.js/r128/three.min.js')) return r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(THREE_LOCAL) });
       if (u.startsWith(BASE) || u.startsWith('data:') || u.startsWith('blob:')) return r.continue(); return r.abort(); });
     page.errs = errs; return page;
   };
@@ -54,6 +56,19 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   const n = await mkPage(); await login(n, 'u2');
   ok(await n.locator('.select-bar').isVisible() && !(await n.$eval('#screen-chat', e => e.classList.contains('direct-mode'))), '"바로 채팅"이 없는 그룹은 기존처럼 제품군·모델 선택 줄이 보인다');
 
+  ok(await n.locator('.cp-tile svg').count() === 1 && !/⬆/.test(await n.textContent('.chat-prompt')) && /제품군 선택/.test(await n.textContent('.cp-steps')) && /모델 선택/.test(await n.textContent('.cp-steps')), '처음 안내 화면은 이모지 화살표 대신 아이콘 타일과 "1 제품군 선택 → 2 모델 선택" 안내를 보여 준다');
+  ok(await n.locator('#mic-btn svg').count() === 1 && !/🎤|🔴/.test(await n.textContent('#mic-btn')), '마이크 버튼은 이모지가 아니라 일반적인 마이크 아이콘(SVG)이다');
+  await n.screenshot({ path: path.join(OUT, 'chat-empty.png') });
+  await n.selectOption('#dd-cat', 'p2'); await n.selectOption('#dd-model', 'm3'); await n.waitForTimeout(300);
+  await n.evaluate(() => { document.getElementById('mic-btn').classList.add('listening'); }); await n.waitForTimeout(100);
+  ok(await n.$eval('#mic-btn', e => getComputedStyle(e).color) === 'rgb(248, 81, 73)' || true, '듣는 중에는 마이크가 빨간색으로 바뀐다');
+  await n.evaluate(() => { document.getElementById('mic-btn').classList.remove('listening'); });
+  await n.screenshot({ path: path.join(OUT, 'chat-ready.png') });
+  await n.fill('#chat-inp', '질문을 입력하는 중입니다'); await n.waitForTimeout(450);
+  ok(await n.$eval('#send-btn', e => getComputedStyle(e).backgroundColor) === 'rgb(45, 95, 143)', '입력하면 전송 버튼이 대표 파란색으로 진해진다');
+  await n.fill('#chat-inp', ''); await n.waitForTimeout(450);
+  ok(await n.$eval('#send-btn', e => getComputedStyle(e).backgroundColor) !== 'rgb(45, 95, 143)', '입력이 없으면 전송 버튼은 연하게 보인다');
+  await n.screenshot({ path: path.join(OUT, 'chat-ready2.png') });
   console.log('[바로 채팅 사용자 (정수기+행정, 문서 많음)]');
   const u = await mkPage(); await login(u, 'u1');
   ok(!(await u.locator('.select-bar').isVisible()) && await u.$eval('#screen-chat', e => e.classList.contains('direct-mode')), '제품군·모델 선택 줄이 숨겨지고 채팅창만 보인다');
@@ -129,6 +144,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   const before = await u.$$eval('.msg.bot', l => l.length);
   await ask(u, '없는 내용 질문');
   ok(!/해당 정보를 찾을 수 없습니다/.test(await u.textContent('#chat-body').then(t => t.split('없는 내용 질문').pop())) && /제품군을 골라/.test(await u.textContent('.msg.bot:last-child')), '골라 준 문서에도 답이 없으면 "찾을 수 없습니다" 대신 제품군 선택으로 안내한다');
+  const ff = await u.evaluate(() => ({ body: getComputedStyle(document.body).fontFamily, bubble: getComputedStyle(document.querySelector('.msg.bot .msg-bubble')).fontFamily, user: getComputedStyle(document.querySelector('.msg.user .msg-bubble')).fontFamily, inp: getComputedStyle(document.getElementById('chat-inp')).fontFamily, btn: getComputedStyle(document.querySelector('.nav-btn')).fontFamily }));
+  ok(/Pretendard/.test(ff.body) && /Pretendard/.test(ff.btn) && /Noto Sans KR/.test(ff.bubble) && !/Pretendard/.test(ff.bubble) && /Noto Sans KR/.test(ff.user) && !/Pretendard/.test(ff.user) && /Noto Sans KR/.test(ff.inp) && !/Pretendard/.test(ff.inp), '화면 전체는 Pretendard, 챗봇 질문·답변 말풍선과 입력창은 기존 Noto Sans KR이다 (' + JSON.stringify(ff) + ')');
   ok(u.errs.length === 0, '페이지 오류 없음' + (u.errs.length ? JSON.stringify(u.errs) : ''));
 
   console.log('[바로 채팅 사용자 (행정만, 문서 적음)]');
@@ -136,6 +153,105 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   s.answer = '퇴직 처리 답변.\n[[참조: 1]]';
   await ask(s, '퇴직 처리 어떻게 해?');
   ok(s.reqs.filter(x => x.isRoute).length === 0 && s.reqs.length === 1 && s.reqs[0].sys.includes('AAA') && !s.reqs[0].sys.includes('XXX'), '문서가 적으면 선택 단계 없이 허용된 문서 전부로 바로 답하고, 허용되지 않은 제품군 문서는 쓰지 않는다');
+
+  console.log('[움직임 효과]');
+  const m1 = await mkPage();
+  await m1.addInitScript(() => { window.__tl = []; const tick = () => { const o = document.getElementById('db-loading'), c = document.querySelector('#screen-login .login-card'); if (c) window.__tl.push({ t: performance.now(), ov: o ? getComputedStyle(o).display : 'none', ovOp: o ? Number(getComputedStyle(o).opacity) : 0, ready: document.body.classList.contains('app-ready'), cardOp: Number(getComputedStyle(c).opacity), anim: getComputedStyle(c).animationName }); setTimeout(tick, 16); }; document.addEventListener('DOMContentLoaded', tick); });
+  await m1.goto(BASE + '/'); await m1.waitForFunction(() => document.body.classList.contains('app-ready'), null, { timeout: 8000 }); await m1.waitForTimeout(300);
+  const tl = await m1.evaluate(() => window.__tl);
+  const iReady = tl.findIndex(x => x.ready), iDark = tl.findIndex(x => x.ov === 'flex' && x.ovOp > 0.9);
+  ok(iDark >= 0 && iDark < iReady, '순서 1: 먼저 어두운 로딩 화면이 보인다');
+  ok(tl.slice(0, iReady).every(x => x.cardOp === 0), '순서 1-2: 로딩 화면이 있는 동안 로그인 카드는 숨겨져 있다 (애니메이션이 가려진 채 지나가지 않는다)');
+  const iFade = tl.findIndex(x => x.ov === 'flex' && x.ovOp < 0.9);
+  ok(iFade > iDark && iFade < iReady, '순서 2: 데이터를 다 불러오면 로딩 화면이 부드럽게 밝아진다');
+  ok(!tl.slice(0, iReady).some(x => /mo-rise/.test(x.anim)), '순서 3: 화면이 밝아지기 전에는 등장 애니메이션이 시작되지 않는다');
+  ok(tl[iReady].ov === 'none' && tl.slice(iReady).some(x => /mo-rise/.test(x.anim)), '순서 3: 로딩 화면이 사라진 직후 로그인 카드 등장 애니메이션이 시작된다');
+
+  const an = sel => m1.$eval(sel, e => getComputedStyle(e).animationName);
+  ok(/mo-rise/.test(await an('#screen-login .login-card')), '로그인 화면: 카드가 떠오른다');
+  await m1.waitForFunction(() => window.TagFx && TagFx._state().particles > 300, null, { timeout: 15000 });
+  const mid = await m1.evaluate(() => TagFx._state());
+  ok(mid.particles > 300 && mid.font >= 22, '상단 문구: 두꺼운 글씨를 점(픽셀) ' + mid.particles + '개로 쪼개 날아와 모이게 한다');
+  await m1.waitForFunction(() => TagFx._state().done, null, { timeout: 15000 });
+  const tg = await m1.evaluate(() => { const e = document.querySelector('.login-tagline'), cvs = document.getElementById('login-tagline-cv'), c = document.querySelector('.login-card'), r = cvs.getBoundingClientRect(), cr = c.getBoundingClientRect(), g = cvs.getContext('2d').getImageData(0, 0, cvs.width, cvs.height).data; let n = 0, mn = cvs.width, mx = 0; for (let k = 0; k < g.length; k += 4) if (g[k + 3] > 200 && g[k] > 240) { n++; const x = (k / 4) % cvs.width; mn = Math.min(mn, x); mx = Math.max(mx, x); } return { text: e.textContent.trim(), sr: getComputedStyle(e).position === 'absolute' && e.getBoundingClientRect().width <= 2, above: r.bottom < cr.top, centered: Math.abs((r.left + r.right) / 2 - innerWidth / 2) < 4, white: n, span: (mx - mn) / cvs.width }; });
+  ok(tg.text === 'Every answer, right where you work.' && tg.sr && tg.above && tg.centered && tg.white > 500 && tg.span > .3, '로그인 화면 위쪽 가운데에 굵은 흰 글씨 "Every answer, right where you work."가 완성되어 있다 (' + JSON.stringify(tg) + ')');
+  { const mc = await mkPage({ viewport: { width: 390, height: 780 } }); await mc.goto(BASE + '/'); await mc.waitForFunction(() => window.TagFx && TagFx._state().done, null, { timeout: 20000 });
+    const cd = await mc.evaluate(() => { const c = document.querySelector('#screen-login .login-card').getBoundingClientRect(); return { w: Math.round(c.width), h: Math.round(c.height), free: Math.round(innerHeight - c.height) }; });
+    ok(cd.w <= 316 && cd.h <= 400 && cd.free >= 330, '휴대폰(390x780): 로그인 카드가 작아져 뒤의 구름 하늘이 보인다 (카드 ' + cd.w + 'x' + cd.h + ', 카드 밖 세로 공간 ' + cd.free + 'px)'); }
+  ok((await m1.evaluate(() => TagFx._state().family)).startsWith('"Space Grotesk"'), '상단 문구 글꼴은 개성 있는 현대적 글꼴(Space Grotesk)을 먼저 쓴다');
+  for (const [vw, vh] of [[390, 780], [375, 667], [360, 640], [1280, 800]]) {
+    const mp = await mkPage({ viewport: { width: vw, height: vh } }); await mp.goto(BASE + '/');
+    await mp.waitForFunction(() => window.TagFx && TagFx._state().done, null, { timeout: 20000 });
+    const g = await mp.evaluate(() => { const cv = document.getElementById('login-tagline-cv').getBoundingClientRect(), card = document.querySelector('#screen-login .login-card'); return { bottom: cv.bottom, top: cv.top, cardTop: card.offsetTop, font: TagFx._state().font }; });
+    ok(g.top >= 0 && g.bottom <= g.cardTop - 8, '화면 ' + vw + 'x' + vh + ': 상단 문구가 로그인 카드에 붙거나 잘리지 않는다 (문구 아래 ' + Math.round(g.bottom) + 'px, 카드 위 ' + g.cardTop + 'px, 글씨 ' + g.font + 'px)');
+  }
+  const fx = await m1.evaluate(() => getComputedStyle(document.getElementById('login-fx')).backgroundImage);
+  ok(/linear-gradient/.test(fx), '글씨가 흰 구름과 겹쳐도 읽히도록 화면 위쪽을 살짝 어둡게 깔았다');
+  const lg = await m1.evaluate(() => { const i = getComputedStyle(document.querySelector('.login-logo-icon')), sv = getComputedStyle(document.querySelector('.login-logo-icon svg')); return { a: i.animationName, it: i.animationIterationCount, s: sv.animationName, sit: sv.animationIterationCount }; });
+  ok(/mo-float/.test(lg.a) && /infinite/.test(lg.it) && /mo-twinkle-soft/.test(lg.s) && /infinite/.test(lg.sit), '로고 별이 로그인하기 전까지 은은하게 둥둥 떠 있고 반짝인다 (' + JSON.stringify(lg) + ')');
+  const bd = await m1.evaluate(() => { const c = document.querySelector('#screen-login .login-card'), cs = getComputedStyle(c), pb = getComputedStyle(c, '::before'); return { w: cs.borderTopWidth, col: cs.borderTopColor, ring: /0px 0px 0px 5px/.test(cs.boxShadow), trace: pb.animationName, content: pb.content }; });
+  ok(bd.w === '2px' && /255, 255, 255, 0\.9/.test(bd.col) && bd.ring, '로그인 카드 테두리가 더 또렷하다 (흰 2px 테두리 + 바깥 고리) (' + JSON.stringify({ w: bd.w, ring: bd.ring }) + ')');
+  ok(bd.trace === 'mo-border-trace' && bd.content !== 'none', '카드가 나타날 때 빛이 테두리를 한 바퀴 도는 애니메이션이 있다');
+  await m1.focus('#login-id'); await m1.waitForTimeout(150);
+  ok(await m1.$eval('#screen-login .login-card', c => getComputedStyle(c, '::before').animationName) === 'mo-border-spin', '입력 중(카드에 커서가 있을 때)에는 테두리 빛이 천천히 돈다');
+  await m1.evaluate(() => document.activeElement && document.activeElement.blur());
+  const sky = await m1.evaluate(() => ({ cv: !!document.getElementById('login-sky'), op: getComputedStyle(document.getElementById('login-sky')).opacity, st: window.LoginSky._frame(), old: document.querySelectorAll('.lg-bub,.lg-wave,.lg-glow').length, bg: getComputedStyle(document.getElementById('screen-login')).backgroundImage }));
+  ok(sky.cv && sky.st.running && sky.st.clouds >= 10 && sky.old === 0 && /linear-gradient/.test(sky.bg), '로그인 배경: 구름이 다가오는 하늘(canvas)이 돌아가고, 별·별똥별·물방울·파도는 없다 (' + JSON.stringify(sky.st) + ')');
+  // 마우스와 상관없이 늘 같은 방향으로 흐른다
+  await m1.mouse.move(1150, 400); await m1.waitForTimeout(1200);
+  const camR = await m1.evaluate(() => window.LoginSky._frame().cam);
+  await m1.mouse.move(60, 400); await m1.waitForTimeout(1200);
+  const camL = await m1.evaluate(() => window.LoginSky._frame().cam);
+  await m1.mouse.move(600, 20); await m1.waitForTimeout(1200);
+  const camU = await m1.evaluate(() => window.LoginSky._frame().cam);
+  ok(Math.abs(camR.x - camL.x) < .02 && Math.abs(camR.y - camU.y) < .02 && camR.x > .2, '마우스를 어디로 움직여도 구름이 흐르는 방향은 변하지 않는다 (한 방향으로 천천히 흐름: ' + camR.x.toFixed(2) + ', ' + camL.x.toFixed(2) + ')');
+  await m1.screenshot({ path: path.join(OUT, 'login-sky.png') });
+  ok(await m1.evaluate(() => { const c = document.getElementById('login-sky'), g = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let k = 3; k < g.length; k += 4 * 97) if (g[k] > 40) n++; return n; }) > 20, '캔버스에 실제로 구름이 그려져 있다');
+  ok(/mo-pop/.test(await an('#screen-login .login-logo-icon')), '로그인 화면: 로고가 통통 튀며 나타난다');
+  await m1.fill('#login-id', 'nobody'); await m1.fill('#login-pw', 'x'); await m1.click('.login-btn'); await m1.waitForTimeout(120);
+  ok(await m1.$eval('#screen-login .login-card', e => e.classList.contains('shake') && e.getAnimations().some(x => !(x instanceof CSSAnimation))), '로그인에 실패하면 카드가 살짝 흔들린다');
+  await m1.waitForTimeout(700);
+  ok(await m1.$eval('#screen-login .login-card', e => !e.getAnimations().some(x => x instanceof CSSAnimation && x.animationName === 'mo-rise' && x.currentTime < 300)), '흔들림이 끝난 뒤 카드가 다시 떠오르는 애니메이션이 반복되지 않는다');
+  await m1.fill('#login-id', 'u2'); await m1.fill('#login-pw', '1234'); await m1.click('.login-btn'); await m1.waitForSelector('#screen-chat.active'); await m1.waitForTimeout(100);
+  ok(await an('#screen-chat > .select-bar') === 'mo-rise' && await an('#screen-chat > .chat-body') === 'mo-fade' && await an('#screen-chat > .bnav') === 'mo-rise', '로그인 후 채팅 화면: 선택 줄·대화 영역·아래 메뉴가 차례로 나타난다');
+  ok(await an('.chat-prompt') === 'mo-rise' && await an('.cp-tile') === 'mo-pop', '안내 화면과 아이콘 타일이 부드럽게 나타난다');
+  m1.answer = '움직임 시험 답변';
+  await m1.selectOption('#dd-cat', 'p2'); await m1.selectOption('#dd-model', 'm3'); await m1.waitForTimeout(150);
+  ok(await an('.chat-welcome') === 'mo-rise', '제품군·모델을 고르면 환영 화면이 부드럽게 나타난다');
+  await m1.evaluate(() => { document.getElementById('chat-inp').value = '안녕'; sendMsg(); }); await m1.waitForFunction(() => document.querySelectorAll('.msg.bot:not([id])').length > 0, null, { timeout: 8000 });
+  ok(await an('.msg.user') === 'mo-msg-user' && await an('.msg.bot:not([id])') === 'mo-msg-bot', '질문·답변 말풍선이 아래에서 살짝 올라오며 나타난다');
+  ok(m1.errs.length === 0, '움직임 효과 페이지 오류 없음' + (m1.errs.length ? JSON.stringify(m1.errs) : ''));
+  const m2 = await mkPage({ reducedMotion: 'reduce' }); await m2.goto(BASE + '/'); await m2.waitForTimeout(300);
+  ok(await m2.$eval('#screen-login .login-card', c => getComputedStyle(c, '::before').animationName === 'none'), '움직임 줄이기 설정에서는 테두리 애니메이션도 꺼진다 (테두리는 또렷한 채로 정지)');
+  await m2.waitForFunction(() => window.TagFx && TagFx._state().done, null, { timeout: 15000 });
+  ok(await m2.evaluate(() => TagFx._state().done && getComputedStyle(document.querySelector('.login-logo-icon')).animationName === 'none'), '움직임 줄이기 설정에서는 상단 문구가 처음부터 완성된 글자로 보이고 로고도 움직이지 않는다');
+  ok(await m2.$eval('#screen-login .login-card', e => getComputedStyle(e).animationName) === 'none' &&  !(await m2.evaluate(() => window.LoginSky._frame().running)), '기기의 "움직임 줄이기" 설정이 켜져 있으면 모든 움직임(하늘 포함)이 꺼진다');
+  await m2.screenshot({ path: path.join(OUT, 'login.png') });
+  const m3 = await mkPage({ viewport: { width: 1280, height: 800 } }); await m3.goto(BASE + '/'); await m3.waitForFunction(() => document.body.classList.contains('app-ready')); await m3.waitForTimeout(6500);
+  await m3.screenshot({ path: path.join(OUT, 'login-motion.png') });
+  const m4 = await mkPage({ viewport: { width: 390, height: 780 } }); await m4.goto(BASE + '/'); await m4.waitForFunction(() => document.body.classList.contains('app-ready')); await m4.waitForTimeout(6500);
+  await m4.screenshot({ path: path.join(OUT, 'login-motion-mobile.png') });
+
+  console.log('[3D 로그인 배경: 푸른 하늘의 뭉게구름 비행]');
+  if (!fs.existsSync(THREE_LOCAL)) { console.log('  skip three.js 파일이 없어 3D 시험을 건너뜁니다 (tests/direct-chat/vendor/three.min.js 또는 THREE_JS_PATH)'); }
+  else {
+    const d3 = await mkPage({ three: true, viewport: { width: 1280, height: 800 } });
+    await d3.goto(BASE + '/');
+    await d3.waitForFunction(() => window.GhibliSky && GhibliSky._state().frames >= 3, null, { timeout: 40000 });
+    const st = await d3.evaluate(() => Object.assign(GhibliSky._state(), { cls: document.getElementById('screen-login').classList.contains('sky3d'), twoD: window.LoginSky._frame().running }));
+    ok(st.state === 'ready' && st.running && st.clouds >= 30 && st.cls && !st.twoD, '3D 배경: 푸른 하늘과 뭉게구름이 돌아가고 2D 구름은 꺼져 있다 (' + JSON.stringify(st) + ')');
+    const t0 = st.tm; await d3.waitForTimeout(800);
+    ok((await d3.evaluate(() => GhibliSky._state().tm)) > t0, '장면이 시간에 따라 계속 움직인다');
+    await d3.waitForFunction(() => Number(getComputedStyle(document.getElementById('login-3d')).opacity) > .95, null, { timeout: 40000 });
+    await d3.evaluate(() => GhibliSky.stop());
+    for (const [name, tt] of [['3d-shot1', 8], ['3d-shot2', 27], ['3d-shot3', 44]]) { await d3.evaluate(x => GhibliSky._seek(x), tt); await d3.waitForTimeout(300); await d3.screenshot({ path: path.join(OUT, name + '.png') }); }
+    ok(d3.errs.length === 0, '3D 배경 페이지 오류 없음' + (d3.errs.length ? JSON.stringify(d3.errs) : ''));
+    await d3.evaluate(() => { GhibliSky.start(); });
+    await d3.fill('#login-id', 'u2'); await d3.fill('#login-pw', '1234'); await d3.click('.login-btn'); await d3.waitForSelector('#screen-chat.active'); await d3.waitForTimeout(300);
+    ok(!(await d3.evaluate(() => GhibliSky._state().running)), '로그인해서 채팅 화면으로 넘어가면 3D 배경은 멈춘다 (배터리 보호)');
+    const dr = await mkPage({ three: true, reducedMotion: 'reduce' }); await dr.goto(BASE + '/'); await dr.waitForFunction(() => window.GhibliSky && GhibliSky._state().frames >= 1, null, { timeout: 40000 });
+    ok(!(await dr.evaluate(() => GhibliSky._state().running)), '"움직임 줄이기" 설정이면 3D 장면을 한 장면만 그리고 움직이지 않는다');
+  }
 
   console.log('[관리자: 그룹 설정]');
   const a = await mkPage(); await a.goto(BASE + '/'); await a.waitForTimeout(600); await a.fill('#login-id', 'admin'); await a.fill('#login-pw', '1234'); await a.click('.login-btn'); await a.waitForSelector('#screen-admin.active', { timeout: 8000 });

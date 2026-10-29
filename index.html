@@ -128,8 +128,13 @@ body .msg-bubble{font-family:var(--font-chat);}   /* 챗봇 질문·답변은 �
 .ctx-chip-model{color:var(--info);}
 .ctx-scope{font-size:11px;color:var(--text3);margin-left:auto;}
 .chat-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px;max-width:720px;width:100%;margin:0 auto;}
-.chat-prompt{text-align:center;padding:40px 16px;}
-.chat-prompt-icon{font-size:48px;margin-bottom:12px;}
+.chat-prompt{text-align:center;padding:56px 16px 40px;}
+.cp-tile{width:76px;height:76px;margin:0 auto 18px;border-radius:24px;display:flex;align-items:center;justify-content:center;color:var(--accent);background:linear-gradient(145deg,#fff,#e2edf8);border:1px solid rgba(255,255,255,.9);box-shadow:0 10px 28px rgba(45,95,143,.16);}
+.cp-tile svg{width:38px;height:38px;}
+.cp-steps{display:inline-flex;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap;justify-content:center;}
+.cp-steps span{display:inline-flex;align-items:center;gap:7px;padding:6px 13px 6px 7px;border-radius:999px;background:rgba(255,255,255,.78);color:#2d5f8f;font-size:12.5px;font-weight:600;}
+.cp-steps b{width:19px;height:19px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;}
+.cp-steps i{font-style:normal;color:#5b7893;font-size:13px;}
 .chat-prompt h2{font-size:17px;font-weight:700;margin-bottom:6px;}
 .chat-welcome{text-align:center;padding:28px 16px;}
 .chat-welcome-icon{width:56px;height:56px;background:var(--accent-dim);border:2px solid var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 12px;}
@@ -188,7 +193,7 @@ body .msg-bubble{font-family:var(--font-chat);}   /* 챗봇 질문·답변은 �
 .typing-dot:nth-child(2){animation-delay:.2s;}
 .typing-dot:nth-child(3){animation-delay:.4s;}
 @keyframes tbd{0%,60%,100%{transform:translateY(0);opacity:.3;}30%{transform:translateY(-6px);opacity:1;}}
-.chat-foot{border-top:1px solid var(--border);background:var(--bg2);padding:12px 16px;max-width:720px;width:100%;margin:0 auto;align-self:stretch;}
+.chat-foot{border-top:1px solid var(--border);background:var(--bg2);padding:12px 16px;max-width:760px;width:100%;margin:0 auto;align-self:stretch;}
 .chat-inp-row{display:flex;gap:8px;align-items:flex-end;}
 .chat-inp{flex:1;background:#ffffff;border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-size:14px;font-family:var(--font-chat);color:var(--text);outline:none;resize:none;max-height:120px;min-height:44px;transition:border-color .2s;line-height:1.5;}
 .chat-inp:focus{border-color:var(--accent);}
@@ -353,12 +358,27 @@ body .msg-bubble{font-family:var(--font-chat);}   /* 챗봇 질문·답변은 �
 #screen-chat .chat-prompt,#screen-chat .chat-welcome{color:#16273a;}
 #screen-chat .chat-prompt p,#screen-chat .chat-welcome p{color:#3b536b !important;}
 #screen-chat .quick-btn{background:rgba(255,255,255,.8);border-color:#fff;color:#2d5f8f;}
-#screen-chat .chat-foot{background:#fff;border-top:none;}
-#screen-chat .chat-inp{background:#eef2f6;border-color:transparent;border-radius:20px;}
-#screen-chat .chat-inp:focus{background:#fff;border-color:var(--accent);}
-#screen-chat .send-btn{background:#ffd54a;border-radius:50%;}
-#screen-chat .send-btn svg{stroke:#2a2300;}
-#screen-chat .mic-btn{background:#eef2f6;border:none;border-radius:50%;}
+/* 채팅 입력창: 떠 있는 둥근 카드 (마이크 · 입력칸 · 전송 한 줄 + 아래에 작은 보조 버튼) */
+#screen-chat .chat-foot{background:transparent;border-top:none;padding:6px 16px 16px;}
+#screen-chat .chat-card{background:#fff;border:1px solid rgba(255,255,255,.9);border-radius:26px;padding:8px 8px 8px 10px;box-shadow:0 8px 28px rgba(22,39,58,.16);transition:box-shadow .2s;}
+#screen-chat .chat-card:focus-within{box-shadow:0 8px 28px rgba(45,95,143,.28);}
+#screen-chat .chat-inp-row{align-items:center;gap:6px;}
+#screen-chat .chat-inp{background:transparent;border:0;border-radius:0;padding:10px 6px;min-height:42px;font-size:15px;}
+#screen-chat .chat-inp:focus{background:transparent;border:0;}
+#screen-chat .send-btn{width:42px;height:42px;background:var(--accent);border-radius:50%;box-shadow:0 3px 10px rgba(45,95,143,.35);transition:transform .1s,background .2s,box-shadow .2s;}
+#screen-chat .send-btn svg{stroke:#fff;}
+#screen-chat .chat-inp-row:has(.chat-inp:placeholder-shown) .send-btn:not(:disabled){background:#c3d3e3;box-shadow:none;}
+#screen-chat .send-btn:disabled{background:#d5dee8;box-shadow:none;opacity:1;}
+#screen-chat .mic-btn{width:42px;height:42px;background:transparent;border:0;border-radius:50%;color:#4d6b87;}
+#screen-chat .mic-btn:hover:not(:disabled){background:#eef2f6;color:var(--accent);}
+#screen-chat .mic-btn svg{width:21px;height:21px;}
+#screen-chat .mic-btn.listening{background:rgba(248,81,73,.12);color:var(--danger);}
+#screen-chat .chat-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 4px 0 6px;border-top:1px solid #eef2f6;margin-top:4px;}
+#screen-chat .chat-chip{background:#f3f6f9;border:1px solid transparent;border-radius:999px;padding:5px 12px;font-size:12px;color:#5b7893;cursor:pointer;font-family:var(--font);transition:background .15s,color .15s;}
+#screen-chat .chat-chip:hover:not(:disabled){background:#e6eef6;}
+#screen-chat .chat-chip:disabled{opacity:.45;cursor:not-allowed;}
+#screen-chat .voice-status-bar{margin-left:auto;}
+#screen-chat .chat-hint-txt{margin-top:8px;}
 .msg{gap:7px;align-items:flex-start;}
 .msg-date{align-self:center;font-size:11px;color:#fff;background:rgba(22,39,58,.25);border-radius:20px;padding:3px 12px;margin:2px 0 4px;}
 .msg-av{border-radius:12px !important;}
@@ -577,25 +597,22 @@ body .msg-bubble{font-family:var(--font-chat);}   /* 챗봇 질문·답변은 �
     <button class="hf-close" onclick="stopHandsfree()">종료</button>
   </div>
   <div class="chat-body" id="chat-body">
-    <div class="chat-prompt"><div class="chat-prompt-icon">⬆️</div><h2>제품군과 모델을 먼저 선택하세요</h2><p style="font-size:13px;color:var(--text2);margin-top:6px;">위 드롭다운에서 선택 후 <strong style="color:var(--accent);">적용</strong>을 누르면 챗봇이 활성화됩니다.</p></div>
   </div>
-  <div style="max-width:720px;width:100%;margin:0 auto;align-self:stretch;">
+  <div style="max-width:760px;width:100%;margin:0 auto;align-self:stretch;">
     <div class="chat-foot">
+      <div class="chat-card">
       <div class="chat-inp-row">
-        <button class="mic-btn" id="mic-btn" onclick="toggleMic()" disabled title="음성 입력 (마이크)">🎤</button>
+        <button class="mic-btn" id="mic-btn" onclick="toggleMic()" disabled title="음성 입력 (마이크)" aria-label="음성 입력"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg></button>
         <textarea class="chat-inp" id="chat-inp" placeholder="제품군과 모델을 먼저 선택하세요" rows="1" disabled
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"
           oninput="autoResize(this)"></textarea>
-        <button class="send-btn" id="send-btn" onclick="sendMsg()" disabled>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
-        </button>
+        <button class="send-btn" id="send-btn" onclick="sendMsg()" disabled aria-label="보내기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></button>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap;gap:4px;">
+      <div class="chat-tools">
+        <button id="tts-toggle-btn" class="chat-chip" onclick="toggleTTS()">🔇 읽기 모드</button>
+        <button id="hf-toggle-btn" class="chat-chip" onclick="toggleHandsfree()" disabled>🎙️ AI와 대화하기</button>
         <div class="voice-status-bar" id="voice-status"></div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <button id="tts-toggle-btn" onclick="toggleTTS()" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--text3);cursor:pointer;font-family:var(--font);">🔇 읽기 모드</button>
-          <button id="hf-toggle-btn" onclick="toggleHandsfree()" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--text3);cursor:pointer;font-family:var(--font);" disabled>🎙️ AI와 대화하기</button>
-        </div>
+      </div>
       </div>
       <div class="chat-hint-txt" id="chat-hint-txt"></div>
     </div>
@@ -1622,7 +1639,7 @@ function initSpeech(){
   recognition.onstart=()=>{
     isListening=true;
     document.getElementById('mic-btn').classList.add('listening');
-    document.getElementById('mic-btn').textContent='🔴';
+    /* 듣는 중: 빨간 마이크(CSS) */
     setVoiceStatus('🎤 듣고 있습니다... 말씀하세요');
   };
 
@@ -1653,7 +1670,7 @@ function initSpeech(){
     clearTimeout(silenceTimer);
     isListening=false;
     document.getElementById('mic-btn').classList.remove('listening');
-    document.getElementById('mic-btn').textContent='🎤';
+    /* 듣기 끝 */
     const inp=document.getElementById('chat-inp');
     delete inp.dataset.accumulated;
     const text=inp.value.trim();
@@ -1665,7 +1682,7 @@ function initSpeech(){
     clearTimeout(silenceTimer);
     isListening=false;
     document.getElementById('mic-btn').classList.remove('listening');
-    document.getElementById('mic-btn').textContent='🎤';
+    /* 듣기 끝 */
     if(e.error==='not-allowed'){ setVoiceStatus('❌ 마이크 권한이 필요합니다.'); }
     else if(e.error!=='no-speech'){ setVoiceStatus(''); }
     if(handsfreeMode) startListeningHF();
@@ -2011,6 +2028,7 @@ function activateChat(){
   renderWelcome();
   showToast(selProduct.name+' > '+selModel.name+' 선택됨','success');
 }
+const CHAT_PROMPT_HTML = `<div class="chat-prompt"><div class="cp-tile"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M40 29a4 4 0 0 1-4 4H17l-9 8V13a4 4 0 0 1 4-4h24a4 4 0 0 1 4 4z"/><path d="M24 15v10M19 20h10" stroke-width="2.6"/></svg></div><h2>제품군과 모델을 먼저 선택하세요</h2><p style="font-size:13px;color:var(--text2);margin-top:6px;">위 목록에서 제품군과 모델을 고르면 바로 챗봇이 시작됩니다.</p><div class="cp-steps"><span><b>1</b>제품군 선택</span><i>→</i><span><b>2</b>모델 선택</span></div></div>`;
 function resetChatState(){
   document.getElementById('ctx-banner').classList.add('hidden');
   const inp=document.getElementById('chat-inp');
@@ -2019,8 +2037,9 @@ function resetChatState(){
   document.getElementById('mic-btn').disabled=true;
   document.getElementById('hf-toggle-btn').disabled=true;
   document.getElementById('chat-hint-txt').textContent='';
-  document.getElementById('chat-body').innerHTML=`<div class="chat-prompt"><div class="chat-prompt-icon">⬆️</div><h2>제품군과 모델을 먼저 선택하세요</h2><p style="font-size:13px;color:var(--text2);margin-top:6px;">위 드롭다운에서 선택 후 <strong style="color:var(--accent);">적용</strong>을 누르면 챗봇이 활성화됩니다.</p></div>`;
+  document.getElementById('chat-body').innerHTML=CHAT_PROMPT_HTML;
 }
+document.getElementById('chat-body').innerHTML=CHAT_PROMPT_HTML;      // 처음 화면
 function renderWelcome(){
   const hasDocs=activeDocs(selModel).length>0;
   document.getElementById('chat-body').innerHTML=`

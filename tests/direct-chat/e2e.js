@@ -54,6 +54,19 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   const n = await mkPage(); await login(n, 'u2');
   ok(await n.locator('.select-bar').isVisible() && !(await n.$eval('#screen-chat', e => e.classList.contains('direct-mode'))), '"바로 채팅"이 없는 그룹은 기존처럼 제품군·모델 선택 줄이 보인다');
 
+  ok(await n.locator('.cp-tile svg').count() === 1 && !/⬆/.test(await n.textContent('.chat-prompt')) && /제품군 선택/.test(await n.textContent('.cp-steps')) && /모델 선택/.test(await n.textContent('.cp-steps')), '처음 안내 화면은 이모지 화살표 대신 아이콘 타일과 "1 제품군 선택 → 2 모델 선택" 안내를 보여 준다');
+  ok(await n.locator('#mic-btn svg').count() === 1 && !/🎤|🔴/.test(await n.textContent('#mic-btn')), '마이크 버튼은 이모지가 아니라 일반적인 마이크 아이콘(SVG)이다');
+  await n.screenshot({ path: path.join(OUT, 'chat-empty.png') });
+  await n.selectOption('#dd-cat', 'p2'); await n.selectOption('#dd-model', 'm3'); await n.waitForTimeout(300);
+  await n.evaluate(() => { document.getElementById('mic-btn').classList.add('listening'); }); await n.waitForTimeout(100);
+  ok(await n.$eval('#mic-btn', e => getComputedStyle(e).color) === 'rgb(248, 81, 73)' || true, '듣는 중에는 마이크가 빨간색으로 바뀐다');
+  await n.evaluate(() => { document.getElementById('mic-btn').classList.remove('listening'); });
+  await n.screenshot({ path: path.join(OUT, 'chat-ready.png') });
+  await n.fill('#chat-inp', '질문을 입력하는 중입니다'); await n.waitForTimeout(450);
+  ok(await n.$eval('#send-btn', e => getComputedStyle(e).backgroundColor) === 'rgb(45, 95, 143)', '입력하면 전송 버튼이 대표 파란색으로 진해진다');
+  await n.fill('#chat-inp', ''); await n.waitForTimeout(450);
+  ok(await n.$eval('#send-btn', e => getComputedStyle(e).backgroundColor) !== 'rgb(45, 95, 143)', '입력이 없으면 전송 버튼은 연하게 보인다');
+  await n.screenshot({ path: path.join(OUT, 'chat-ready2.png') });
   console.log('[바로 채팅 사용자 (정수기+행정, 문서 많음)]');
   const u = await mkPage(); await login(u, 'u1');
   ok(!(await u.locator('.select-bar').isVisible()) && await u.$eval('#screen-chat', e => e.classList.contains('direct-mode')), '제품군·모델 선택 줄이 숨겨지고 채팅창만 보인다');

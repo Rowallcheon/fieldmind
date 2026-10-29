@@ -1451,9 +1451,13 @@ const _SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 const sb = supabase.createClient(_SB_URL, _SB_KEY);
 
 /* 작업 중 표시 (진행 중인 작업이 하나라도 있으면 막대+알림 표시, 0.25초 넘게 걸릴 때만 알림 글씨 표시) */
-let _busyN = 0, _busyT = null;
+let _busyN = 0, _busyT = null, _busyHideT = null, _busyShownAt = 0;
+const BUSY_SHOW_DELAY = 250;     // 이 시간 안에 끝나는 짧은 작업은 알림을 띄우지 않음
+const BUSY_HIDE_GRACE = 700;     // 작업이 끝나도 이 시간 동안은 유지 → 이어지는 다음 작업이 시작되면 끊김 없이 계속 표시
+const BUSY_MIN_SHOW = 800;       // 한 번 뜨면 최소 이 시간은 유지 (깜박임 방지)
 function busyBegin(){
   _busyN++;
+  clearTimeout(_busyHideT); _busyHideT = null;        // 곧 끝난다고 예약해 둔 숨김 취소
   let bar = document.getElementById('busy-bar');
   if(!bar){
     bar = document.createElement('div'); bar.id = 'busy-bar'; bar.setAttribute('role','progressbar'); bar.setAttribute('aria-label','작업 중');
@@ -1462,14 +1466,20 @@ function busyBegin(){
     document.body.appendChild(bar); document.body.appendChild(pill);
   }
   bar.classList.add('on');
-  if(!_busyT) _busyT = setTimeout(function(){ const p = document.getElementById('busy-pill'); if(p && _busyN>0) p.classList.add('on'); }, 250);
+  if(!_busyT && !_busyShownAt) _busyT = setTimeout(function(){ _busyT = null; const p = document.getElementById('busy-pill'); if(p){ p.classList.add('on'); _busyShownAt = Date.now(); } }, BUSY_SHOW_DELAY);
+}
+function busyHide(){
+  _busyHideT = null; _busyShownAt = 0;
+  const bar = document.getElementById('busy-bar'), pill = document.getElementById('busy-pill');
+  if(bar) bar.classList.remove('on'); if(pill) pill.classList.remove('on');
 }
 function busyEnd(){
   _busyN = Math.max(0,_busyN-1);
   if(_busyN>0) return;
   clearTimeout(_busyT); _busyT = null;
-  const bar = document.getElementById('busy-bar'), pill = document.getElementById('busy-pill');
-  if(bar) bar.classList.remove('on'); if(pill) pill.classList.remove('on');
+  if(!_busyShownAt){ busyHide(); return; }               // 알림이 뜬 적 없으면 막대만 바로 정리
+  const wait = Math.max(BUSY_HIDE_GRACE, BUSY_MIN_SHOW - (Date.now() - _busyShownAt));
+  _busyHideT = setTimeout(function(){ if(_busyN===0) busyHide(); }, wait);   // 잠깐 기다렸다가, 그 사이 새 작업이 없으면 숨김
 }
 async function withBusy(fn){ busyBegin(); try{ return await fn(); } finally { busyEnd(); } }
 

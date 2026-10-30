@@ -2490,9 +2490,9 @@ function directEntries(){
 function directActivate(){
   document.getElementById('screen-chat').classList.add('direct-mode');
   const ents = directEntries(), prods = directProducts();
-  selProduct = {id: DIRECT_ID, name: '전체 검색', icon: '🔎', models: []};
+  selProduct = {id: DIRECT_ID, name: '전체 검색', icon: '', models: []};
   selModel = {id: DIRECT_ID, name: '전체 문서', docs: []};
-  document.getElementById('ctx-cat-chip').textContent = '🔎 전체 검색';
+  document.getElementById('ctx-cat-chip').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px;"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 16 16"/></svg>전체 검색';
   document.getElementById('ctx-model-chip').textContent = '제품군 ' + prods.length + '개';
   document.getElementById('ctx-scope-txt').textContent = '문서 ' + ents.length + '건';
   document.getElementById('ctx-banner').classList.remove('hidden');
@@ -2502,7 +2502,7 @@ function directActivate(){
   document.getElementById('chat-hint-txt').textContent = '[전체 검색]';
   document.getElementById('chat-body').innerHTML = `
     <div class="chat-welcome">
-      <div class="chat-welcome-icon">🔎</div>
+      <div class="cp-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 16 16"/></svg></div>
       <h2>무엇이든 물어보세요</h2>
       <p>${ents.length ? '열람 가능한 ' + ents.length + '건의 문서에서 찾아 답변합니다. 모델이나 제품명을 함께 말씀해 주시면 더 정확합니다.' : '현재 열람할 수 있는 문서가 없습니다. 관리자에게 문의하세요.'}</p>
     </div>`;

@@ -74,6 +74,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(!(await u.locator('.select-bar').isVisible()) && await u.$eval('#screen-chat', e => e.classList.contains('direct-mode')), '제품군·모델 선택 줄이 숨겨지고 채팅창만 보인다');
   ok(!(await u.$eval('#chat-inp', e => e.disabled)) && /전체 검색/.test(await u.textContent('#ctx-banner')) && /문서 4건/.test(await u.textContent('#ctx-banner')), '입력창이 바로 켜져 있고 열람 가능한 문서 4건으로 표시된다');
   ok(/무엇이든 물어보세요/.test(await u.textContent('#chat-body')), '환영 문구가 보인다');
+  ok(await u.locator('#chat-body .cp-tile svg').count() === 1 && await u.locator('#ctx-cat-chip svg').count() === 1 && !/🔎/.test(await u.textContent('#screen-chat')), '바로 채팅 화면의 🔎 이모지가 깔끔한 선 아이콘(SVG)으로 바뀌었다');
   // 1) 선택 단계 → 답변 단계
   u.route_reply = sys => JSON.stringify({ action: 'select', docs: [numOf(sys, '정수기 > CP-PS | 기술교본 | CP-PS 유로도')] });
   u.answer = 'PS 유로도는 이렇습니다.\n[[참조: 1]]';

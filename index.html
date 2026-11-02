@@ -1263,6 +1263,19 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 
 <!-- 자료실: 글자 입력 / 선택 / 업로드 / 공개범위 / 구성원 -->
 <!-- 문서 관리: 체크한 문서를 다른 제품군의 모델로 이동/복사 -->
+<!-- 제품군 수정: 이름과 아이콘 -->
+<div class="modal-overlay" id="modal-cat-edit"><div class="modal" style="max-width:420px;">
+  <div class="modal-title">제품군 수정</div>
+  <div class="form-group"><label class="form-label">제품군 이름</label><input class="form-input" id="ce-name" maxlength="40" autocomplete="off"></div>
+  <div class="form-group"><label class="form-label">아이콘 <span style="font-size:11px;color:var(--text3);font-weight:400;">(이모지 한 개 · 비우면 📦)</span></label>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div id="ce-preview" style="width:48px;height:48px;border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;background:var(--bg3);flex:none;"></div>
+      <input class="form-input" id="ce-icon" maxlength="8" autocomplete="off" placeholder="💧" style="text-align:center;font-size:18px;" oninput="ceIconInput()">
+    </div>
+    <div id="ce-presets" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
+  </div>
+  <div class="modal-actions"><button type="button" class="btn btn-ghost" onclick="ceClose()">취소</button><button type="button" class="btn btn-primary" id="ce-ok" onclick="ceSave()">저장</button></div>
+</div></div>
 <div class="modal-overlay" id="modal-mv"><div class="modal" style="max-width:560px;">
   <div class="modal-title" id="mv-title">선택 문서 이동</div>
   <div class="la-movebox" id="mv-src"></div>
@@ -3502,7 +3515,7 @@ function renderDocTree(){
     if(!_sortMode){
       const footer = document.createElement('div');
       footer.style.cssText = 'padding:10px 16px 10px 48px;display:flex;gap:8px;flex-wrap:wrap;';
-      const ec = document.createElement('button'); ec.className='btn btn-ghost btn-sm'; ec.textContent='✏️ 제품군명 수정';
+      const ec = document.createElement('button'); ec.className='btn btn-ghost btn-sm'; ec.textContent='✏️ 이름·아이콘 수정';
       ec.onclick = (function(a){return function(){editCatName(a);};})(pi);
       const dc = document.createElement('button'); dc.className='btn btn-danger btn-sm'; dc.textContent='🗑️ 제품군 삭제';
       dc.style.cssText='border-color:var(--danger);color:var(--danger);';
@@ -3825,18 +3838,38 @@ async function delModel(pi,mi){
 }
 
 // ── 제품군 이름 수정 ──
-async function editCatName(pi){
-  const cur=products[pi].name;
-  const newName=prompt('제품군 이름 수정\n현재: '+cur, cur);
-  if(newName===null) return;
-  const trimmed=newName.trim();
-  if(!trimmed){showToast('이름을 입력하세요.','error');return;}
-  if(products.find((p,i)=>p.name===trimmed&&i!==pi)){showToast('이미 존재하는 제품군 이름입니다.','error');return;}
-  const ok = await dbUpd('products',{id:products[pi].id},{name:trimmed});
+let _ceIdx=null;
+const CE_PRESETS=['💧','🚰','🧊','❄️','🔥','♻️','🍎','🍚','🧴','🌀','🔧','⚙️','🗂️','🏢','📦','📘'];
+function ceIconInput(){ const v=document.getElementById('ce-icon').value.trim(); document.getElementById('ce-preview').textContent=v||'📦'; }
+function editCatName(pi){                                     // 제품군 이름·아이콘 수정 창 열기
+  _ceIdx=pi; const p=products[pi];
+  document.getElementById('ce-name').value=p.name;
+  document.getElementById('ce-icon').value=p.icon||'';
+  const box=document.getElementById('ce-presets'); box.innerHTML='';
+  CE_PRESETS.forEach(function(em){
+    const b=document.createElement('button'); b.type='button'; b.className='btn btn-ghost btn-sm'; b.textContent=em; b.style.cssText='font-size:18px;padding:4px 9px;';
+    b.setAttribute('aria-label','아이콘 '+em); b.onclick=function(){ document.getElementById('ce-icon').value=em; ceIconInput(); };
+    box.appendChild(b);
+  });
+  ceIconInput();
+  document.getElementById('modal-cat-edit').classList.add('open');
+  setTimeout(function(){ const n=document.getElementById('ce-name'); n.focus(); n.select(); },50);
+}
+function ceClose(){ document.getElementById('modal-cat-edit').classList.remove('open'); _ceIdx=null; }
+async function ceSave(){
+  const pi=_ceIdx; if(pi===null||!products[pi]) return;
+  const name=document.getElementById('ce-name').value.trim();
+  const icon=document.getElementById('ce-icon').value.trim()||'📦';
+  if(!name){showToast('이름을 입력하세요.','error');return;}
+  if(products.find((q,i)=>q.name===name&&i!==pi)){showToast('이미 존재하는 제품군 이름입니다.','error');return;}
+  const cur=products[pi];
+  if(name===cur.name&&icon===(cur.icon||'📦')){ ceClose(); return; }
+  const ok=await dbUpd('products',{id:cur.id},{name,icon});
   if(!ok){showToast('DB 저장 실패','error');return;}
-  products[pi].name=trimmed;
+  cur.name=name; cur.icon=icon;
+  ceClose();
   renderDocTree(); renderCatSel(); renderDash(); populateCatDD();
-  showToast('✅ 제품군 이름이 수정되었습니다.','success');
+  showToast('✅ 제품군 이름·아이콘이 수정되었습니다.','success');
 }
 
 // ── 모델 이름 수정 ──

@@ -186,6 +186,30 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok((await writes()).some(x => x.t === 'documents' && x.k === 'delete') && (await page.$$('#existing-docs-list .doc-card')).length === cardsBefore - 1, '문서 입력창의 「삭제」도 이제 DB에서 실제로 삭제한다 (예전에는 화면에서만 지워짐)');
   await page.evaluate(() => closeModal('modal-doc-input'));
 
+  // 제품군 이름·아이콘 수정
+  await page.evaluate(() => { showPanel('docs'); renderDocTree(); });
+  ok((await page.locator('button:has-text("이름·아이콘 수정")').count()) === (await page.evaluate(() => products.length)), '제품군마다 「이름·아이콘 수정」 버튼이 있다');
+  await clearW();
+  await page.evaluate(() => document.querySelectorAll('button.btn-ghost').forEach(b => { if (b.textContent.includes('이름·아이콘 수정') && !b.dataset.t) { b.dataset.t = '1'; } }));
+  await page.evaluate(() => { [...document.querySelectorAll('button')].filter(b => b.textContent.includes('이름·아이콘 수정'))[1].click(); });
+  ok(await page.$eval('#modal-cat-edit', e => e.classList.contains('open')) && (await page.inputValue('#ce-name')) === '정수기' && (await page.inputValue('#ce-icon')) === '💧', '수정 창이 현재 이름(정수기)과 아이콘(💧)을 채워서 열린다');
+  await page.screenshot({ path: path.join(OUT, 'cat-edit.png') });
+  await page.click('#ce-presets button[aria-label="아이콘 🚰"]');
+  ok((await page.inputValue('#ce-icon')) === '🚰' && (await page.textContent('#ce-preview')) === '🚰', '추천 아이콘을 누르면 입력칸과 미리보기가 바뀐다');
+  await page.click('#ce-ok'); await page.waitForTimeout(400);
+  const wce = (await writes()).filter(w => w.t === 'products');
+  ok(wce.length === 1 && wce[0].k === 'update' && wce[0].a.icon === '🚰' && wce[0].a.name === '정수기' && wce[0].m.id === 'p2', '저장하면 DB의 제품군(p2)에 이름·아이콘이 함께 저장된다 (' + JSON.stringify(wce[0] && wce[0].a) + ')');
+  ok((await page.evaluate(() => products[1].icon)) === '🚰' && !(await page.$eval('#modal-cat-edit', e => e.classList.contains('open'))) && (await page.$$eval('.cat-icon-lg', l => l.map(e => e.textContent))).includes('🚰'), '화면의 제품군 줄 아이콘이 바로 🚰로 바뀌고 창이 닫힌다');
+  await page.evaluate(() => editCatName(1)); await page.fill('#ce-name', '사무행정'); await clearW(); await page.click('#ce-ok'); await page.waitForTimeout(300);
+  ok((await writes()).filter(w => w.t === 'products').length === 0 && await page.$eval('#modal-cat-edit', e => e.classList.contains('open')), '이미 있는 제품군 이름으로는 저장되지 않고 창이 그대로 열려 있다');
+  await page.fill('#ce-name', '정수기'); await page.fill('#ce-icon', ''); await page.click('#ce-ok'); await page.waitForTimeout(400);
+  ok((await page.evaluate(() => products[1].icon)) === '📦', '아이콘을 비우고 저장하면 기본 📦가 된다');
+  await page.evaluate(() => editCatName(1)); await clearW(); await page.click('#modal-cat-edit .modal-actions button:has-text("취소")'); await page.waitForTimeout(200);
+  ok((await writes()).length === 0 && !(await page.$eval('#modal-cat-edit', e => e.classList.contains('open'))), '취소하면 아무것도 저장되지 않는다');
+  await page.evaluate(() => { editCatName(1); window.__failNext = 'products.update'; }); await page.fill('#ce-icon', '🔥'); await page.click('#ce-ok'); await page.waitForTimeout(400);
+  ok((await page.evaluate(() => products[1].icon)) === '📦' && /DB 저장 실패/.test(await page.textContent('body')), 'DB 저장이 실패하면 화면 데이터는 바뀌지 않고 안내가 나온다');
+  await page.evaluate(() => ceClose());
+
   const realErrs = errs.filter(e => !/\{message: fail\}/.test(e));
   ok(realErrs.length === 0, '페이지 오류 없음(의도한 저장 실패 로그 제외)' + (realErrs.length ? ' ' + JSON.stringify(realErrs) : ''));
   await browser.close(); srv.close();

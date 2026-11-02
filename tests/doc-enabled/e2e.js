@@ -46,6 +46,21 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   const a = await mkPage(); await login(a, 'admin'); await a.waitForSelector('#screen-admin.active', { timeout: 8000 });
   await a.evaluate(() => { showPanel('docs'); const t = document.getElementById('doc-tree'); const open = () => document.querySelectorAll('.cat-models').forEach(x => x.classList.add('open')); new MutationObserver(open).observe(t, { childList: true }); open(); products.forEach((p, i) => p.models.forEach((m, j) => _docOpen.add(i + '-' + j))); renderDocTree(); });
   await a.waitForSelector('.dl-doc .dl-eye');
+  ok(await a.$eval('#admin-avatar', e => getComputedStyle(e).display === 'none'), '관리자 화면 이름 앞의 동그란 첫 글자 표시가 없다');
+  { const pi = await a.$$eval('.p-icon', l => l.map(e => ({ svg: !!e.querySelector('svg'), txt: e.textContent.trim() }))); ok(pi.length === 8 && pi.every(x => x.svg && x.txt === ''), '관리자 화면 제목 옆 아이콘 8개가 모두 이모지 대신 심플한 선 아이콘(SVG)이다 (' + pi.length + '개)'); await a.screenshot({ path: path.join(OUT, 'admin-icons.png'), clip: { x: 230, y: 40, width: 700, height: 90 } }); }
+  { const EMO = /[\u{1F300}-\u{1FAFF}☀-➿⭐]/u; const bad = [], sizes = [];
+    for (const pn of ['dashboard', 'apikey', 'docs', 'users', 'logs']) {
+      await a.evaluate(n => showPanel(n), pn); await a.waitForTimeout(250);
+      if (pn === 'users') await a.evaluate(() => { try { switchUtab('group'); } catch (e) {} });
+      if (pn === 'logs') await a.evaluate(() => { try { switchLogTab('report'); } catch (e) {} });
+      await a.waitForTimeout(250);
+      const r = await a.evaluate(() => { const els = [...document.querySelectorAll('#screen-admin .a-panel.active .sec-title, #screen-admin .a-panel.active .api-config-title, #screen-admin .a-panel.active .utab, #screen-admin .a-panel.active .log-tab, #screen-admin .a-panel.active .log-period-btn, #screen-admin .a-panel.active .rpt-period-btn, #screen-admin .a-panel.active .stat-card div, #screen-admin .a-panel.active #log-report div')]; return { txt: els.filter(e => e.offsetParent).map(e => e.textContent), ai: [...document.querySelectorAll('#screen-admin .a-panel.active .ai')].filter(e => e.getBoundingClientRect().width > 0).length }; });
+      r.txt.forEach(t => { if (EMO.test(t)) bad.push(pn + ': ' + t.slice(0, 30)); }); sizes.push(pn + '=' + r.ai);
+      await a.screenshot({ path: path.join(OUT, 'admin-' + pn + '.png') });
+    }
+    ok(bad.length === 0, '관리자 화면의 소제목·탭·카드 제목에 이모지가 남아 있지 않다 (' + (bad.join(' / ') || '없음') + ')');
+    ok(sizes.every(x => !x.endsWith('=0') || /docs|users/.test(x)), '대시보드·API 키 화면의 새 선 아이콘이 실제로 그려진다 (' + sizes.join(', ') + ')'); }
+  await a.evaluate(() => { showPanel('docs'); renderDocTree(); }); await a.waitForSelector('.dl-doc .dl-eye');
   const writes = () => a.evaluate(() => window.__writes.slice());
   const row = t => a.locator('.dl-doc', { hasText: t });
   await a.screenshot({ path: path.join(OUT, 'eye.png'), clip: { x: 230, y: 520, width: 970, height: 380 } });
@@ -150,6 +165,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await u.evaluate(() => { document.getElementById('chat-inp').value = '전표 입력 방법'; sendMsg(); });
   await u.waitForFunction(() => document.querySelectorAll('.msg.bot').length >= 2, null, { timeout: 8000 });
   ok(/등록된 문서 없음/.test(u.gem.req.system_instruction.parts[0].text) && !u.gem.req.system_instruction.parts[0].text.includes('DDD'), '모든 문서를 꺼 두면 "등록된 문서 없음"으로 전달되고 본문은 전달되지 않는다');
+  ok(await u.$eval('#chat-avatar', e => getComputedStyle(e).display === 'none') && /사용자/.test(await u.textContent('.nav-right')), '사용자 화면 이름 앞의 동그란 첫 글자 표시가 없고 이름은 그대로 보인다');
   ok(u.errs.length === 0, '사용자 화면 페이지 오류 없음' + (u.errs.length ? JSON.stringify(u.errs) : ''));
 
   await browser.close(); srv.close();

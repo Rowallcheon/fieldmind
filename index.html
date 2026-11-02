@@ -347,7 +347,8 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 .a-panel{display:none;}
 .a-panel.active{display:block;}
 .panel-title{font-size:19px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
-.p-icon{width:32px;height:32px;border-radius:8px;background:var(--accent-dim);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:15px;}
+.p-icon{width:34px;height:34px;border-radius:10px;background:var(--accent-dim);border:1px solid rgba(45,95,143,.22);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:none;}
+.p-icon svg{width:18px;height:18px;}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px;}
 .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
 .stat-lbl{font-size:12px;color:var(--text3);margin-bottom:5px;}
@@ -509,7 +510,9 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 .topnav{gap:10px;}
 .nav-logo{flex-shrink:0;}
 .nav-right{min-width:0;}
-.nav-avatar{flex:none;}
+.nav-avatar{display:none !important;}
+.ai{width:1.15em;height:1.15em;vertical-align:-.2em;flex:none;margin-right:.35em;}   /* 관리자 화면의 작은 선 아이콘 */
+.ai.ai-lg{width:1em;height:1em;margin:0;}   /* 이름 앞의 동그란 첫 글자 표시는 사용하지 않음 */
 @media(max-width:420px){ #screen-chat .nav-avatar{display:none;} }
 @media(max-width:380px){
   .topnav{padding:0 10px;gap:6px;}
@@ -625,6 +628,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/></symbol><symbol id="i-battery" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8" width="17" height="9" rx="2"/><path d="M22 11v3M6 12h5"/></symbol><symbol id="i-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.2v9.6L12 21l-8-4.2V7.2z"/><path d="M4 7.2l8 4.3 8-4.3M12 11.5V21"/></symbol><symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c.8 5.5 3 7.7 9 9-6 1.3-8.2 3.5-9 9-.8-5.5-3-7.7-9-9 6-1.3 8.2-3.5 9-9z"/></symbol><symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></symbol><symbol id="i-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 11h6M9 15h6"/></symbol><symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></symbol><symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol><symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.7A8 8 0 1 1 21 12z"/></symbol><symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol><symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol><symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol><symbol id="i-ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16.5 9.5"/></symbol><symbol id="i-no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></symbol><symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c.5-3.6 3-5.5 6-5.5s5.5 1.9 6 5.5"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.8c1.8.7 3 2.4 3.4 5.2"/></symbol><symbol id="i-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2.5V6M15 2.5V6M9 18v3.5M15 18v3.5M2.5 9H6M2.5 15H6M18 9h3.5M18 15h3.5"/></symbol><symbol id="i-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></symbol><symbol id="i-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 10.5 3.75 3.75 0 0 1 17.5 18z"/></symbol><symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.5h.01"/></symbol></defs></svg>
 
 <!-- LOGIN -->
 <div id="screen-login" class="screen active">
@@ -825,9 +829,9 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 
       <!-- 대시보드 -->
       <div class="a-panel active" id="panel-dashboard">
-        <div class="panel-title"><div class="p-icon">📊</div>대시보드</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>대시보드</div>
         <div style="background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <span style="font-size:20px;">⚡</span>
+          <span style="font-size:20px;color:var(--info);display:inline-flex;"><svg class="ai" style="width:1em;height:1em;margin:0;" aria-hidden="true"><use href="#i-bolt"/></svg></span>
           <div><div style="font-size:13px;font-weight:700;color:var(--info);">Gemini 2.0 Flash — Google AI 엔진 사용 중</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">분당 100만 토큰 · 50명 동시 사용 가능 · 한국어 우수</div></div>
           <button class="btn btn-ghost btn-sm" id="dash-key-btn" style="margin-left:auto;" onclick="showPanel('apikey')">키 설정 →</button>
         </div>
@@ -838,16 +842,16 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
           <div class="stat-card"><div class="stat-lbl">오늘 질문</div><div class="stat-val" style="color:var(--warn);" id="d-today">-</div><div class="stat-sub" id="d-today-sub"></div></div>
         </div>
         <div class="usage-card" id="usage-card" style="display:none;">
-          <div class="sec-hdr" style="margin-bottom:0;"><div class="sec-title">🔋 무료 사용량 <span class="eb-tag">admin 전용</span></div><button class="btn btn-ghost btn-sm" onclick="renderUsage()">새로고침</button></div>
+          <div class="sec-hdr" style="margin-bottom:0;"><div class="sec-title"><svg class="ai" aria-hidden="true"><use href="#i-battery"/></svg>무료 사용량 <span class="eb-tag">admin 전용</span></div><button class="btn btn-ghost btn-sm" onclick="renderUsage()">새로고침</button></div>
           <div id="usage-bars"></div>
         </div>
-        <div class="sec-hdr"><div class="sec-title">📦 제품군별 현황</div></div>
+        <div class="sec-hdr"><div class="sec-title"><svg class="ai" aria-hidden="true"><use href="#i-box"/></svg>제품군별 현황</div></div>
         <div id="d-prod-list" style="display:flex;flex-direction:column;gap:8px;"></div>
       </div>
 
       <!-- 원본 자료실 관리 -->
       <div class="a-panel" id="panel-library">
-        <div class="panel-title"><div class="p-icon">📚</div>원본 자료실</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></div>원본 자료실</div>
         <div class="usage-card" id="la-usage" style="display:none;"></div>
         <div class="la-tabs" id="la-tabs">
           <button type="button" class="active" data-t="tree" onclick="laTab('tree')">분류 · 자료</button>
@@ -859,9 +863,9 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 
       <!-- API 키 설정 -->
       <div class="a-panel" id="panel-apikey">
-        <div class="panel-title"><div class="p-icon">🔑</div>API 키 설정</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3 21 2m-3 3 3 3m-6-6 3 3"/></svg></div>API 키 설정</div>
         <div class="api-config-box">
-          <div class="api-config-title">🌀 Gemini API 키 (무료)</div>
+          <div class="api-config-title"><svg class="ai" aria-hidden="true"><use href="#i-spark"/></svg>Gemini API 키 (무료)</div>
           <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.7;"><a href="https://aistudio.google.com" target="_blank" style="color:var(--info);">aistudio.google.com</a>에서 무료 발급 · Gemini 2.0 Flash · 분당 100만 토큰</div>
           <div style="display:flex;gap:8px;align-items:flex-end;">
             <div class="form-group" style="flex:1;margin:0;"><label class="form-label">Gemini API Key</label><input class="form-input" id="groq-key-input" type="password" placeholder="AIza..."></div>
@@ -870,7 +874,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
           <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;" id="groq-key-status"><span style="color:var(--text3);">● 확인 중...</span></div>
         </div>
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
-          <div style="font-size:13px;font-weight:700;margin-bottom:12px;">⚙️ 모델 선택</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px;"><svg class="ai" aria-hidden="true"><use href="#i-gear"/></svg>모델 선택</div>
           <div style="display:flex;flex-direction:column;gap:8px;">
             <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:8px;cursor:pointer;border:1px solid var(--accent);">
               <input type="radio" name="groq-model" value="gemini-2.5-flash-lite" checked style="accent-color:var(--accent);">
@@ -889,11 +893,11 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 
       <!-- 문서 관리 -->
       <div class="a-panel" id="panel-docs">
-        <div class="panel-title"><div class="p-icon">📁</div>문서 관리</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></div>문서 관리</div>
 
         <!-- 안내 박스 -->
         <div style="background:rgba(45,95,143,.07);border:1px solid rgba(45,95,143,.25);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;">
-          <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px;">📋 문서 등록 방법</div>
+          <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px;"><svg class="ai" aria-hidden="true"><use href="#i-clip"/></svg>문서 등록 방법</div>
           <div style="font-size:13px;color:var(--text2);line-height:1.8;">
             ① 제품군/모델을 먼저 추가하세요<br>
             ② 모델 옆 <strong style="color:var(--accent);">📝 내용 입력</strong> 버튼 클릭<br>
@@ -903,7 +907,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
         </div>
 
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:14px;">➕ 제품군 / 모델 추가</div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:14px;"><svg class="ai" aria-hidden="true"><use href="#i-plus"/></svg>제품군 / 모델 추가</div>
           <div class="add-row" style="margin-bottom:12px;">
             <div class="form-group"><label class="form-label">제품군명 (대분류)</label><input class="form-input" id="new-cat" placeholder="예: 펌프류"></div>
             <div class="form-group" style="max-width:90px;"><label class="form-label">아이콘</label><input class="form-input" id="new-cat-icon" placeholder="💧" style="text-align:center;"></div>
@@ -940,7 +944,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 
       <!-- 공지사항 -->
       <div class="a-panel" id="panel-notice">
-        <div class="panel-title"><div class="p-icon">📢</div>공지사항 관리</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></div>공지사항 관리</div>
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;">
           <div style="font-size:14px;font-weight:700;margin-bottom:12px;">새 공지 작성</div>
           <div class="form-group"><label class="form-label">제목</label><input class="form-input" id="ntc-title" placeholder="공지 제목"></div>
@@ -952,11 +956,11 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 
       <!-- 회원 관리 -->
       <div class="a-panel" id="panel-users">
-        <div class="panel-title"><div class="p-icon">👥</div>회원 관리</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>회원 관리</div>
         <div class="tab-row">
           <button class="utab active" id="utab-single" onclick="switchUtab('single')">개별 등록</button>
           <button class="utab" id="utab-csv" onclick="switchUtab('csv')">CSV / Excel 일괄 등록</button>
-          <button class="utab" id="utab-group" onclick="switchUtab('group')">🔑 그룹 권한 관리</button>
+          <button class="utab" id="utab-group" onclick="switchUtab('group')"><svg class="ai" aria-hidden="true"><use href="#i-key"/></svg>그룹 권한 관리</button>
         </div>
         <div id="utab-single-body" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;">
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;">
@@ -985,7 +989,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
             ondragleave="this.style.borderColor=''"
             ondrop="csvDropHandler(event)">
             <input type="file" id="csv-file-input" accept=".csv,.xlsx" style="display:none" onchange="csvFileSelected(this.files[0])">
-            <div style="font-size:36px;margin-bottom:8px;">📂</div>
+            <div style="font-size:36px;margin-bottom:8px;color:var(--accent);line-height:1;"><svg class="ai" style="width:1em;height:1em;margin:0;" aria-hidden="true"><use href="#i-upload"/></svg></div>
             <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">CSV 또는 Excel 파일 업로드</div>
             <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">클릭하거나 파일을 드래그하세요</div>
             <div style="display:flex;gap:6px;justify-content:center;"><span class="file-tag">.csv</span><span class="file-tag">.xlsx</span></div>
@@ -999,7 +1003,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
             <div id="csv-preview-rows"></div>
           </div>
           <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;">
-            <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px;">📋 CSV 양식</div>
+            <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px;"><svg class="ai" aria-hidden="true"><use href="#i-clip"/></svg>CSV 양식</div>
             <code style="font-family:var(--mono);color:var(--accent);font-size:11px;">아이디, 이름, 소속, 비밀번호, 권한(user/admin), 그룹명</code>
             <div style="font-size:11px;color:var(--text3);margin-top:6px;">예) user001, 홍길동, 1공구 현장, pass1234, user, 정수기팀</div>
             <div style="font-size:11px;color:var(--text3);">권한·그룹 생략 시 자동으로 <strong>user / 그룹 없음</strong>으로 설정됩니다.</div>
@@ -1031,7 +1035,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
             <!-- 바로 채팅 -->
             <label style="display:flex;align-items:flex-start;gap:8px;margin-top:14px;cursor:pointer;font-size:13px;">
               <input type="checkbox" id="grp-direct-chat" style="accent-color:var(--accent);margin-top:3px;">
-              <span><strong>💬 바로 채팅</strong> <span style="font-size:11px;color:var(--text3);">이 그룹 사용자는 로그인하면 제품군·모델 선택 없이 채팅창만 보이며, 허용된 제품군 전체 문서에서 찾아 답합니다. (여러 그룹에 속해 있으면 하나라도 체크된 경우 바로 채팅)</span></span>
+              <span><strong><svg class="ai" aria-hidden="true"><use href="#i-chat"/></svg>바로 채팅</strong> <span style="font-size:11px;color:var(--text3);">이 그룹 사용자는 로그인하면 제품군·모델 선택 없이 채팅창만 보이며, 허용된 제품군 전체 문서에서 찾아 답합니다. (여러 그룹에 속해 있으면 하나라도 체크된 경우 바로 채팅)</span></span>
             </label>
           </div>
 
@@ -1110,18 +1114,18 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 
       <!-- 문의 관리 -->
       <div class="a-panel" id="panel-inquiries">
-        <div class="panel-title"><div class="p-icon">📬</div>문의 관리</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M9 10h6M9 14h4"/></svg></div>문의 관리</div>
         <div id="inq-admin-list"></div>
       </div>
 
       <!-- 로그 -->
       <div class="a-panel" id="panel-logs">
-        <div class="panel-title"><div class="p-icon">📜</div>대화 로그 & 분석</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>대화 로그 & 분석</div>
 
         <!-- 탭 -->
         <div style="display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--border);padding-bottom:0;">
-          <button class="log-tab active" id="ltab-log" onclick="switchLogTab('log')" style="padding:8px 18px;font-size:13px;font-weight:600;font-family:var(--font);background:none;border:none;border-bottom:2px solid var(--accent);color:var(--accent);cursor:pointer;margin-bottom:-1px;">📋 대화 로그</button>
-          <button class="log-tab" id="ltab-report" onclick="switchLogTab('report')" style="padding:8px 18px;font-size:13px;font-weight:600;font-family:var(--font);background:none;border:none;border-bottom:2px solid transparent;color:var(--text3);cursor:pointer;margin-bottom:-1px;">📊 분석 리포트</button>
+          <button class="log-tab active" id="ltab-log" onclick="switchLogTab('log')" style="padding:8px 18px;font-size:13px;font-weight:600;font-family:var(--font);background:none;border:none;border-bottom:2px solid var(--accent);color:var(--accent);cursor:pointer;margin-bottom:-1px;"><svg class="ai" aria-hidden="true"><use href="#i-list"/></svg>대화 로그</button>
+          <button class="log-tab" id="ltab-report" onclick="switchLogTab('report')" style="padding:8px 18px;font-size:13px;font-weight:600;font-family:var(--font);background:none;border:none;border-bottom:2px solid transparent;color:var(--text3);cursor:pointer;margin-bottom:-1px;"><svg class="ai" aria-hidden="true"><use href="#i-chart"/></svg>분석 리포트</button>
         </div>
 
         <!-- ── 탭1: 대화 로그 ── -->
@@ -1135,7 +1139,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
                 <button class="log-period-btn" data-d="7"  onclick="setLogPeriod(this)" style="padding:5px 10px;font-size:11px;font-weight:600;font-family:var(--font);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;">7일</button>
                 <button class="log-period-btn" data-d="30" onclick="setLogPeriod(this)" style="padding:5px 10px;font-size:11px;font-weight:600;font-family:var(--font);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;">30일</button>
                 <button class="log-period-btn" data-d="-1" onclick="setLogPeriod(this)" style="padding:5px 10px;font-size:11px;font-weight:600;font-family:var(--font);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;">전체</button>
-                <button class="log-period-btn" data-d="custom" onclick="toggleLogCustom()" style="padding:5px 10px;font-size:11px;font-weight:600;font-family:var(--font);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;">📅 직접입력</button>
+                <button class="log-period-btn" data-d="custom" onclick="toggleLogCustom()" style="padding:5px 10px;font-size:11px;font-weight:600;font-family:var(--font);border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;"><svg class="ai" aria-hidden="true"><use href="#i-cal"/></svg>직접입력</button>
               </div>
               <!-- 직접입력 날짜 피커 -->
               <div id="log-custom-range" style="display:none;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
@@ -1172,7 +1176,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
             <button class="rpt-period-btn active" data-d="7"  onclick="setRptPeriod(this)" style="padding:6px 14px;font-size:12px;font-weight:600;font-family:var(--font);border-radius:20px;border:1px solid var(--accent);background:var(--accent-dim);color:var(--accent);cursor:pointer;">최근 7일</button>
             <button class="rpt-period-btn" data-d="30" onclick="setRptPeriod(this)" style="padding:6px 14px;font-size:12px;font-weight:600;font-family:var(--font);border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;">최근 30일</button>
             <button class="rpt-period-btn" data-d="-1" onclick="setRptPeriod(this)" style="padding:6px 14px;font-size:12px;font-weight:600;font-family:var(--font);border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;">전체</button>
-            <button class="rpt-period-btn" data-d="custom" onclick="toggleRptCustom()" style="padding:6px 14px;font-size:12px;font-weight:600;font-family:var(--font);border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;">📅 직접입력</button>
+            <button class="rpt-period-btn" data-d="custom" onclick="toggleRptCustom()" style="padding:6px 14px;font-size:12px;font-weight:600;font-family:var(--font);border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;"><svg class="ai" aria-hidden="true"><use href="#i-cal"/></svg>직접입력</button>
             <span id="rpt-range-txt" style="font-size:12px;color:var(--text3);margin-left:4px;"></span>
           </div>
           <!-- 직접입력 날짜 피커 -->
@@ -1614,8 +1618,31 @@ function showLoadingOverlay(show) {
   if (!el) {
     el = document.createElement('div');
     el.id = 'db-loading';
-    el.style.cssText = 'position:fixed;inset:0;background:rgba(13,17,23,.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:1;transition:opacity .4s ease;';
-    el.innerHTML = '<div style="width:38px;height:38px;border:3px solid #30363d;border-top-color:#2d5f8f;border-radius:50%;animation:dbspin .8s linear infinite;"></div><div style="font-size:14px;color:#8b949e;">데이터 불러오는 중...</div><style>@keyframes dbspin{to{transform:rotate(360deg)}}</style>';
+    el.setAttribute('role','status'); el.setAttribute('aria-label','Loading');
+    el.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;opacity:1;transition:opacity .4s ease;overflow:hidden;background:linear-gradient(180deg,#070d22 0%,#10204a 52%,#27487d 100%);';
+    var h = '<style>'
+      + '#db-loading .ld-star{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.35;animation:ldtw 3.2s ease-in-out infinite;}'
+      + '#db-loading .ld-shoot{position:absolute;width:130px;height:2px;border-radius:2px;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(190,215,255,.55) 70%,#fff);opacity:0;transform:rotate(145deg);animation:ldsh 4.6s ease-in infinite;}'
+      + '#db-loading .ld-shoot::after{content:"";position:absolute;right:-2px;top:-2px;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 10px 3px rgba(190,215,255,.85);}'
+      + '#db-loading .ld-mark{position:relative;width:64px;height:64px;animation:ldfl 4.2s ease-in-out infinite;filter:drop-shadow(0 0 14px rgba(255,214,102,.55));}'
+      + '#db-loading .ld-txt{position:relative;font-size:15px;font-weight:500;letter-spacing:.08em;color:rgba(214,226,255,.82);}'
+      + '#db-loading .ld-dots i{font-style:normal;animation:lddt 1.4s ease-in-out infinite;}#db-loading .ld-dots i:nth-child(2){animation-delay:.2s;}#db-loading .ld-dots i:nth-child(3){animation-delay:.4s;}'
+      + '@keyframes lddt{0%,60%,100%{opacity:.2;}30%{opacity:1;}}'
+      + '@keyframes ldtw{0%,100%{opacity:.18;transform:scale(.8);}50%{opacity:.95;transform:scale(1.5);}}'
+      + '@keyframes ldsh{0%{opacity:0;transform:rotate(145deg) translateX(0);}4%{opacity:1;}24%{opacity:0;transform:rotate(145deg) translateX(520px);}100%{opacity:0;transform:rotate(145deg) translateX(520px);}}'
+      + '@keyframes ldfl{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}'
+      + '@keyframes ldpu{0%,100%{opacity:.45;}50%{opacity:1;}}'
+      + '@media (prefers-reduced-motion:reduce){#db-loading .ld-star,#db-loading .ld-mark,#db-loading .ld-txt,#db-loading .ld-dots i{animation:none;}#db-loading .ld-shoot{display:none;}}'
+      + '</style>';
+    for (var k = 0; k < 70; k++) {
+      h += '<i class="ld-star" style="left:' + (Math.random()*100).toFixed(1) + '%;top:' + (Math.random()*92).toFixed(1) + '%;animation-delay:-' + (Math.random()*3.2).toFixed(2) + 's;animation-duration:' + (2.4+Math.random()*2.6).toFixed(2) + 's;' + (Math.random()<.18 ? 'width:3px;height:3px;' : '') + '"></i>';
+    }
+    for (var q = 0; q < 6; q++) {
+      h += '<i class="ld-shoot" style="left:' + (35 + Math.random()*62).toFixed(0) + '%;top:' + (Math.random()*38).toFixed(0) + '%;animation-delay:-' + (q*0.8 + Math.random()*0.5).toFixed(2) + 's;animation-duration:' + (4.2+Math.random()*2).toFixed(1) + 's;"></i>';
+    }
+    h += '<svg class="ld-mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4c2.2 15.5 8.5 22 28 28-19.5 6-25.8 12.5-28 28C29.8 44.5 23.5 38 4 32c19.5-6 25.8-12.5 28-28z" fill="#ffe08a"/></svg>'
+       + '<div class="ld-txt">Loading<span class="ld-dots"><i>.</i><i>.</i><i>.</i></span></div>';
+    el.innerHTML = h;
     document.body.appendChild(el);
   }
   clearTimeout(_loadOvT);
@@ -5091,9 +5118,10 @@ function barHtml(label,count,max,badgeClass){
   </div>`;
 }
 
+function AIC(n){return '<svg class="ai ai-lg" aria-hidden="true"><use href="#i-'+n+'"/></svg>';}
 function cardHtml(icon,title,val,sub,color){
   return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-    <div style="font-size:22px;margin-bottom:6px;">${icon}</div>
+    <div style="font-size:22px;margin-bottom:6px;line-height:1;color:${color};">${icon}</div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">${title}</div>
     <div style="font-size:26px;font-weight:900;color:${color};">${val}</div>
     ${sub?`<div style="font-size:11px;color:var(--text3);margin-top:3px;">${sub}</div>`:''}
@@ -5157,21 +5185,21 @@ function renderReport(){
   el.innerHTML=`
     <!-- 요약 카드 -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:24px;">
-      ${cardHtml('💬','총 질문',total+'건','','var(--info)')}
-      ${cardHtml('✅','답변완료',ok+'건',answerRate+'%','var(--success)')}
-      ${cardHtml('❌','미답변',fail+'건',total>0?(100-answerRate)+'%':'0%','var(--danger)')}
-      ${cardHtml('👥','참여 인원',[...new Set(logs.map(l=>l.user))].length+'명','','var(--accent)')}
+      ${cardHtml(AIC('chat'),'총 질문',total+'건','','var(--info)')}
+      ${cardHtml(AIC('ok'),'답변완료',ok+'건',answerRate+'%','var(--success)')}
+      ${cardHtml(AIC('no'),'미답변',fail+'건',total>0?(100-answerRate)+'%':'0%','var(--danger)')}
+      ${cardHtml(AIC('users'),'참여 인원',[...new Set(logs.map(l=>l.user))].length+'명','','var(--accent)')}
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
       <!-- 제품군별 -->
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
-        <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">📦</span>제품군별 질문 빈도</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;display:inline-flex;color:var(--accent);">${AIC('box')}</span>제품군별 질문 빈도</div>
         ${byCat.length?byCat.map(([k,v])=>barHtml(k,v,catMax,'badge-gold')).join(''):'<div style="font-size:12px;color:var(--text3);">데이터 없음</div>'}
       </div>
       <!-- 모델별 -->
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
-        <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">🔩</span>모델별 질문 빈도</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;display:inline-flex;color:var(--accent);">${AIC('chip')}</span>모델별 질문 빈도</div>
         ${byModel.length?byModel.map(([k,v])=>barHtml(k,v,modelMax,'badge-blue')).join(''):'<div style="font-size:12px;color:var(--text3);">데이터 없음</div>'}
       </div>
     </div>
@@ -5179,25 +5207,25 @@ function renderReport(){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
       <!-- 많이 참조된 문서 -->
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
-        <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">📄</span>많이 참조된 문서 Top 10</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;display:inline-flex;color:var(--accent);">${AIC('doc')}</span>많이 참조된 문서 Top 10</div>
         ${byRef.length?byRef.slice(0,10).map(([k,v])=>barHtml(k.length>18?k.slice(0,18)+'…':k,v,refMax,'badge-gray')).join(''):'<div style="font-size:12px;color:var(--text3);">데이터 없음</div>'}
       </div>
       <!-- 사용자별 활동 -->
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
-        <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">👥</span>사용자별 활동량</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;display:inline-flex;color:var(--accent);">${AIC('users')}</span>사용자별 활동량</div>
         ${byUser.length?byUser.slice(0,10).map(([k,v])=>barHtml(k,v,userMax,'badge-blue')).join(''):'<div style="font-size:12px;color:var(--text3);">데이터 없음</div>'}
       </div>
     </div>
 
     <!-- 자주 묻는 질문 키워드 -->
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">☁️</span>자주 묻는 질문 키워드</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;display:inline-flex;color:var(--accent);">${AIC('cloud')}</span>자주 묻는 질문 키워드</div>
       <div style="line-height:2.2;">${keywordCloud(logs)}</div>
     </div>
 
     <!-- 미답변 질문 -->
     <div style="background:rgba(248,81,73,.06);border:1px solid rgba(248,81,73,.25);border-radius:var(--radius);padding:16px;">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;color:var(--danger);"><span style="font-size:16px;">⚠️</span>미답변 질문 (문서 보완 필요)</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;color:var(--danger);"><span style="font-size:16px;display:inline-flex;">${AIC('alert')}</span>미답변 질문 (문서 보완 필요)</div>
       ${failLogs.length===0
         ?'<div style="font-size:12px;color:var(--text3);">미답변 질문이 없습니다 🎉</div>'
         :failLogs.map(l=>`
@@ -5683,7 +5711,7 @@ function laUsageDraw(){
   const c=document.getElementById('la-usage');if(!c)return;
   if(!isSuperAdmin()||!LA.data){c.style.display='none';return;}
   const u=LA.data.usage;c.style.display='';
-  c.innerHTML='<div class="sec-hdr" style="margin-bottom:0;"><div class="sec-title">🔋 자료실 파일 저장공간 <span class="eb-tag">admin 전용</span></div></div>'
+  c.innerHTML='<div class="sec-hdr" style="margin-bottom:0;"><div class="sec-title"><svg class="ai" aria-hidden="true"><use href="#i-battery"/></svg>자료실 파일 저장공간 <span class="eb-tag">admin 전용</span></div></div>'
     +energyBar('무료 저장공간 (R2 10GB)',libBytes(u.usedBytes),libBytes(u.limitBytes||LA_R2_LIMIT),(u.usedBytes||0)/(u.limitBytes||LA_R2_LIMIT),'자료 '+u.docCount+'건, 이전 버전 포함');
 }
 

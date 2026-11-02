@@ -177,12 +177,30 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   }, BIG.toString('base64'));
   await page.waitForSelector('#doc-editor .de-img', { timeout: 8000 });
   ok((await page.evaluate(() => window.__uploads.length)) === 2, '캡처 이미지를 붙여넣기(Ctrl+V)해도 올라간다');
+  // 파워포인트에서 글을 복사하면 글 + 그 글을 찍은 그림이 같이 담긴다 → 글이 붙어야 하고 사진으로 올라가면 안 된다
+  await page.click('#doc-editor .de-imgbox .x'); await page.waitForTimeout(100);
+  const pp = await page.evaluate(async (b64) => {
+    const bin = atob(b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+    const dt = new DataTransfer(); dt.setData('text/plain', '슬라이드에서 복사한 글'); dt.setData('text/html', '<p>슬라이드에서 복사한 글</p>'); dt.items.add(new File([a], 'image.png', { type: 'image/png' }));
+    const ta = document.querySelector('#doc-editor .de-text'); ta.focus();
+    const ev = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }); ta.dispatchEvent(ev);
+    return { prevented: ev.defaultPrevented };
+  }, BIG.toString('base64'));
+  await page.waitForTimeout(600);
+  ok(pp.prevented === false && (await page.$$('#doc-editor .de-img')).length === 0 && (await page.evaluate(() => window.__uploads.length)) === 2, '글과 그림이 같이 복사된 경우(파워포인트 등) 사진으로 가로채지 않고 글이 그대로 붙여진다');
+  await page.evaluate(async (b64) => {
+    const bin = atob(b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+    const dt = new DataTransfer(); dt.setData('text/plain', '   '); dt.items.add(new File([a], 'p.png', { type: 'image/png' }));
+    document.querySelector('#doc-editor .de-text').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  }, BIG.toString('base64'));
+  await page.waitForSelector('#doc-editor .de-img', { timeout: 8000 });
+  ok((await page.evaluate(() => window.__uploads.length)) === 3, '빈 글(공백)만 같이 있는 이미지 복사는 여전히 사진으로 올라간다');
   await page.click('#doc-editor .de-imgbox .x'); await page.waitForTimeout(100);
   ok((await page.$$('#doc-editor .de-img')).length === 0 && (await page.$$('#doc-editor .de-text')).length === 1 && (await hidden()) === '', '✕ 를 누르면 사진 칸이 빠지고 글 칸이 하나로 합쳐진다');
   // 사진이 아닌 파일
   await page.setInputFiles('#doc-img-file', { name: 'a.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') });
   await page.waitForTimeout(300);
-  ok((await page.evaluate(() => window.__uploads.length)) === 2, '사진이 아닌 파일은 올라가지 않는다');
+  ok((await page.evaluate(() => window.__uploads.length)) === 3, '사진이 아닌 파일은 올라가지 않는다');
   // 두 장 연속 + 글 사이
   await page.fill('#doc-editor .de-text', 'AAA\nBBB');
   await page.evaluate(() => { const t = document.querySelector('#doc-editor .de-text'); t.focus(); t.setSelectionRange(3, 3); t.dispatchEvent(new Event('keyup')); });

@@ -347,7 +347,8 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 .a-panel{display:none;}
 .a-panel.active{display:block;}
 .panel-title{font-size:19px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
-.p-icon{width:32px;height:32px;border-radius:8px;background:var(--accent-dim);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:15px;}
+.p-icon{width:34px;height:34px;border-radius:10px;background:var(--accent-dim);border:1px solid rgba(45,95,143,.22);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:none;}
+.p-icon svg{width:18px;height:18px;}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px;}
 .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
 .stat-lbl{font-size:12px;color:var(--text3);margin-bottom:5px;}
@@ -509,7 +510,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 .topnav{gap:10px;}
 .nav-logo{flex-shrink:0;}
 .nav-right{min-width:0;}
-.nav-avatar{flex:none;}
+.nav-avatar{display:none !important;}   /* 이름 앞의 동그란 첫 글자 표시는 사용하지 않음 */
 @media(max-width:420px){ #screen-chat .nav-avatar{display:none;} }
 @media(max-width:380px){
   .topnav{padding:0 10px;gap:6px;}
@@ -825,7 +826,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 
       <!-- 대시보드 -->
       <div class="a-panel active" id="panel-dashboard">
-        <div class="panel-title"><div class="p-icon">📊</div>대시보드</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>대시보드</div>
         <div style="background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <span style="font-size:20px;">⚡</span>
           <div><div style="font-size:13px;font-weight:700;color:var(--info);">Gemini 2.0 Flash — Google AI 엔진 사용 중</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">분당 100만 토큰 · 50명 동시 사용 가능 · 한국어 우수</div></div>
@@ -847,7 +848,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 
       <!-- 원본 자료실 관리 -->
       <div class="a-panel" id="panel-library">
-        <div class="panel-title"><div class="p-icon">📚</div>원본 자료실</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></div>원본 자료실</div>
         <div class="usage-card" id="la-usage" style="display:none;"></div>
         <div class="la-tabs" id="la-tabs">
           <button type="button" class="active" data-t="tree" onclick="laTab('tree')">분류 · 자료</button>
@@ -859,7 +860,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 
       <!-- API 키 설정 -->
       <div class="a-panel" id="panel-apikey">
-        <div class="panel-title"><div class="p-icon">🔑</div>API 키 설정</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3 21 2m-3 3 3 3m-6-6 3 3"/></svg></div>API 키 설정</div>
         <div class="api-config-box">
           <div class="api-config-title">🌀 Gemini API 키 (무료)</div>
           <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.7;"><a href="https://aistudio.google.com" target="_blank" style="color:var(--info);">aistudio.google.com</a>에서 무료 발급 · Gemini 2.0 Flash · 분당 100만 토큰</div>
@@ -889,7 +890,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 
       <!-- 문서 관리 -->
       <div class="a-panel" id="panel-docs">
-        <div class="panel-title"><div class="p-icon">📁</div>문서 관리</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></div>문서 관리</div>
 
         <!-- 안내 박스 -->
         <div style="background:rgba(45,95,143,.07);border:1px solid rgba(45,95,143,.25);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;">
@@ -940,7 +941,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 
       <!-- 공지사항 -->
       <div class="a-panel" id="panel-notice">
-        <div class="panel-title"><div class="p-icon">📢</div>공지사항 관리</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></div>공지사항 관리</div>
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;">
           <div style="font-size:14px;font-weight:700;margin-bottom:12px;">새 공지 작성</div>
           <div class="form-group"><label class="form-label">제목</label><input class="form-input" id="ntc-title" placeholder="공지 제목"></div>
@@ -952,7 +953,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 
       <!-- 회원 관리 -->
       <div class="a-panel" id="panel-users">
-        <div class="panel-title"><div class="p-icon">👥</div>회원 관리</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>회원 관리</div>
         <div class="tab-row">
           <button class="utab active" id="utab-single" onclick="switchUtab('single')">개별 등록</button>
           <button class="utab" id="utab-csv" onclick="switchUtab('csv')">CSV / Excel 일괄 등록</button>
@@ -1110,13 +1111,13 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 
       <!-- 문의 관리 -->
       <div class="a-panel" id="panel-inquiries">
-        <div class="panel-title"><div class="p-icon">📬</div>문의 관리</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M9 10h6M9 14h4"/></svg></div>문의 관리</div>
         <div id="inq-admin-list"></div>
       </div>
 
       <!-- 로그 -->
       <div class="a-panel" id="panel-logs">
-        <div class="panel-title"><div class="p-icon">📜</div>대화 로그 & 분석</div>
+        <div class="panel-title"><div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>대화 로그 & 분석</div>
 
         <!-- 탭 -->
         <div style="display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--border);padding-bottom:0;">

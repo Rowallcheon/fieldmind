@@ -46,6 +46,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   const a = await mkPage(); await login(a, 'admin'); await a.waitForSelector('#screen-admin.active', { timeout: 8000 });
   await a.evaluate(() => { showPanel('docs'); const t = document.getElementById('doc-tree'); const open = () => document.querySelectorAll('.cat-models').forEach(x => x.classList.add('open')); new MutationObserver(open).observe(t, { childList: true }); open(); products.forEach((p, i) => p.models.forEach((m, j) => _docOpen.add(i + '-' + j))); renderDocTree(); });
   await a.waitForSelector('.dl-doc .dl-eye');
+  ok(await a.$eval('#admin-avatar', e => getComputedStyle(e).display === 'none'), '관리자 화면 이름 앞의 동그란 첫 글자 표시가 없다');
+  { const pi = await a.$$eval('.p-icon', l => l.map(e => ({ svg: !!e.querySelector('svg'), txt: e.textContent.trim() }))); ok(pi.length === 8 && pi.every(x => x.svg && x.txt === ''), '관리자 화면 제목 옆 아이콘 8개가 모두 이모지 대신 심플한 선 아이콘(SVG)이다 (' + pi.length + '개)'); await a.screenshot({ path: path.join(OUT, 'admin-icons.png'), clip: { x: 230, y: 40, width: 700, height: 90 } }); }
   const writes = () => a.evaluate(() => window.__writes.slice());
   const row = t => a.locator('.dl-doc', { hasText: t });
   await a.screenshot({ path: path.join(OUT, 'eye.png'), clip: { x: 230, y: 520, width: 970, height: 380 } });
@@ -150,6 +152,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await u.evaluate(() => { document.getElementById('chat-inp').value = '전표 입력 방법'; sendMsg(); });
   await u.waitForFunction(() => document.querySelectorAll('.msg.bot').length >= 2, null, { timeout: 8000 });
   ok(/등록된 문서 없음/.test(u.gem.req.system_instruction.parts[0].text) && !u.gem.req.system_instruction.parts[0].text.includes('DDD'), '모든 문서를 꺼 두면 "등록된 문서 없음"으로 전달되고 본문은 전달되지 않는다');
+  ok(await u.$eval('#chat-avatar', e => getComputedStyle(e).display === 'none') && /사용자/.test(await u.textContent('.nav-right')), '사용자 화면 이름 앞의 동그란 첫 글자 표시가 없고 이름은 그대로 보인다');
   ok(u.errs.length === 0, '사용자 화면 페이지 오류 없음' + (u.errs.length ? JSON.stringify(u.errs) : ''));
 
   await browser.close(); srv.close();

@@ -69,6 +69,16 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await n.fill('#chat-inp', ''); await n.waitForTimeout(450);
   ok(await n.$eval('#send-btn', e => getComputedStyle(e).backgroundColor) !== 'rgb(45, 95, 143)', '입력이 없으면 전송 버튼은 연하게 보인다');
   await n.screenshot({ path: path.join(OUT, 'chat-ready2.png') });
+  // 추천 질문: 문서에 없는 내용(점검 항목 등)은 고정으로 띄우지 않는다
+  { const qb = () => n.$$eval('#chat-body .quick-btn', l => l.map(b => b.textContent.trim()));
+    const q1 = await qb();
+    ok(!q1.some(s => /점검|에러코드|주요 사양|안전/.test(s)) && q1.some(s => /CP-PS 유로도/.test(s)) && q1.length <= 4, '문서에 없는 주제(점검 항목·에러코드·사양·안전)는 추천 질문으로 뜨지 않고, 실제 문서 제목이 추천으로 뜬다 (' + q1.join(' | ') + ')');
+    await n.evaluate(() => { selModel.docs.push({ id: 'dz', title: '정기 점검 안내', cat: '기타', content: '필터 점검 방법. 월 1회 점검.', enabled: true }, { id: 'dy', title: '설치 안내서', cat: '기타', content: '에러 E-04 는 입수 오류. 에러 E-05 는 배수 오류.', enabled: true }); renderWelcome(); });
+    const q2 = await qb();
+    ok(q2.some(s => /점검 항목/.test(s)) && q2.some(s => /에러코드/.test(s)) && !q2.some(s => /주요 사양|안전 주의/.test(s)) && q2.length <= 4, '문서에 실제로 있는 주제(점검·에러)만 주제 추천이 뜬다 (' + q2.join(' | ') + ')');
+    await n.evaluate(() => { selModel.docs.forEach(d => { d.enabled = false; }); renderWelcome(); });
+    ok((await qb()).length === 0, '모든 문서를 꺼 두면(사용 안 함) 추천 질문도 없다');
+    await n.evaluate(() => { selModel.docs = selModel.docs.filter(d => d.id !== 'dz' && d.id !== 'dy'); selModel.docs.forEach(d => { d.enabled = true; }); }); }
   console.log('[바로 채팅 사용자 (정수기+행정, 문서 많음)]');
   const u = await mkPage(); await login(u, 'u1');
   ok(!(await u.locator('.select-bar').isVisible()) && await u.$eval('#screen-chat', e => e.classList.contains('direct-mode')), '제품군·모델 선택 줄이 숨겨지고 채팅창만 보인다');

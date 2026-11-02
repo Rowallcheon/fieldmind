@@ -1618,19 +1618,21 @@ function showLoadingOverlay(show) {
   if (!el) {
     el = document.createElement('div');
     el.id = 'db-loading';
-    el.setAttribute('role','status'); el.setAttribute('aria-label','불러오는 중');
+    el.setAttribute('role','status'); el.setAttribute('aria-label','Loading');
     el.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;opacity:1;transition:opacity .4s ease;overflow:hidden;background:linear-gradient(180deg,#070d22 0%,#10204a 52%,#27487d 100%);';
     var h = '<style>'
       + '#db-loading .ld-star{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.35;animation:ldtw 3.2s ease-in-out infinite;}'
       + '#db-loading .ld-shoot{position:absolute;width:130px;height:2px;border-radius:2px;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(190,215,255,.55) 70%,#fff);opacity:0;transform:rotate(145deg);animation:ldsh 4.6s ease-in infinite;}'
       + '#db-loading .ld-shoot::after{content:"";position:absolute;right:-2px;top:-2px;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 10px 3px rgba(190,215,255,.85);}'
       + '#db-loading .ld-mark{position:relative;width:64px;height:64px;animation:ldfl 4.2s ease-in-out infinite;filter:drop-shadow(0 0 14px rgba(255,214,102,.55));}'
-      + '#db-loading .ld-txt{position:relative;font-size:14px;letter-spacing:.04em;color:rgba(214,226,255,.78);animation:ldpu 2.6s ease-in-out infinite;}'
+      + '#db-loading .ld-txt{position:relative;font-size:15px;font-weight:500;letter-spacing:.08em;color:rgba(214,226,255,.82);}'
+      + '#db-loading .ld-dots i{font-style:normal;animation:lddt 1.4s ease-in-out infinite;}#db-loading .ld-dots i:nth-child(2){animation-delay:.2s;}#db-loading .ld-dots i:nth-child(3){animation-delay:.4s;}'
+      + '@keyframes lddt{0%,60%,100%{opacity:.2;}30%{opacity:1;}}'
       + '@keyframes ldtw{0%,100%{opacity:.18;transform:scale(.8);}50%{opacity:.95;transform:scale(1.5);}}'
       + '@keyframes ldsh{0%{opacity:0;transform:rotate(145deg) translateX(0);}4%{opacity:1;}24%{opacity:0;transform:rotate(145deg) translateX(520px);}100%{opacity:0;transform:rotate(145deg) translateX(520px);}}'
       + '@keyframes ldfl{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}'
       + '@keyframes ldpu{0%,100%{opacity:.45;}50%{opacity:1;}}'
-      + '@media (prefers-reduced-motion:reduce){#db-loading .ld-star,#db-loading .ld-mark,#db-loading .ld-txt{animation:none;}#db-loading .ld-shoot{display:none;}}'
+      + '@media (prefers-reduced-motion:reduce){#db-loading .ld-star,#db-loading .ld-mark,#db-loading .ld-txt,#db-loading .ld-dots i{animation:none;}#db-loading .ld-shoot{display:none;}}'
       + '</style>';
     for (var k = 0; k < 70; k++) {
       h += '<i class="ld-star" style="left:' + (Math.random()*100).toFixed(1) + '%;top:' + (Math.random()*92).toFixed(1) + '%;animation-delay:-' + (Math.random()*3.2).toFixed(2) + 's;animation-duration:' + (2.4+Math.random()*2.6).toFixed(2) + 's;' + (Math.random()<.18 ? 'width:3px;height:3px;' : '') + '"></i>';
@@ -1639,7 +1641,7 @@ function showLoadingOverlay(show) {
       h += '<i class="ld-shoot" style="left:' + (35 + Math.random()*62).toFixed(0) + '%;top:' + (Math.random()*38).toFixed(0) + '%;animation-delay:-' + (q*0.8 + Math.random()*0.5).toFixed(2) + 's;animation-duration:' + (4.2+Math.random()*2).toFixed(1) + 's;"></i>';
     }
     h += '<svg class="ld-mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4c2.2 15.5 8.5 22 28 28-19.5 6-25.8 12.5-28 28C29.8 44.5 23.5 38 4 32c19.5-6 25.8-12.5 28-28z" fill="#ffe08a"/></svg>'
-       + '<div class="ld-txt">별빛을 모으는 중이에요</div>';
+       + '<div class="ld-txt">Loading<span class="ld-dots"><i>.</i><i>.</i><i>.</i></span></div>';
     el.innerHTML = h;
     document.body.appendChild(el);
   }

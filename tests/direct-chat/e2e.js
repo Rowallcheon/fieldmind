@@ -164,8 +164,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(iDark >= 0 && iDark < iReady, '순서 1: 먼저 어두운 로딩 화면이 보인다');
   { const lp = await mkPage(); await lp.goto(BASE + '/'); await lp.waitForFunction(() => document.body.classList.contains('app-ready'), null, { timeout: 15000 });
     await lp.evaluate(() => showLoadingOverlay(true)); await lp.waitForTimeout(300);
-    const ld = await lp.evaluate(() => { const o = document.getElementById('db-loading'), sh = [...o.querySelectorAll('.ld-shoot')]; return { txt: o.textContent.replace(/\s+/g, ' ').trim(), stars: o.querySelectorAll('.ld-star').length, sh: sh.length, shAnim: sh.every(e => /ldsh/.test(getComputedStyle(e).animationName) && getComputedStyle(e).animationIterationCount === 'infinite'), tw: /ldtw/.test(getComputedStyle(o.querySelector('.ld-star')).animationName), bg: getComputedStyle(o).backgroundImage.includes('linear-gradient') }; }); await lp.close();
-    ok(!/불러오는|데이터/.test(ld.txt) && /별빛/.test(ld.txt), '로딩 화면: 딱딱한 "데이터 불러오는 중" 대신 감성 문구 ("' + ld.txt + '")');
+    const ld = await lp.evaluate(() => { const o = document.getElementById('db-loading'), sh = [...o.querySelectorAll('.ld-shoot')]; return { txt: o.querySelector('.ld-txt').textContent.trim(), all: [...o.childNodes].filter(n => n.nodeType === 3).length, stars: o.querySelectorAll('.ld-star').length, sh: sh.length, shAnim: sh.every(e => /ldsh/.test(getComputedStyle(e).animationName) && getComputedStyle(e).animationIterationCount === 'infinite'), tw: /ldtw/.test(getComputedStyle(o.querySelector('.ld-star')).animationName), bg: getComputedStyle(o).backgroundImage.includes('linear-gradient') }; }); await lp.close();
+    ok(/^Loading\s*\.\s*\.\s*\.$/.test(ld.txt), '로딩 화면: 문구는 영어 "Loading..." 뿐이다 ("' + ld.txt + '")');
     ok(ld.stars >= 50 && ld.tw && ld.sh >= 4 && ld.shAnim && ld.bg, '로딩 화면: 반짝이는 별과 계속 반복해서 떨어지는 별똥별이 있는 밤하늘이다 (별 ' + ld.stars + '개, 별똥별 ' + ld.sh + '개)'); }
   ok(tl.slice(0, iReady).every(x => x.cardOp === 0), '순서 1-2: 로딩 화면이 있는 동안 로그인 카드는 숨겨져 있다 (애니메이션이 가려진 채 지나가지 않는다)');
   const iFade = tl.findIndex(x => x.ov === 'flex' && x.ovOp < 0.9);

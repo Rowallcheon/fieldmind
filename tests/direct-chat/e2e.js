@@ -164,9 +164,14 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(iDark >= 0 && iDark < iReady, '순서 1: 먼저 어두운 로딩 화면이 보인다');
   { const lp = await mkPage(); await lp.goto(BASE + '/'); await lp.waitForFunction(() => document.body.classList.contains('app-ready'), null, { timeout: 15000 });
     await lp.evaluate(() => showLoadingOverlay(true)); await lp.waitForTimeout(300);
-    const ld = await lp.evaluate(() => { const o = document.getElementById('db-loading'), sh = [...o.querySelectorAll('.ld-shoot')]; return { txt: o.querySelector('.ld-txt').textContent.trim(), all: [...o.childNodes].filter(n => n.nodeType === 3).length, stars: o.querySelectorAll('.ld-star').length, sh: sh.length, shAnim: sh.every(e => /ldsh/.test(getComputedStyle(e).animationName) && getComputedStyle(e).animationIterationCount === 'infinite'), tw: /ldtw/.test(getComputedStyle(o.querySelector('.ld-star')).animationName), bg: getComputedStyle(o).backgroundImage.includes('linear-gradient') }; }); await lp.close();
+    const ld = await lp.evaluate(() => { const o = document.getElementById('db-loading'), d3 = o.querySelector('.ld-3d'), cs = getComputedStyle(d3), L = [...d3.querySelectorAll('svg')]; return { txt: o.querySelector('.ld-txt').textContent.trim(), stars: o.querySelectorAll('.ld-star').length, shoot: o.querySelectorAll('.ld-shoot').length, tw: /ldtw/.test(getComputedStyle(o.querySelector('.ld-star')).animationName), bg: getComputedStyle(o).backgroundImage.includes('linear-gradient'), layers: L.length, z: new Set(L.map(e => e.style.transform)).size, spin: /ldspin/.test(cs.animationName) && cs.animationIterationCount === 'infinite', p3d: cs.transformStyle === 'preserve-3d', persp: getComputedStyle(o.querySelector('.ld-mark')).perspective }; });
     ok(/^Loading\s*\.\s*\.\s*\.$/.test(ld.txt), '로딩 화면: 문구는 영어 "Loading..." 뿐이다 ("' + ld.txt + '")');
-    ok(ld.stars >= 50 && ld.tw && ld.sh >= 4 && ld.shAnim && ld.bg, '로딩 화면: 반짝이는 별과 계속 반복해서 떨어지는 별똥별이 있는 밤하늘이다 (별 ' + ld.stars + '개, 별똥별 ' + ld.sh + '개)'); }
+    ok(ld.stars >= 50 && ld.tw && ld.bg && ld.shoot === 0, '로딩 화면: 반짝이는 별이 있는 밤하늘이고 별똥별은 없다 (별 ' + ld.stars + '개)');
+    ok(ld.layers >= 20 && ld.z === ld.layers && ld.p3d && ld.persp !== 'none' && ld.spin, '로딩 화면: 가운데 별이 두께를 가진 3D로 빙글빙글 계속 돈다 (조각 ' + ld.layers + '장, 회전 ' + ld.spin + ')');
+    const r1 = await lp.evaluate(() => getComputedStyle(document.querySelector('#db-loading .ld-3d')).transform); await lp.waitForTimeout(700);
+    const r2 = await lp.evaluate(() => getComputedStyle(document.querySelector('#db-loading .ld-3d')).transform);
+    ok(r1 !== r2, '로딩 화면: 별의 방향이 시간이 지나면서 실제로 바뀐다'); await lp.close();
+  }
   ok(tl.slice(0, iReady).every(x => x.cardOp === 0), '순서 1-2: 로딩 화면이 있는 동안 로그인 카드는 숨겨져 있다 (애니메이션이 가려진 채 지나가지 않는다)');
   const iFade = tl.findIndex(x => x.ov === 'flex' && x.ovOp < 0.9);
   ok(iFade > iDark && iFade < iReady, '순서 2: 데이터를 다 불러오면 로딩 화면이 부드럽게 밝아진다');

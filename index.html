@@ -3021,7 +3021,11 @@ function docImgCaptionsOk(text){      // 설명이 비었으면 저장 전에 �
 const inDocEditor=e=>!!(e.target&&e.target.closest&&e.target.closest('#doc-editor'));
 document.addEventListener('paste',function(e){
   if(inDocEditor(e)){
-    const files=Array.from((e.clipboardData&&e.clipboardData.files)||[]).filter(f=>/^image\//.test(f.type));
+    const cd=e.clipboardData;
+    // 파워포인트·워드·엑셀에서 글을 복사하면 글과 함께 "그 글을 찍은 그림"도 클립보드에 같이 담긴다.
+    // 글이 들어 있으면 글을 붙여넣는다. 그림만 있는 경우(캡처·이미지 복사)에만 사진으로 올린다.
+    if(cd&&String(cd.getData('text/plain')||'').trim()) return;
+    const files=Array.from((cd&&cd.files)||[]).filter(f=>/^image\//.test(f.type));
     if(files.length){ e.preventDefault(); docImgUpload(files); }
   }
 });

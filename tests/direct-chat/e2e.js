@@ -178,13 +178,14 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(tg.text === 'Every answer, right where you work.' && tg.sr && tg.above && tg.centered && tg.white > 500 && tg.span > .3, '로그인 화면 위쪽 가운데에 굵은 흰 글씨 "Every answer, right where you work."가 완성되어 있다 (' + JSON.stringify(tg) + ')');
   { const mc = await mkPage({ viewport: { width: 390, height: 780 } }); await mc.goto(BASE + '/'); await mc.waitForFunction(() => window.TagFx && TagFx._state().done, null, { timeout: 20000 });
     const cd = await mc.evaluate(() => { const c = document.querySelector('#screen-login .login-card').getBoundingClientRect(); return { w: Math.round(c.width), h: Math.round(c.height), free: Math.round(innerHeight - c.height) }; });
-    ok(cd.w <= 316 && cd.h <= 400 && cd.free >= 330, '휴대폰(390x780): 로그인 카드가 작아져 뒤의 구름 하늘이 보인다 (카드 ' + cd.w + 'x' + cd.h + ', 카드 밖 세로 공간 ' + cd.free + 'px)'); }
+    ok(cd.w <= 316 && cd.h <= 400 && cd.free >= 330, '휴대폰(390x780): 로그인 카드가 작아져 뒤의 구름 하늘이 보인다 (카드 ' + cd.w + 'x' + cd.h + ', 카드 밖 세로 공간 ' + cd.free + 'px)'); await mc.close(); }
   ok((await m1.evaluate(() => TagFx._state().family)).startsWith('"Space Grotesk"'), '상단 문구 글꼴은 개성 있는 현대적 글꼴(Space Grotesk)을 먼저 쓴다');
   for (const [vw, vh] of [[390, 780], [375, 667], [360, 640], [1280, 800]]) {
     const mp = await mkPage({ viewport: { width: vw, height: vh } }); await mp.goto(BASE + '/');
     await mp.waitForFunction(() => window.TagFx && TagFx._state().done, null, { timeout: 20000 });
     const g = await mp.evaluate(() => { const cv = document.getElementById('login-tagline-cv').getBoundingClientRect(), card = document.querySelector('#screen-login .login-card'); return { bottom: cv.bottom, top: cv.top, cardTop: card.offsetTop, font: TagFx._state().font }; });
     ok(g.top >= 0 && g.bottom <= g.cardTop - 8, '화면 ' + vw + 'x' + vh + ': 상단 문구가 로그인 카드에 붙거나 잘리지 않는다 (문구 아래 ' + Math.round(g.bottom) + 'px, 카드 위 ' + g.cardTop + 'px, 글씨 ' + g.font + 'px)');
+    await mp.close();
   }
   const fx = await m1.evaluate(() => getComputedStyle(document.getElementById('login-fx')).backgroundImage);
   ok(/linear-gradient/.test(fx), '글씨가 흰 구름과 겹쳐도 읽히도록 화면 위쪽을 살짝 어둡게 깔았다');

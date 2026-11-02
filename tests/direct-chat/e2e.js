@@ -79,6 +79,18 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
     await n.evaluate(() => { selModel.docs.forEach(d => { d.enabled = false; }); renderWelcome(); });
     ok((await qb()).length === 0, '모든 문서를 꺼 두면(사용 안 함) 추천 질문도 없다');
     await n.evaluate(() => { selModel.docs = selModel.docs.filter(d => d.id !== 'dz' && d.id !== 'dy'); selModel.docs.forEach(d => { d.enabled = true; }); }); }
+  // 채팅 화면 배경: 위는 하늘색 → 아래로 연해지는 그라데이션
+  { const gp = await mkPage({ viewport: { width: 390, height: 780 } }); await login(gp, 'u2');
+    await gp.selectOption('#dd-cat', 'p2'); await gp.selectOption('#dd-model', 'm3'); await gp.waitForTimeout(300);
+    gp.answer = '유로도는 정수 → 필터 → 냉각 순서입니다.\n[[참조: 2]]'; await ask(gp, 'CP-PS 유로도 알려줘');
+    const bg = await gp.$eval('#screen-chat', e => { const c = getComputedStyle(e); return { img: c.backgroundImage }; });
+    const cols = (bg.img.match(/rgb\(\d+, \d+, \d+\)/g) || []).map(s => s.match(/\d+/g).map(Number));
+    const lum = c => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+    ok(/linear-gradient/.test(bg.img) && cols.length >= 3 && lum(cols[cols.length - 1]) > lum(cols[0]) + 25 && cols[0][2] > cols[0][0], '채팅 화면 배경이 위는 하늘색, 아래로 갈수록 연해지는 그라데이션이다 (' + cols.map(c => 'rgb(' + c + ')').join(' → ') + ')');
+    ok(await gp.$eval('.msg.bot .msg-bubble', e => getComputedStyle(e).backgroundColor) === 'rgb(255, 255, 255)' && /rgba?\(.*\)/.test(await gp.$eval('.msg.bot .msg-bubble', e => getComputedStyle(e).boxShadow)), '챗봇 말풍선은 흰색이고 연한 배경 위에서도 보이도록 그림자가 있다');
+    await gp.screenshot({ path: path.join(OUT, 'chat-gradient-mobile.png') });
+    await gp.setViewportSize({ width: 1200, height: 800 }); await gp.waitForTimeout(300); await gp.screenshot({ path: path.join(OUT, 'chat-gradient-pc.png') });
+    ok(gp.errs.length === 0, '채팅 화면 페이지 오류 없음 (' + gp.errs.join(' / ') + ')'); await gp.close(); }
   console.log('[바로 채팅 사용자 (정수기+행정, 문서 많음)]');
   const u = await mkPage(); await login(u, 'u1');
   ok(!(await u.locator('.select-bar').isVisible()) && await u.$eval('#screen-chat', e => e.classList.contains('direct-mode')), '제품군·모델 선택 줄이 숨겨지고 채팅창만 보인다');

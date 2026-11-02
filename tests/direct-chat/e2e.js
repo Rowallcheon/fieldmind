@@ -127,6 +127,22 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await u.click('.msg.bot:last-child .dc-opt:has-text("CP-T07")'); await u.waitForTimeout(700);
   ok(u.reqs.filter(x => !x.isRoute).length === 1 && u.reqs.filter(x => !x.isRoute)[0].sys.includes('T본문 7') && /T07 답변입니다/.test(await u.textContent('#chat-body')) && await u.locator('.dc-card.done').count() >= 1, '고르면 그 모델 문서로 답하고 카드는 선택 완료 상태가 된다');
   await u.evaluate(() => { const p = products.find(x => x.id === 'p2'); p.models = p.models.filter(m => !m.id.startsWith('mx')); });
+  // 2-4) 안전장치: AI가 모델을 안 말했는데도 한 모델(X501) 문서만 골라 답하려 하면 → 모델부터 묻는다 ("냉수 출수 방법"이 W 모델만 나오던 문제)
+  await u.evaluate(() => { chatHistory.length = 0; });
+  u.reqs.length = 0; u.route_reply = () => JSON.stringify({ action: 'select', docs: [2] });
+  await ask(u, '정수기 냉수 출수 방법 알려줘');
+  const g1 = await u.$$eval('.msg.bot:last-child .dc-opt b', l => l.map(b => b.textContent.trim()));
+  ok(u.reqs.filter(x => !x.isRoute).length === 0 && g1.includes('CP-X501') && g1.includes('CP-PS') && /정수기 모델/.test(await u.textContent('.msg.bot:last-child .dc-head')), 'AI가 한 모델 문서만 골라도 사용자가 모델을 말하지 않았으면 답하지 않고 정수기의 모든 모델을 먼저 보여 준다 (' + g1.join() + ')');
+  u.reqs.length = 0; u.route_reply = () => JSON.stringify({ action: 'select', docs: [2] }); u.answer = 'X501 냉수입니다.\n[[참조: 1]]';
+  await ask(u, 'CP-X501 냉수 출수 방법 알려줘');
+  ok(u.reqs.filter(x => !x.isRoute).length === 1 && /X501 냉수입니다/.test(await u.textContent('#chat-body')), '사용자가 모델 이름(CP-X501)을 말했으면 바로 그 문서로 답한다');
+  u.reqs.length = 0; u.route_reply = () => JSON.stringify({ action: 'select', docs: [2, 3] }); u.answer = '둘 다 설명입니다.\n[[참조: 1]]';
+  await ask(u, '정수기 설명서 다 알려줘');
+  ok(u.reqs.filter(x => !x.isRoute).length === 1, '여러 모델의 문서를 골랐으면(전부 보여 주기) 되묻지 않고 답한다');
+  await u.evaluate(() => { chatHistory.length = 0; });
+  u.reqs.length = 0; u.route_reply = () => JSON.stringify({ action: 'select', docs: [1] }); u.answer = '행정 답변입니다.\n[[참조: 1]]';
+  await ask(u, '퇴직 처리 절차');
+  ok(u.reqs.filter(x => !x.isRoute).length === 1 && /행정 답변입니다/.test(await u.textContent('#chat-body')), '모델이 하나뿐인 제품군(행정)은 되묻지 않고 바로 답한다');
   // 3) 못 찾음(unknown) → 제품군/모델 고르기
   u.reqs.length = 0; u.route_reply = () => '{"action":"unknown"}';
   await ask(u, '아무말 대잔치');

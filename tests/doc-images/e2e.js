@@ -110,7 +110,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await page.fill('#doc-input-title', '결재 올리는 방법');
   await page.fill('#doc-editor .de-text', '1. 그룹웨어에 접속합니다.\n2. 상단의 결재 메뉴를 누릅니다.\n3. 완료합니다.');
   await page.evaluate(() => { const t = document.querySelector('#doc-editor .de-text'); const p = t.value.indexOf('3. 완료'); t.focus(); t.setSelectionRange(p, p); t.dispatchEvent(new Event('keyup')); });
-  await page.setInputFiles('#doc-img-file', { name: 'cap.png', mimeType: 'image/png', buffer: BIG });
+  await page.setInputFiles('#doc-img-file', { name: 'IMG_1234.png', mimeType: 'image/png', buffer: BIG });
   await page.waitForSelector('#doc-editor .de-img', { timeout: 8000 });
   const up = await page.evaluate(() => window.__uploads);
   ok(up && up.length === 1 && up[0].b === 'doc-images' && /^UP/.test(up[0].token), '사진이 doc-images 저장소로, 서버가 준 업로드 토큰으로 올라간다');
@@ -197,6 +197,16 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok((await page.evaluate(() => window.__uploads.length)) === 3, '빈 글(공백)만 같이 있는 이미지 복사는 여전히 사진으로 올라간다');
   await page.click('#doc-editor .de-imgbox .x'); await page.waitForTimeout(100);
   ok((await page.$$('#doc-editor .de-img')).length === 0 && (await page.$$('#doc-editor .de-text')).length === 1 && (await hidden()) === '', '✕ 를 누르면 사진 칸이 빠지고 글 칸이 하나로 합쳐진다');
+  // 파일 이름이 기본 설명으로 들어간다 (뜻 없는 이름은 비움)
+  await page.setInputFiles('#doc-img-file', [{ name: '결재 메뉴 위치.png', mimeType: 'image/png', buffer: BIG }, { name: 'IMG_5678.png', mimeType: 'image/png', buffer: BIG }, { name: '스크린샷 2026-11-03 오후 1.02.03.png', mimeType: 'image/png', buffer: BIG }, { name: 'CP-X501 필터 교체.png', mimeType: 'image/png', buffer: BIG }]);
+  await page.waitForFunction(() => document.querySelectorAll('#doc-editor .de-img').length === 4, null, { timeout: 15000 });
+  const caps = await page.$$eval('#doc-editor .de-cap', l => l.map(e => e.value));
+  ok(caps.join('|') === '결재 메뉴 위치|||CP-X501 필터 교체', '사진을 넣으면 설명 칸에 파일 이름(확장자 뺀 것)이 처음부터 들어간다 (' + JSON.stringify(caps) + ')');
+  ok((await page.$$eval('#doc-editor .de-cap.empty', l => l.length)) === 2, 'IMG_5678·스크린샷처럼 뜻 없는 이름은 비워 두어 빨간 테두리로 남는다');
+  ok((await hidden()).includes('|결재 메뉴 위치]]') && (await hidden()).includes('|CP-X501 필터 교체]]'), '저장 형식(숨김)에도 파일 이름 설명이 들어간다');
+  const sel = await page.evaluate(() => { const c = document.activeElement; return { cls: c.className, sel: c.selectionStart === 0 && c.selectionEnd === c.value.length }; });
+  ok(/de-cap/.test(sel.cls) && sel.sel, '설명 칸에 커서가 있고 글자가 모두 선택되어 있어 바로 덮어쓸 수 있다');
+  for (let k = 0; k < 4; k++) { await page.click('#doc-editor .de-imgbox .x'); await page.waitForTimeout(80); }
   // 끌어다 놓기: 입력창 밖(창 제목)에 놓아도 들어가고, 끄는 동안 안내 테두리, 사진 아닌 파일은 브라우저가 열지 않게 막고 안내
   const dragEv = (type, kind, sel, b64 = BIG.toString('base64')) => page.evaluate(([type, kind, sel, b64]) => {
     const dt = new DataTransfer();
@@ -214,17 +224,17 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await dragEv('dragenter', 'img', '#modal-doc-input .modal-title');
   ok(await dragEv('drop', 'img', '#modal-doc-input .modal-title', BIG.toString('base64')) === true, '입력칸 밖(창 제목)에 놓아도 브라우저가 이미지를 열지 않고 처리한다');
   await page.waitForFunction(() => document.querySelectorAll('#doc-editor .de-img').length === 2, null, { timeout: 12000 });
-  ok((await page.evaluate(() => window.__uploads.length)) === 5 && !(await page.$eval('#doc-editor', e => e.classList.contains('drop-on'))), '끌어다 놓은 사진 2장이 한꺼번에 올라가고 안내 테두리가 사라진다');
+  ok((await page.evaluate(() => window.__uploads.length)) === 9 && !(await page.$eval('#doc-editor', e => e.classList.contains('drop-on'))), '끌어다 놓은 사진 2장이 한꺼번에 올라가고 안내 테두리가 사라진다');
   await page.click('#doc-editor .de-imgbox .x'); await page.waitForTimeout(100); await page.click('#doc-editor .de-imgbox .x'); await page.waitForTimeout(100);
   const pdfPrevented = await dragEv('drop', 'pdf', '#modal-doc-input .modal-title'); await page.waitForTimeout(200);
-  ok(pdfPrevented === true && (await page.evaluate(() => window.__uploads.length)) === 5 && /사진 파일/.test(await page.textContent('body')), '사진이 아닌 파일(PDF)을 놓으면 올리지 않고 "사진 파일만" 안내를 보여 준다 (브라우저가 파일을 열지 않음)');
+  ok(pdfPrevented === true && (await page.evaluate(() => window.__uploads.length)) === 9 && /사진 파일/.test(await page.textContent('body')), '사진이 아닌 파일(PDF)을 놓으면 올리지 않고 "사진 파일만" 안내를 보여 준다 (브라우저가 파일을 열지 않음)');
   await page.evaluate(() => closeModal('modal-doc-input'));
   ok(await dragEv('drop', 'img', 'body', BIG.toString('base64')) === false, '문서 입력창이 닫혀 있을 때는 끌어다 놓기를 가로채지 않는다');
   await page.evaluate(() => { openDocInputModal(0, 0); });
   // 사진이 아닌 파일
   await page.setInputFiles('#doc-img-file', { name: 'a.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') });
   await page.waitForTimeout(300);
-  ok((await page.evaluate(() => window.__uploads.length)) === 5, '사진이 아닌 파일은 올라가지 않는다');
+  ok((await page.evaluate(() => window.__uploads.length)) === 9, '사진이 아닌 파일은 올라가지 않는다');
   // 두 장 연속 + 글 사이
   await page.fill('#doc-editor .de-text', 'AAA\nBBB');
   await page.evaluate(() => { const t = document.querySelector('#doc-editor .de-text'); t.focus(); t.setSelectionRange(3, 3); t.dispatchEvent(new Event('keyup')); });

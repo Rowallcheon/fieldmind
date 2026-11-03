@@ -56,7 +56,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await page.evaluate(() => {
     showPanel('docs'); const t = document.getElementById('doc-tree');
     const open = () => document.querySelectorAll('.cat-models').forEach(x => x.classList.add('open'));
-    new MutationObserver(open).observe(t, { childList: true }); open();
+    window.__catObs = new MutationObserver(open); window.__catObs.observe(t, { childList: true }); open();
   });
   await page.waitForSelector('.model-row'); await openLists();
 
@@ -222,6 +222,28 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(order1 !== order0 && order1.split(',')[2] === order0.split(',')[0] && so.length === (await page.evaluate(() => products.length)), '제품군을 끌어서 놓으면 순서가 바뀌고 새 순서가 저장된다 (' + order0 + ' → ' + order1 + ')');
   ok((await page.$$eval('.cat-block .cat-name', l => l.map(e => e.textContent))).join() === (await page.evaluate(() => products.map(p => p.name).join())), '화면의 제품군 순서도 바로 바뀐다');
   await page.click('#sort-mode-btn'); await page.waitForTimeout(200);
+  // 순서 변경 화면: 제품군은 접혀 있고(문서 내용 안 보임), 끄는 중 가장자리에서 자동 스크롤
+  await page.evaluate(() => { window.__catObs.disconnect(); products.forEach((p, i) => p.models.forEach((m, j) => _docOpen.add(i + '-' + j))); _catOpen.clear(); _catOpen.add(0); renderDocTree(); });
+  await page.click('#sort-mode-btn'); await page.waitForTimeout(250);
+  const vis = await page.evaluate(() => ({ models: [...document.querySelectorAll('.cat-models')].filter(e => e.offsetParent !== null).length, docs: [...document.querySelectorAll('.model-docs')].filter(e => e.offsetParent !== null).length }));
+  ok(vis.models === 0 && vis.docs === 0, '「순서 변경」을 켜면 제품군이 모두 접히고 문서 내용은 보이지 않아 제품군 줄만 한눈에 보인다 (보이는 모델 목록 ' + vis.models + ', 문서 목록 ' + vis.docs + ')');
+  await page.click('.cat-block:nth-child(2) .cat-hdr'); await page.waitForTimeout(150);
+  ok((await page.evaluate(() => [...document.querySelectorAll('.cat-models')].filter(e => e.offsetParent !== null).length)) === 1 && (await page.evaluate(() => [...document.querySelectorAll('.model-docs')].filter(e => e.offsetParent !== null).length)) === 0, '제품군 줄을 누르면 그 제품군의 모델만 펼쳐지고(모델 순서 변경용) 문서 내용은 여전히 숨겨져 있다');
+  await page.evaluate(() => { for (let k = 0; k < 40; k++) products.push({ id: 'zz' + k, name: '긴목록' + k, icon: '📦', models: [] }); renderDocTree(); });
+  await page.setViewportSize({ width: 1200, height: 700 }); await page.waitForTimeout(200);
+  const pos = () => page.evaluate(() => { const m = document.querySelector('.admin-main'); return m.scrollHeight > m.clientHeight + 2 ? m.scrollTop : scrollY; });
+  const sc0 = await page.evaluate(() => { const m = document.querySelector('.admin-main'); if (m.scrollHeight > m.clientHeight + 2) m.scrollTop = 0; else scrollTo(0, 0); return document.documentElement.scrollHeight > innerHeight || m.scrollHeight > m.clientHeight + 2; });
+  const dragNear = (edge) => page.evaluate((edge) => { const m = document.querySelector('.admin-main'), inner = m.scrollHeight > m.clientHeight + 2, r = inner ? m.getBoundingClientRect() : { top: 0, bottom: innerHeight, left: 0 }; const y = edge === 'bottom' ? r.bottom - 8 : r.top + 8; const t = document.elementFromPoint(r.left + 300, y) || document.body; for (let k = 0; k < 40; k++) t.dispatchEvent(new DragEvent('dragover', { clientX: r.left + 300, clientY: y, bubbles: true, cancelable: true })); }, edge);
+  await dragNear('bottom'); await page.waitForTimeout(700);
+  const down = await pos();
+  await dragNear('top'); await page.waitForTimeout(700);
+  const up = await pos();
+  ok(sc0 && down > 40 && up < down, '제품군이 많아도 끄는 중 화면 아래 가장자리에 가면 자동으로 내려가고, 위 가장자리에 가면 올라간다 (아래 ' + Math.round(down) + 'px → 위 ' + Math.round(up) + 'px)');
+  await page.evaluate(() => { products.splice(products.length - 40, 40); });
+  await page.setViewportSize({ width: 1200, height: 1500 });
+  await page.screenshot({ path: path.join(OUT, 'sort-mode.png'), clip: { x: 230, y: 380, width: 960, height: 520 } });
+  await page.click('#sort-mode-btn'); await page.waitForTimeout(250);
+  ok((await page.evaluate(() => [...document.querySelectorAll('.cat-models')].filter(e => e.offsetParent !== null).length)) === 1, '순서 변경을 끝내면 원래 펼쳐 두었던 제품군 상태로 돌아온다');
 
   const realErrs = errs.filter(e => !/\{message: fail\}/.test(e));
   ok(realErrs.length === 0, '페이지 오류 없음(의도한 저장 실패 로그 제외)' + (realErrs.length ? ' ' + JSON.stringify(realErrs) : ''));

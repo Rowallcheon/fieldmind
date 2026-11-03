@@ -930,7 +930,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
           </div>
         </div>
         <div id="sort-mode-guide" style="display:none;background:rgba(45,95,143,.08);border:1px solid rgba(45,95,143,.25);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--accent);">
-          ☰ 핸들을 드래그해서 순서를 변경하세요. 변경 후 자동 저장됩니다.
+          ☰ 제품군 줄을 끌어서 순서를 바꾸세요. 제품군 줄을 누르면 그 제품군의 모델이 펼쳐져 모델 순서도 바꿀 수 있습니다. 끌 때 화면 위·아래 끝으로 가면 자동으로 스크롤됩니다. 바꾸면 바로 저장됩니다.
         </div>
         <div class="dl-bar" id="doc-dl-bar">
           <span class="dl-count" id="dl-count">선택 0건</span>
@@ -3325,8 +3325,11 @@ async function renderUsage(){
 /* DOC TREE */
 let _sortMode = false;
 
+let _catOpenSaved = null;
 function toggleSortMode(){
   _sortMode = !_sortMode;
+  if(_sortMode){ _catOpenSaved = new Set(_catOpen); _catOpen.clear(); }          // 순서 변경 중에는 제품군을 모두 접어서 한 화면에 보이게 함
+  else if(_catOpenSaved){ _catOpen.clear(); _catOpenSaved.forEach(function(v){ _catOpen.add(v); }); _catOpenSaved = null; }   // 끝나면 원래 펼쳐 둔 상태로
   const btn = document.getElementById('sort-mode-btn');
   const guide = document.getElementById('sort-mode-guide');
   if(_sortMode){
@@ -3364,9 +3367,7 @@ function renderDocTree(){
     /* 헤더 */
     const hdr = document.createElement('div');
     hdr.className = 'cat-hdr';
-    if(!_sortMode){
-      hdr.onclick = function(){ toggleCat('cm-'+pi,'cv-'+pi); };
-    }
+    hdr.onclick = function(){ toggleCat('cm-'+pi,'cv-'+pi); };
 
     const hdrL = document.createElement('div');
     hdrL.className = 'cat-hdr-l';
@@ -3382,19 +3383,18 @@ function renderDocTree(){
     hdr.appendChild(hdrL);
 
     const chevEl = document.createElement('span');
+    chevEl.className='cat-chev'; chevEl.id='cv-'+pi; chevEl.textContent='▼';
     if(_sortMode){
-      chevEl.style.fontSize='11px'; chevEl.style.color='var(--text3)'; chevEl.textContent='드래그로 순서 변경';
-    } else {
-      chevEl.className='cat-chev'; chevEl.id='cv-'+pi; chevEl.textContent='▼';
-    }
-    hdr.appendChild(chevEl);
+      const hint = document.createElement('span'); hint.style.cssText='font-size:11px;color:var(--text3);margin-right:10px;'; hint.textContent='끌어서 순서 변경 · 눌러서 모델 보기';
+      const wrap = document.createElement('div'); wrap.style.cssText='display:flex;align-items:center;'; wrap.appendChild(hint); wrap.appendChild(chevEl);
+      hdr.appendChild(wrap);
+    } else hdr.appendChild(chevEl);
     block.appendChild(hdr);
 
     /* 모델 목록 */
     const catModels = document.createElement('div');
     catModels.className = 'cat-models';
     catModels.id = 'cm-'+pi;
-    if(_sortMode) catModels.style.display='block';
     if(_catOpen.has(pi)){ catModels.classList.add('open'); chevEl.classList.add('open'); }
 
     p.models.forEach(function(m, mi){
@@ -3438,6 +3438,7 @@ function renderDocTree(){
       const docsKey = pi+'-'+mi;
       const docsBox = document.createElement('div');
       docsBox.className = 'model-docs' + (_docOpen.has(docsKey) ? ' open' : '');
+      if(_sortMode) docsBox.style.display = 'none';                                  // 순서 변경 중에는 문서 내용을 보여 주지 않음
       if(m.docs.length===0){
         const em = document.createElement('div'); em.className='dl-empty'; em.textContent='등록된 문서가 없습니다.';
         docsBox.appendChild(em);
@@ -3733,6 +3734,25 @@ async function deleteSelectedDocs(){
   if(done<sel.length)showToast('⚠️ '+done+'건만 삭제하고 저장 오류로 멈췄습니다. 나머지는 그대로 있습니다.','error');
   else showToast('🗑 문서 '+done+'건을 삭제했습니다.','success');
 }
+
+/* ── 끄는 동안 화면 위·아래 가장자리에 가면 자동으로 스크롤 (끄는 중에는 마우스 휠이 안 먹기 때문) ── */
+let _dsV=0,_dsRaf=null,_dsLast=0;
+function dragScrollArea(){ const m=document.querySelector('.admin-main'); return (m&&m.scrollHeight>m.clientHeight+2)?m:null; }
+function dragScrollTick(){
+  if(!_dsV||performance.now()-_dsLast>300){ _dsV=0; _dsRaf=null; return; }
+  const m=dragScrollArea(); if(m) m.scrollTop+=_dsV; else window.scrollBy(0,_dsV);
+  _dsRaf=requestAnimationFrame(dragScrollTick);
+}
+document.addEventListener('dragover',function(e){
+  if(!_sortMode) return;
+  const m=dragScrollArea(), top=m?m.getBoundingClientRect().top:0, bottom=m?m.getBoundingClientRect().bottom:window.innerHeight, Z=90;
+  let v=0;
+  if(e.clientY<top+Z) v=-(Math.min(Z,top+Z-e.clientY)/Z*16+2);
+  else if(e.clientY>bottom-Z) v=Math.min(Z,e.clientY-(bottom-Z))/Z*16+2;
+  _dsV=v; _dsLast=performance.now();
+  if(v&&!_dsRaf) _dsRaf=requestAnimationFrame(dragScrollTick);
+});
+['dragend','drop'].forEach(function(n){ document.addEventListener(n,function(){ _dsV=0; }); });
 
 /* ── 제품군 드래그 ── */
 let _dragCatPi = null;

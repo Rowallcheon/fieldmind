@@ -244,6 +244,9 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 .dimg-bar select{font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-family:inherit;}
 .dimg-hint{font-size:11px;color:var(--text3);}
 .de{border:1px solid var(--border);border-radius:var(--radius-sm);background:#fff;padding:8px;display:flex;flex-direction:column;gap:6px;}
+.de{position:relative;transition:background .12s,border-color .12s;}
+.de.drop-on{border:2px dashed var(--accent);background:var(--accent-dim);}
+.de.drop-on::after{content:'여기에 놓으면 사진이 들어갑니다';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:9px 18px;border-radius:999px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;pointer-events:none;box-shadow:0 6px 18px rgba(45,95,143,.3);z-index:2;}
 .de:focus-within{border-color:var(--accent);}
 .de-text{width:100%;border:0;outline:0;resize:none;background:transparent;font-family:var(--font);font-size:13px;line-height:1.7;color:var(--text);padding:4px 6px;overflow:hidden;min-height:48px;}
 .de-img{background:#f3f7fb;border:1px solid var(--border);border-radius:10px;padding:8px;}
@@ -1236,7 +1239,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
           <option value="1000" selected>보통 (1000px · 권장)</option>
           <option value="1600">선명 (1600px · 글자 많은 화면)</option>
         </select>
-        <span class="dimg-hint">글 쓰는 위치에 사진이 들어갑니다 · 캡처를 복사해 붙여넣기(Ctrl+V)해도 됩니다</span>
+        <span class="dimg-hint">글 쓰는 위치에 사진이 들어갑니다 · 사진 파일을 입력창으로 끌어다 놓거나 캡처를 붙여넣기(Ctrl+V)해도 됩니다 (여러 장 가능)</span>
       </div>
       <textarea id="doc-input-content" style="display:none" aria-hidden="true" tabindex="-1"></textarea>
       <div id="doc-editor" class="de"></div>
@@ -3082,13 +3085,24 @@ document.addEventListener('paste',function(e){
     if(files.length){ e.preventDefault(); docImgUpload(files); }
   }
 });
-document.addEventListener('dragover',function(e){ if(inDocEditor(e)&&e.dataTransfer&&Array.from(e.dataTransfer.types||[]).includes('Files')) e.preventDefault(); });
+/* 사진 끌어다 놓기: 문서 입력창이 열려 있으면 창 어디에 놓아도 사진이 들어가고(글 쓰던 위치), 끄는 동안 입력칸에 안내 테두리가 나온다.
+   사진이 아닌 파일을 놓아도 브라우저가 그 파일을 열어 버리지 않게 막고 안내만 한다. */
+const docModalOpen=()=>{ const m=document.getElementById('modal-doc-input'); return !!(m&&m.classList.contains('open')); };
+const dragHasFiles=e=>!!(e.dataTransfer&&Array.from(e.dataTransfer.types||[]).includes('Files'));
+let _dropDepth=0;
+function dropHint(on){ const el=document.getElementById('doc-editor'); if(el) el.classList.toggle('drop-on',!!on); }
+document.addEventListener('dragenter',function(e){ if(docModalOpen()&&dragHasFiles(e)){ _dropDepth++; dropHint(true); } });
+document.addEventListener('dragleave',function(e){ if(docModalOpen()&&dragHasFiles(e)){ _dropDepth=Math.max(0,_dropDepth-1); if(!_dropDepth) dropHint(false); } });
+document.addEventListener('dragover',function(e){ if(docModalOpen()&&dragHasFiles(e)){ e.preventDefault(); try{ e.dataTransfer.dropEffect='copy'; }catch(x){} } });
 document.addEventListener('drop',function(e){
-  if(inDocEditor(e)&&e.dataTransfer&&e.dataTransfer.files.length){
-    const files=Array.from(e.dataTransfer.files).filter(f=>/^image\//.test(f.type));
-    if(files.length){ e.preventDefault(); docImgUpload(files); }
+  if(docModalOpen()&&dragHasFiles(e)){
+    e.preventDefault(); _dropDepth=0; dropHint(false);
+    const all=Array.from(e.dataTransfer.files||[]), files=all.filter(f=>/^image\//.test(f.type));
+    if(files.length) docImgUpload(files);
+    else if(all.length) showToast('사진 파일(png, jpg, webp 등)만 끌어다 놓을 수 있습니다.','error');
   }
 });
+window.addEventListener('dragend',function(){ _dropDepth=0; dropHint(false); });
 
 /* ── 마크다운 → HTML 변환 (** 볼드, * 리스트, # 헤더 처리) ── */
 function mdToHtml(text){

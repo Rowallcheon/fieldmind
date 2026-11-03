@@ -197,10 +197,34 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok((await page.evaluate(() => window.__uploads.length)) === 3, '빈 글(공백)만 같이 있는 이미지 복사는 여전히 사진으로 올라간다');
   await page.click('#doc-editor .de-imgbox .x'); await page.waitForTimeout(100);
   ok((await page.$$('#doc-editor .de-img')).length === 0 && (await page.$$('#doc-editor .de-text')).length === 1 && (await hidden()) === '', '✕ 를 누르면 사진 칸이 빠지고 글 칸이 하나로 합쳐진다');
+  // 끌어다 놓기: 입력창 밖(창 제목)에 놓아도 들어가고, 끄는 동안 안내 테두리, 사진 아닌 파일은 브라우저가 열지 않게 막고 안내
+  const dragEv = (type, kind, sel, b64 = BIG.toString('base64')) => page.evaluate(([type, kind, sel, b64]) => {
+    const dt = new DataTransfer();
+    if (kind === 'img') { const bin = atob(b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); dt.items.add(new File([a], 'a.png', { type: 'image/png' })); dt.items.add(new File([a], 'b.png', { type: 'image/png' })); }
+    else if (kind === 'pdf') dt.items.add(new File(['%PDF-1.4'], 'a.pdf', { type: 'application/pdf' }));
+    const ev = new DragEvent(type, { dataTransfer: dt, bubbles: true, cancelable: true }); (document.querySelector(sel) || document.body).dispatchEvent(ev);
+    return ev.defaultPrevented;
+  }, [type, kind, sel, b64]);
+  await dragEv('dragenter', 'img', '#modal-doc-input .modal-title', BIG.toString('base64'));
+  ok(await page.$eval('#doc-editor', e => e.classList.contains('drop-on')) && /여기에 놓으면 사진이 들어갑니다/.test(await page.$eval('#doc-editor', e => getComputedStyle(e, '::after').content)), '사진을 끌어오면 입력칸에 "여기에 놓으면 사진이 들어갑니다" 안내 테두리가 나온다');
+  await page.screenshot({ path: path.join(OUT, 'drop-hint.png') });
+  ok(await dragEv('dragover', 'img', '#modal-doc-input .modal-title') === true, '입력칸 밖(창 위쪽)에서도 놓을 수 있게 열려 있다');
+  await dragEv('dragleave', 'img', '#modal-doc-input .modal-title');
+  ok(!(await page.$eval('#doc-editor', e => e.classList.contains('drop-on'))), '끌다가 창 밖으로 나가면 안내 테두리가 사라진다');
+  await dragEv('dragenter', 'img', '#modal-doc-input .modal-title');
+  ok(await dragEv('drop', 'img', '#modal-doc-input .modal-title', BIG.toString('base64')) === true, '입력칸 밖(창 제목)에 놓아도 브라우저가 이미지를 열지 않고 처리한다');
+  await page.waitForFunction(() => document.querySelectorAll('#doc-editor .de-img').length === 2, null, { timeout: 12000 });
+  ok((await page.evaluate(() => window.__uploads.length)) === 5 && !(await page.$eval('#doc-editor', e => e.classList.contains('drop-on'))), '끌어다 놓은 사진 2장이 한꺼번에 올라가고 안내 테두리가 사라진다');
+  await page.click('#doc-editor .de-imgbox .x'); await page.waitForTimeout(100); await page.click('#doc-editor .de-imgbox .x'); await page.waitForTimeout(100);
+  const pdfPrevented = await dragEv('drop', 'pdf', '#modal-doc-input .modal-title'); await page.waitForTimeout(200);
+  ok(pdfPrevented === true && (await page.evaluate(() => window.__uploads.length)) === 5 && /사진 파일/.test(await page.textContent('body')), '사진이 아닌 파일(PDF)을 놓으면 올리지 않고 "사진 파일만" 안내를 보여 준다 (브라우저가 파일을 열지 않음)');
+  await page.evaluate(() => closeModal('modal-doc-input'));
+  ok(await dragEv('drop', 'img', 'body', BIG.toString('base64')) === false, '문서 입력창이 닫혀 있을 때는 끌어다 놓기를 가로채지 않는다');
+  await page.evaluate(() => { openDocInputModal(0, 0); });
   // 사진이 아닌 파일
   await page.setInputFiles('#doc-img-file', { name: 'a.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') });
   await page.waitForTimeout(300);
-  ok((await page.evaluate(() => window.__uploads.length)) === 3, '사진이 아닌 파일은 올라가지 않는다');
+  ok((await page.evaluate(() => window.__uploads.length)) === 5, '사진이 아닌 파일은 올라가지 않는다');
   // 두 장 연속 + 글 사이
   await page.fill('#doc-editor .de-text', 'AAA\nBBB');
   await page.evaluate(() => { const t = document.querySelector('#doc-editor .de-text'); t.focus(); t.setSelectionRange(3, 3); t.dispatchEvent(new Event('keyup')); });

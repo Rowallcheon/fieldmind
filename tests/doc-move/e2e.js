@@ -210,6 +210,19 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok((await page.evaluate(() => products[1].icon)) === '📦' && /DB 저장 실패/.test(await page.textContent('body')), 'DB 저장이 실패하면 화면 데이터는 바뀌지 않고 안내가 나온다');
   await page.evaluate(() => ceClose());
 
+  // 제품군 드래그로 순서 바꾸기 (「⇅ 순서 변경」을 켠 상태)
+  await page.evaluate(() => { showPanel('docs'); if (typeof _sortMode !== 'undefined' && _sortMode) toggleSortMode(); renderDocTree(); });
+  const order0 = await page.evaluate(() => products.map(p => p.id).join());
+  await page.click('#sort-mode-btn'); await page.waitForTimeout(200);
+  ok((await page.$$eval('.cat-block[draggable="true"]', l => l.length)) === (await page.evaluate(() => products.length)), '「순서 변경」을 켜면 제품군 줄이 모두 끌 수 있는 상태가 된다');
+  await clearW();
+  await page.dragAndDrop('.cat-block:nth-child(1) .cat-hdr', '.cat-block:nth-child(3) .cat-hdr'); await page.waitForTimeout(600);
+  const order1 = await page.evaluate(() => products.map(p => p.id).join());
+  const so = (await writes()).filter(w => w.t === 'products' && w.k === 'update' && w.a && 'sort_order' in w.a);
+  ok(order1 !== order0 && order1.split(',')[2] === order0.split(',')[0] && so.length === (await page.evaluate(() => products.length)), '제품군을 끌어서 놓으면 순서가 바뀌고 새 순서가 저장된다 (' + order0 + ' → ' + order1 + ')');
+  ok((await page.$$eval('.cat-block .cat-name', l => l.map(e => e.textContent))).join() === (await page.evaluate(() => products.map(p => p.name).join())), '화면의 제품군 순서도 바로 바뀐다');
+  await page.click('#sort-mode-btn'); await page.waitForTimeout(200);
+
   const realErrs = errs.filter(e => !/\{message: fail\}/.test(e));
   ok(realErrs.length === 0, '페이지 오류 없음(의도한 저장 실패 로그 제외)' + (realErrs.length ? ' ' + JSON.stringify(realErrs) : ''));
   await browser.close(); srv.close();

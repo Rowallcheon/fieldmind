@@ -15,6 +15,7 @@ function makePng(w, h) {
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
 const BIG = makePng(1800, 1000);
+const HAVE_LIBS = fs.existsSync(path.join(__dirname, 'vendor', 'xlsx.full.min.js')) && fs.existsSync(path.join(__dirname, 'vendor', 'jszip.min.js'));   // 엑셀·ZIP 시험용 도구 (없으면 그 시험만 건너뜀)
 const OUT = path.join(__dirname, 'out'); fs.mkdirSync(OUT, { recursive: true });
 
 // ── 가짜 서버: 화면 + 사진 저장소 ──
@@ -93,6 +94,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
     const u = r.request().url();
     if (u.includes('supabase-js')) return r.fulfill({ contentType: 'application/javascript', body: STUB });
     if (u.includes('generativelanguage.googleapis.com')) { geminiReq = JSON.parse(r.request().postData()); return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: geminiReply }] } }] }) }); }
+    if (HAVE_LIBS && u.includes('/xlsx/0.18.5/xlsx.full.min.js')) return r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(__dirname, 'vendor', 'xlsx.full.min.js')) });
+    if (HAVE_LIBS && u.includes('/jszip/3.10.1/jszip.min.js')) return r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(__dirname, 'vendor', 'jszip.min.js')) });
     if (u.startsWith(BASE) || u.startsWith('data:') || u.startsWith('blob:')) return r.continue();
     return r.abort();
   });
@@ -235,6 +238,58 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await page.setInputFiles('#doc-img-file', { name: 'a.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') });
   await page.waitForTimeout(300);
   ok((await page.evaluate(() => window.__uploads.length)) === 9, '사진이 아닌 파일은 올라가지 않는다');
+  // 사진+설명 한꺼번에 (사진 여러 장 + 엑셀 / ZIP / 텍스트)
+  if (!HAVE_LIBS) console.log('  skip 엑셀·ZIP 시험 (tests/doc-images/vendor 에 xlsx.full.min.js, jszip.min.js 가 없음)');
+  else {
+    const XLSX = require('./vendor/xlsx.full.min.js'), JSZip = require('./vendor/jszip.min.js');
+    const small = makePng(300, 200);
+    const names = ['p012-01.png', 'p012-02.png', 'p012-03.png', 'p012-10.png'];
+    const ws = XLSX.utils.aoa_to_sheet([['번호', '파일명', '설명'], [1, 'p012-01.png', '커버 하단 걸쇠를 눌러 분리하는 모습'], [2, 'p012-02', '필터를 반시계 방향으로 돌려 분리'], [3, 'P012-03.PNG', '새 필터를 끼우는 모습'], [4, 'p999-99.png', '사진이 없는 설명']]);
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    const xlsxB64 = Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })).toString('base64');
+    const txtB64 = Buffer.from('p012-01.png: 첫째 설명\np012-02.png - 둘째 설명\n1) p012-03.png | 셋째 설명\np012-10.png\n열 번째 사진 설명\n두 줄로 적힌 설명').toString('base64');
+    const zip = new JSZip(); names.forEach(n => zip.file('images/' + n, small)); zip.file('__MACOSX/._x.png', 'junk'); zip.file('설명.txt', Buffer.from('p012-01.png: ZIP 첫째\np012-02.png: ZIP 둘째\np012-03.png: ZIP 셋째\np012-10.png: ZIP 열째'));
+    const zipB64 = (await zip.generateAsync({ type: 'nodebuffer' })).toString('base64');
+    const dropFiles = (list) => page.evaluate(async (list) => { const dt = new DataTransfer(); for (const [n, mt, b64] of list) { const bin = atob(b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); dt.items.add(new File([a], n, { type: mt })); }
+      const ev = new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }); document.querySelector('#modal-doc-input .modal-title').dispatchEvent(ev); return ev.defaultPrevented; }, list);
+    const smallB64 = small.toString('base64');
+    const up0 = await page.evaluate(() => window.__uploads.length);
+    // 1) 사진 4장 + 엑셀
+    await dropFiles([['p012-10.png', 'image/png', smallB64], ['p012-02.png', 'image/png', smallB64], ['p012-01.png', 'image/png', smallB64], ['p012-03.png', 'image/png', smallB64], ['설명.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', xlsxB64]]);
+    await page.waitForSelector('#modal-bulk-img.open', { timeout: 15000 });
+    const sum1 = await page.textContent('#bulk-sum');
+    ok(/사진 4장/.test(sum1) && /설명 파일 설명\.xlsx/.test(sum1) && /파일 이름으로 맞춘 설명이 들어가는 사진: 3장/.test(sum1) && /설명을 못 찾은 사진: 1장/.test(sum1) && /p012-10\.png/.test(sum1) && /사진을 못 찾은 설명: 1개/.test(sum1), '사진 4장 + 엑셀을 놓으면 확인 창이 짝 맞춘 결과를 알려 준다: 3장 맞음, 설명 없는 사진 1장, 사진 없는 설명 1개 (' + sum1.replace(/\s+/g, ' ').slice(0, 160) + ')');
+    await page.screenshot({ path: path.join(OUT, 'bulk-confirm.png') });
+    await page.click('#modal-bulk-img .modal-actions button:has-text("취소")'); await page.waitForTimeout(300);
+    ok((await page.evaluate(() => window.__uploads.length)) === up0 && !(await page.$eval('#modal-bulk-img', e => e.classList.contains('open'))), '확인 창에서 취소하면 아무것도 올라가지 않는다');
+    await dropFiles([['p012-10.png', 'image/png', smallB64], ['p012-02.png', 'image/png', smallB64], ['p012-01.png', 'image/png', smallB64], ['p012-03.png', 'image/png', smallB64], ['설명.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', xlsxB64]]);
+    await page.waitForSelector('#modal-bulk-img.open'); await page.click('#bulk-ok');
+    await page.waitForFunction(() => document.querySelectorAll('#doc-editor .de-img').length === 4, null, { timeout: 30000 });
+    const caps1 = await page.$$eval('#doc-editor .de-cap', l => l.map(e => e.value));
+    ok(caps1.join('|') === '커버 하단 걸쇠를 눌러 분리하는 모습|필터를 반시계 방향으로 돌려 분리|새 필터를 끼우는 모습|p012-10', '사진은 파일 이름 순서(01·02·03·10)로 들어가고 설명이 엑셀 내용대로 자동으로 채워진다 (확장자 대소문자·없음도 인식, 짝 없는 사진은 파일 이름) (' + JSON.stringify(caps1) + ')');
+    ok((await page.evaluate(() => window.__uploads.length)) === up0 + 4 && (await hidden()).split('[[그림:').length === 5, '4장이 모두 저장소에 올라가고 저장 형식에도 4개의 자리표와 설명이 들어간다');
+    for (let k = 0; k < 4; k++) { await page.click('#doc-editor .de-imgbox .x'); await page.waitForTimeout(80); }
+    // 2) ZIP 하나(사진 + 설명 텍스트가 안에 들어 있음)
+    await dropFiles([['기술교본_사진.zip', 'application/zip', zipB64]]);
+    await page.waitForSelector('#modal-bulk-img.open', { timeout: 20000 });
+    const sum2 = await page.textContent('#bulk-sum');
+    ok(/사진 4장/.test(sum2) && /설명 파일 설명\.txt/.test(sum2) && /맞춘 설명이 들어가는 사진: 4장/.test(sum2), 'ZIP 하나만 놓아도 안의 사진 4장과 설명 파일(텍스트)을 읽어 짝을 맞춘다 (쓰레기 파일 __MACOSX는 무시)');
+    await page.click('#bulk-ok');
+    await page.waitForFunction(() => document.querySelectorAll('#doc-editor .de-img').length === 4, null, { timeout: 30000 });
+    ok((await page.$$eval('#doc-editor .de-cap', l => l.map(e => e.value))).join('|') === 'ZIP 첫째|ZIP 둘째|ZIP 셋째|ZIP 열째', 'ZIP 안의 사진에 ZIP 안의 설명이 그대로 들어간다');
+    for (let k = 0; k < 4; k++) { await page.click('#doc-editor .de-imgbox .x'); await page.waitForTimeout(80); }
+    // 3) 사진 + 텍스트 설명(여러 줄 형식)
+    await dropFiles([['p012-01.png', 'image/png', smallB64], ['p012-02.png', 'image/png', smallB64], ['p012-03.png', 'image/png', smallB64], ['p012-10.png', 'image/png', smallB64], ['캡션.txt', 'text/plain', txtB64]]);
+    await page.waitForSelector('#modal-bulk-img.open'); await page.click('#bulk-ok');
+    await page.waitForFunction(() => document.querySelectorAll('#doc-editor .de-img').length === 4, null, { timeout: 30000 });
+    ok((await page.$$eval('#doc-editor .de-cap', l => l.map(e => e.value))).join('|') === '첫째 설명|둘째 설명|셋째 설명|열 번째 사진 설명 두 줄로 적힌 설명', '텍스트 설명(줄마다 "파일: 설명", 번호·하이픈·세로선, 파일 이름 다음 줄에 적은 설명)도 읽는다');
+    for (let k = 0; k < 4; k++) { await page.click('#doc-editor .de-imgbox .x'); await page.waitForTimeout(80); }
+    // 4) 설명 파일만 / 사진 몇 장만
+    await dropFiles([['설명.xlsx', 'application/octet-stream', xlsxB64]]); await page.waitForTimeout(300);
+    ok(/설명 파일만으로는 넣을 수 없습니다/.test(await page.textContent('body')) && !(await page.$eval('#modal-bulk-img', e => e.classList.contains('open'))), '설명 파일만 놓으면 사진도 함께 올려 달라고 안내하고 아무것도 올리지 않는다');
+    // 5) '사진+설명 한꺼번에' 버튼
+    ok(await page.$eval('#doc-bulk-file', e => e.multiple && /\.zip/.test(e.accept) && /\.xlsx/.test(e.accept)), '「📦 사진+설명 한꺼번에」 버튼의 파일 선택에서 사진·ZIP·엑셀·CSV·텍스트를 여러 개 고를 수 있다');
+  }
   // 두 장 연속 + 글 사이
   await page.fill('#doc-editor .de-text', 'AAA\nBBB');
   await page.evaluate(() => { const t = document.querySelector('#doc-editor .de-text'); t.focus(); t.setSelectionRange(3, 3); t.dispatchEvent(new Event('keyup')); });

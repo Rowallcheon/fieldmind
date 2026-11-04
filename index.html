@@ -1235,12 +1235,14 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
       <div class="dimg-bar">
         <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('doc-img-file').click()">🖼️ 사진 넣기</button>
         <input type="file" id="doc-img-file" accept="image/*" multiple style="display:none" onchange="docImgPick(this)">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('doc-bulk-file').click()" title="사진 여러 장이나 ZIP 파일과 설명 파일(엑셀·CSV·텍스트)을 함께 고르면 사진마다 설명이 자동으로 들어갑니다">📦 사진+설명 한꺼번에</button>
+        <input type="file" id="doc-bulk-file" accept="image/*,.zip,.xlsx,.xls,.csv,.tsv,.txt,.md" multiple style="display:none" onchange="docIntakePick(this)">
         <select id="doc-img-size" aria-label="사진 크기">
           <option value="700">작게 (700px · 가장 절약)</option>
           <option value="1000" selected>보통 (1000px · 권장)</option>
           <option value="1600">선명 (1600px · 글자 많은 화면)</option>
         </select>
-        <span class="dimg-hint">글 쓰는 위치에 사진이 들어갑니다 · 사진 파일을 입력창으로 끌어다 놓거나 캡처를 붙여넣기(Ctrl+V)해도 됩니다 (여러 장 가능)</span>
+        <span class="dimg-hint">글 쓰는 위치에 사진이 들어갑니다 · 사진·ZIP·설명 파일(엑셀/CSV/텍스트)을 입력창으로 한꺼번에 끌어다 놓으면 사진마다 설명이 자동으로 들어갑니다 · 캡처 붙여넣기(Ctrl+V)도 됩니다</span>
       </div>
       <textarea id="doc-input-content" style="display:none" aria-hidden="true" tabindex="-1"></textarea>
       <div id="doc-editor" class="de"></div>
@@ -1279,6 +1281,12 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
     <div id="ce-presets" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
   </div>
   <div class="modal-actions"><button type="button" class="btn btn-ghost" onclick="ceClose()">취소</button><button type="button" class="btn btn-primary" id="ce-ok" onclick="ceSave()">저장</button></div>
+</div></div>
+<!-- 사진+설명 한꺼번에 넣기: 확인 창 -->
+<div class="modal-overlay" id="modal-bulk-img"><div class="modal" style="max-width:520px;">
+  <div class="modal-title">사진 · 설명 한꺼번에 넣기</div>
+  <div id="bulk-sum" style="font-size:13px;line-height:1.7;color:var(--text);"></div>
+  <div class="modal-actions"><button type="button" class="btn btn-ghost" onclick="bulkImgDone(false)">취소</button><button type="button" class="btn btn-primary" id="bulk-ok" onclick="bulkImgDone(true)">넣기</button></div>
 </div></div>
 <div class="modal-overlay" id="modal-mv"><div class="modal" style="max-width:560px;">
   <div class="modal-title" id="mv-title">선택 문서 이동</div>
@@ -3009,7 +3017,7 @@ function deRender(focus){
       const x=document.createElement('button'); x.type='button'; x.className='x'; x.title='이 사진 빼기'; x.textContent='✕';
       x.addEventListener('click',()=>deRemoveImg(i));
       ib.appendChild(im); ib.appendChild(x);
-      const cap=document.createElement('input'); cap.type='text'; cap.className='de-cap'+(sg.cap?'':' empty'); cap.maxLength=120;
+      const cap=document.createElement('input'); cap.type='text'; cap.className='de-cap'+(sg.cap?'':' empty'); cap.maxLength=300;
       cap.placeholder='사진 설명 (예: 결재 메뉴 위치 — 화면 상단 가운데)';
       cap.value=sg.cap; cap.dataset.i=i;
       cap.addEventListener('input',()=>{ sg.cap=cap.value; cap.classList.toggle('empty',!cap.value.trim()); deSync(); });
@@ -3057,7 +3065,7 @@ function docImgDefaultCaption(f){
   if(/^(image|img|photo|pic|picture|blob|untitled|unnamed|noname|download|스크린샷|화면\s*캡처|캡처|screenshot|screen\s*shot|capture|kakaotalk|dsc|dscn|pxl|mvimg|wechat)(\d|\s|[._()\-:]|at|am|pm|오전|오후)*$/i.test(n)) return '';
   return n.slice(0,120);
 }
-async function docImgUpload(files){
+async function docImgUpload(files, opts){
   const list=Array.from(files||[]).filter(f=>/^image\//.test(f.type));
   if(!list.length){ showToast('사진 파일만 넣을 수 있습니다.','error'); return; }
   if(_docImgBusy){ showToast('사진을 올리는 중입니다. 잠시 후 다시 해주세요.'); return; }
@@ -3076,15 +3084,153 @@ async function docImgUpload(files){
         const r=await sb.storage.from(t.bucket).uploadToSignedUrl(t.path,t.token,c.blob,{contentType:t.contentType,cacheControl:'3600'});
         if(r.error) throw new Error('올리기 실패: '+r.error.message);
         docLocalPreview[t.name]=URL.createObjectURL(c.blob);
-        const dc=docImgDefaultCaption(f); if(dc) named++;
+        const dc=(opts&&opts.caps&&opts.caps.has(f)) ? opts.caps.get(f) : docImgDefaultCaption(f); if(dc) named++;
         deInsertImage(t.name,dc);
         saved++;
       }catch(e){ showToast('⚠️ '+(f.name||'사진')+': '+e.message,'error'); }
       done++;
     }
   } finally { _docImgBusy=false; }
-  if(saved) showToast('✅ 사진 '+saved+'장을 넣었습니다. '+(named?'설명 칸에 파일 이름이 들어가 있으니 필요하면 고쳐 주세요.':'사진 아래 칸에 설명을 적어 주세요.'),'success');
+  if(saved) showToast('✅ 사진 '+saved+'장을 넣었습니다. '+(named?(opts&&opts.caps?'설명 '+named+'개가 사진과 함께 들어갔습니다. 필요하면 고쳐 주세요.':'설명 칸에 파일 이름이 들어가 있으니 필요하면 고쳐 주세요.'):'사진 아래 칸에 설명을 적어 주세요.'),'success');
 }
+/* ═══ 사진 + 설명 한꺼번에 넣기 ═══
+   사진 여러 장 / ZIP 파일 / 설명 파일(엑셀·CSV·텍스트)을 한꺼번에 끌어다 놓거나 고르면,
+   사진 파일 이름과 설명 파일의 이름을 맞춰 사진마다 설명을 자동으로 넣는다 (이름이 없으면 순서대로).
+   엑셀·ZIP을 읽는 도구는 필요할 때만 인터넷(cdnjs)에서 불러온다. */
+const DOC_IMG_EXT=/\.(png|jpe?g|webp|gif|bmp)$/i;
+const DOC_DESC_EXT=['xlsx','xls','csv','tsv','txt','md'];
+const LIB_XLSX='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', LIB_JSZIP='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+const _docLibP={};
+function docLoadLib(url,ok){ if(ok()) return Promise.resolve(); if(_docLibP[url]) return _docLibP[url];
+  return _docLibP[url]=new Promise(function(res,rej){ const sc=document.createElement('script'); sc.src=url; sc.onload=function(){ ok()?res():rej(new Error('load')); }; sc.onerror=function(){ delete _docLibP[url]; rej(new Error('load')); }; document.head.appendChild(sc); }); }
+function docExt(n){ const m=String(n||'').toLowerCase().match(/\.([a-z0-9]+)$/); return m?m[1]:''; }
+function docBase(n){ return String(n||'').split(/[\\/]/).pop(); }
+function docNormKey(n){ return docBase(n).replace(/\.[A-Za-z0-9]{2,5}$/,'').replace(/\s+/g,' ').trim().toLowerCase(); }
+function docNatSort(a,b){ return docBase(a.name).localeCompare(docBase(b.name),'ko',{numeric:true,sensitivity:'base'}); }
+function docCsvRows(text){
+  text=String(text||'').replace(/^﻿/,''); const first=text.split(/\r?\n/,1)[0]||'', delim=(first.split('\t').length>first.split(',').length)?'\t':',';
+  const rows=[]; let row=[],cur='',q=false;
+  for(let i=0;i<text.length;i++){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){ cur+='"'; i++; } else q=false; } else cur+=c; }
+    else if(c==='"') q=true;
+    else if(c===delim){ row.push(cur); cur=''; }
+    else if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n') i++; row.push(cur); rows.push(row); row=[]; cur=''; }
+    else cur+=c; }
+  if(cur!==''||row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+function docDescFromRows(rows){
+  rows=rows.map(function(r){ return r.map(function(c){ return String(c==null?'':c).trim(); }); }).filter(function(r){ return r.some(function(c){ return c!==''; }); });
+  const map=new Map(), list=[]; if(!rows.length) return {map:map,list:list};
+  const HK=/파일|file|이미지|image|사진|name|이름/i, HD=/설명|description|caption|desc|내용|alt|캡션/i;
+  let h=-1,kc=-1,dc=-1;
+  for(let i=0;i<Math.min(rows.length,5)&&h<0;i++){
+    if(rows[i].some(function(c){ return DOC_IMG_EXT.test(c); })) continue;              // 사진 파일 이름이 든 줄은 머리글이 아니라 자료
+    const k=rows[i].findIndex(function(c){ return HK.test(c)&&c.length<=20; }), d=rows[i].findIndex(function(c,j){ return HD.test(c)&&c.length<=20&&j!==k; });
+    if(k>=0||d>=0){ h=i; kc=k; dc=d; } }
+  const body=rows.slice(h+1), ncol=Math.max.apply(null,rows.map(function(r){ return r.length; }));
+  const avgLen=function(j){ const v=body.map(function(r){ return r[j]||''; }).filter(Boolean); return v.length?v.reduce(function(a,x){ return a+x.length; },0)/v.length:-1; };
+  if(kc<0){                                              // 파일 이름 열 찾기: 확장자가 붙은 값이 가장 많은 열
+    let best=-1,bn=0; for(let j=0;j<ncol;j++){ const n=body.filter(function(r){ return DOC_IMG_EXT.test(r[j]||''); }).length; if(n>bn){ bn=n; best=j; } }
+    if(best>=0&&bn>=Math.max(1,body.length*0.5)) kc=best;
+    else if(h<0&&ncol>=2&&avgLen(0)>0&&avgLen(0)<=40&&avgLen(1)>avgLen(0)) kc=0; }  // 머리글도 확장자도 없으면: 첫 열이 짧은 이름, 둘째 열이 긴 설명
+  if(dc<0||dc===kc){                                     // 설명 열: 이름 열 말고 평균 글자 수가 가장 긴 열
+    let best=-1,bl=-1; for(let j=0;j<ncol;j++){ if(j===kc) continue; const a=avgLen(j); if(a>bl){ bl=a; best=j; } } dc=best; }
+  body.forEach(function(r){ const d=dc>=0?(r[dc]||''):''; if(kc>=0){ const k=docNormKey(r[kc]||''); if(k) map.set(k,d); } else if(d) list.push(d); });
+  return {map:map,list:list};
+}
+function docDescFromText(text){
+  const map=new Map(), list=[], lines=String(text||'').replace(/^﻿/,'').split(/\r?\n/);
+  const FN='[^\\s|:：\\t\\[\\]*`]+?\\.(?:png|jpe?g|webp|gif|bmp)';
+  const reInline=new RegExp('^\\s*(?:[-*•]\\s*|\\d+[.)]\\s*)?[*_`#]*('+FN+')[*_`]*\\s*(?:[:：|\\t,\\-–—]+|\\s{2,})\\s*(.+)$','i');
+  const reOnly=new RegExp('^\\s*(?:[-*•]\\s*|\\d+[.)]\\s*)?[*_`#]*('+FN+')[*_`]*\\s*$','i');
+  const reMark=/\[\[\s*(?:IMG|그림)\s*[:：]\s*([^|\]\n]+?)\s*(?:\|([^\]\n]*))?\]\]/ig;
+  let pend=null;
+  lines.forEach(function(line){
+    let m, any=false; reMark.lastIndex=0;
+    while((m=reMark.exec(line))){ any=true; map.set(docNormKey(m[1]),(m[2]||'').trim()); }
+    if(any){ pend=null; return; }
+    if(/^\s*\|.*\|\s*$/.test(line)){                      // 마크다운 표
+      if(/^[\s:|-]+$/.test(line)) return;
+      const cells=line.trim().replace(/^\||\|$/g,'').split('|').map(function(c){ return c.trim(); });
+      const ki=cells.findIndex(function(c){ return DOC_IMG_EXT.test(c); });
+      if(ki>=0){ const d=cells.filter(function(c,j){ return j!==ki; }).sort(function(a,b){ return b.length-a.length; })[0]||''; map.set(docNormKey(cells[ki]),d); pend=null; }
+      return; }
+    if((m=line.match(reInline))){ map.set(docNormKey(m[1]),m[2].trim()); pend=null; return; }
+    if((m=line.match(reOnly))){ pend=docNormKey(m[1]); if(!map.has(pend)) map.set(pend,''); return; }
+    const t=line.trim(); if(!t) return;
+    if(pend){ map.set(pend,(map.get(pend)?map.get(pend)+' ':'')+t.replace(/^[-*•]\s*/,'')); return; }
+    list.push(t.replace(/^(?:\d+[.)]\s*|[-*•]\s*)/,''));
+  });
+  return map.size?{map:map,list:[]}:{map:map,list:list};
+}
+async function docDescParse(f){
+  const ext=docExt(f.name);
+  if(ext==='xlsx'||ext==='xls'){
+    try{ await docLoadLib(LIB_XLSX,function(){ return !!window.XLSX; }); }catch(e){ throw new Error('엑셀을 읽는 도구를 불러오지 못했습니다. 설명 파일을 CSV나 텍스트로 저장해 다시 올려 주세요.'); }
+    const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}), ws=wb.Sheets[wb.SheetNames[0]];
+    return docDescFromRows(XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false}));
+  }
+  const text=await f.text();
+  return (ext==='csv'||ext==='tsv')?docDescFromRows(docCsvRows(text)):docDescFromText(text);
+}
+function docPairImages(imgs,desc){
+  const byName=desc.map.size>0;
+  const items=imgs.map(function(f,i){ let cap='',matched=false;
+    if(byName){ const k=docNormKey(f.name); if(desc.map.has(k)&&desc.map.get(k)){ cap=desc.map.get(k); matched=true; } }
+    else if(desc.list.length&&desc.list[i]!=null){ cap=desc.list[i]; matched=true; }
+    return {f:f,cap:deSanCap(cap).slice(0,300),matched:matched}; });
+  const used=new Set(items.filter(function(x){ return x.matched; }).map(function(x){ return docNormKey(x.f.name); }));
+  return {items:items,byName:byName,unmatchedKeys:byName?[...desc.map.keys()].filter(function(k){ return !used.has(k); }):[]};
+}
+let _bulkPending=null;
+async function docIntake(fileList){
+  const all=Array.from(fileList||[]); let imgs=[],descs=[],zips=[];
+  all.forEach(function(f){ const e=docExt(f.name); if(/^image\//.test(f.type)||DOC_IMG_EXT.test(f.name)) imgs.push(f); else if(e==='zip') zips.push(f); else if(DOC_DESC_EXT.indexOf(e)>=0) descs.push(f); });
+  if(!imgs.length&&!zips.length&&!descs.length){ showToast('사진 파일(png, jpg, webp 등)·ZIP·설명 파일(엑셀·CSV·텍스트)만 끌어다 놓을 수 있습니다.','error'); return; }
+  if(_docImgBusy){ showToast('사진을 올리는 중입니다. 잠시 후 다시 해주세요.'); return; }
+  if(zips.length){
+    showToast('ZIP 파일을 푸는 중...');
+    try{ await docLoadLib(LIB_JSZIP,function(){ return !!window.JSZip; }); }catch(e){ showToast('ZIP을 푸는 도구를 불러오지 못했습니다. ZIP을 풀어서 사진 파일을 직접 올려 주세요.','error'); return; }
+    for(const z of zips){
+      try{ const zip=await JSZip.loadAsync(await z.arrayBuffer());
+        for(const name of Object.keys(zip.files)){ const en=zip.files[name]; if(en.dir||/(^|\/)(__MACOSX|\.DS_Store)/.test(name)||/(^|\/)\./.test(name)) continue;
+          const e=docExt(name), base=docBase(name);
+          if(DOC_IMG_EXT.test(base)){ const b=await en.async('blob'); const mt={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',gif:'image/gif',bmp:'image/bmp'}[e]; imgs.push(new File([b],base,{type:mt})); }
+          else if(DOC_DESC_EXT.indexOf(e)>=0){ const b=await en.async('blob'); descs.push(new File([b],base)); } }
+      }catch(err){ showToast('ZIP 파일을 읽지 못했습니다: '+z.name,'error'); return; }
+    }
+  }
+  if(!imgs.length){ showToast(descs.length?'설명 파일만으로는 넣을 수 없습니다. 사진(또는 사진이 든 ZIP)도 함께 올려 주세요.':'사진이 없습니다.','error'); return; }
+  imgs.sort(docNatSort);
+  if(!descs.length&&imgs.length<10){ docImgUpload(imgs); return; }           // 사진만 몇 장: 기존처럼 바로 넣기
+  let desc={map:new Map(),list:[]}, dname='';
+  if(descs.length){
+    try{ const parsed=[]; for(const d of descs) parsed.push(await docDescParse(d));
+      parsed.forEach(function(r){ r.map.forEach(function(v,k){ desc.map.set(k,v); }); desc.list=desc.list.concat(r.list); }); dname=descs.map(function(d){ return d.name; }).join(', ');
+    }catch(err){ showToast('⚠️ '+(err&&err.message||'설명 파일을 읽지 못했습니다.'),'error'); return; }
+  }
+  const pr=docPairImages(imgs,desc); _bulkPending=pr;
+  const matched=pr.items.filter(function(x){ return x.matched; }).length, nodesc=pr.items.length-matched;
+  const box=document.getElementById('bulk-sum'); box.innerHTML='';
+  const line=function(t,warn){ const d=document.createElement('div'); d.textContent=t; if(warn) d.style.color='var(--warn,#b45309)'; box.appendChild(d); return d; };
+  line('사진 '+imgs.length+'장'+(descs.length?' · 설명 파일 '+dname:' (설명 파일 없음)'));
+  if(descs.length){
+    line((pr.byName?'파일 이름으로 ':'순서대로 ')+'맞춘 설명이 들어가는 사진: '+matched+'장');
+    if(!pr.byName&&desc.list.length!==imgs.length) line('⚠️ 설명 '+desc.list.length+'개와 사진 '+imgs.length+'장의 개수가 달라 순서가 어긋날 수 있습니다. 어긋나면 올린 뒤 설명 칸에서 고쳐 주세요.',true);
+    if(nodesc) line('설명을 못 찾은 사진: '+nodesc+'장 (파일 이름이 설명으로 들어가거나 비어 있게 됩니다)'+(pr.items.filter(function(x){ return !x.matched; }).slice(0,5).map(function(x){ return '\n · '+x.f.name; }).join('')),true).style.whiteSpace='pre-line';
+    if(pr.unmatchedKeys.length) line('사진을 못 찾은 설명: '+pr.unmatchedKeys.length+'개'+(pr.unmatchedKeys.slice(0,5).map(function(k){ return '\n · '+k; }).join('')),true).style.whiteSpace='pre-line';
+  }
+  line('글 쓰던 위치에 파일 이름 순서대로 들어가며, 사진이 많으면 몇 분 걸릴 수 있습니다.');
+  document.getElementById('modal-bulk-img').classList.add('open');
+}
+function bulkImgDone(go){
+  document.getElementById('modal-bulk-img').classList.remove('open');
+  const pr=_bulkPending; _bulkPending=null; if(!go||!pr) return;
+  const caps=new Map(); pr.items.forEach(function(x){ if(x.matched) caps.set(x.f,x.cap); });
+  docImgUpload(pr.items.map(function(x){ return x.f; }),{caps:caps});
+}
+function docIntakePick(inp){ const f=Array.from(inp.files||[]); inp.value=''; docIntake(f); }
 function docImgPick(inp){ const f=inp.files; docImgUpload(f).then(()=>{ inp.value=''; }); }
 function docImgCaptionsOk(text){      // 설명이 비었으면 저장 전에 한 번 확인
   const bad=docImgList(text).filter(it=>!it.cap||it.cap===DOC_IMG_PLACEHOLDER).length;
@@ -3113,9 +3259,7 @@ document.addEventListener('dragover',function(e){ if(docModalOpen()&&dragHasFile
 document.addEventListener('drop',function(e){
   if(docModalOpen()&&dragHasFiles(e)){
     e.preventDefault(); _dropDepth=0; dropHint(false);
-    const all=Array.from(e.dataTransfer.files||[]), files=all.filter(f=>/^image\//.test(f.type));
-    if(files.length) docImgUpload(files);
-    else if(all.length) showToast('사진 파일(png, jpg, webp 등)만 끌어다 놓을 수 있습니다.','error');
+    docIntake(Array.from(e.dataTransfer.files||[]));      // 사진 · ZIP · 설명 파일(엑셀/CSV/텍스트) 모두 처리
   }
 });
 window.addEventListener('dragend',function(){ _dropDepth=0; dropHint(false); });

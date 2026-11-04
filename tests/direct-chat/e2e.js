@@ -133,6 +133,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(a22.length === 1 && a22[0].sys.includes('PPP') && !a22[0].sys.includes('XXX') && a22[0].req.contents.map(c => c.parts[0].text).join('|').includes('에러 04번 뭐야?') && a22[0].req.contents.map(c => c.parts[0].text).join('|').includes('정수기 > CP-PS'), '모델을 고르면 원래 질문("에러 04번 뭐야?")에 그 모델 문서로 답한다');
   ok(/PS의 E-04는 입수 점검입니다/.test(await u.textContent('#chat-body')), '답변이 나온다');
   ok(/모델마다 다른 질문이면|ask_model/.test(r1[0].sys) && /반드시 ask_model/.test(r1[0].sys), '문서 고르기 지침에 "모델별 질문은 모델부터 물어라"가 들어 있다');
+  ok(/사진을 모아 둔 문서/.test(r1[0].sys) && /이미지.*사진.*그림/.test(r1[0].sys), '문서 고르기 지침에 "사진이 도움이 되는 질문이면 사진 모음 문서도 함께 고르라"가 들어 있다');
   // 2-3) 제품군은 말했고 모델만 안 말함 → 그 제품군의 모델을 전부(개수 제한 없이) 카드로 보여 주기
   await u.evaluate(() => { const p = products.find(x => x.id === 'p2'); for(let i = 1; i <= 20; i++) p.models.push({ id: 'mx' + i, name: 'CP-T' + String(i).padStart(2, '0'), docs: [{ id: 'dx' + i, title: 'T' + i, cat: '기타', content: 'T본문 ' + i, enabled: true }] }); });
   u.reqs.length = 0; u.route_reply = () => JSON.stringify({ action: 'ask_model', question: '어떤 정수기 모델의 필터 개수를 알고 싶으신가요?', product: '정수기' });

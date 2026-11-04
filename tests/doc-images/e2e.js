@@ -261,6 +261,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   const sys = geminiReq.system_instruction.parts[0].text;
   ok(sys.includes('[[그림:' + name + '|결재 메뉴 위치 (화면 상단 가운데)]]'), 'AI에게 보내는 문서에 사진 자리표와 설명이 들어간다');
   ok(/\[\[그림:파일명\]\] 만 그대로 출력/.test(sys), '사진 표시 규칙이 AI 지시문에 들어간다');
+  ok(/묻지 않아도 처음 답변부터 함께 보여 주는 것이 기본/.test(sys) && /다시 물을 때까지 기다리는 것은 잘못/.test(sys) && /이미지 모음/.test(sys) && /억지로 만들지 말고/.test(sys), '사진은 사용자가 묻지 않아도 첫 답변부터 함께 보여 주고(다른 문서에 모여 있어도), 관련 사진이 없으면 억지로 만들지 말라는 규칙이 AI 지시문에 들어간다');
   ok(JSON.stringify(geminiReq).length < 6000, 'AI 요청에 사진 데이터는 없다 (글만: ' + JSON.stringify(geminiReq).length + ' bytes)');
   const imgs = await page.$$eval('.msg.bot .chat-img', l => l.map(i => i.getAttribute('src')));
   ok(imgs.length === 1 && imgs[0].includes('/__img/' + name + '?sig=ok'), '답변에 사진이 한 장, 서버가 준 임시 주소(서명 포함)로 표시된다 (형식이 틀린 파일명은 무시)');

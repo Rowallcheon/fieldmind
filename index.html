@@ -2544,6 +2544,7 @@ async function sendQuick(t){document.getElementById('chat-inp').value=t;sendMsg(
 const DIRECT_ID = '__direct';
 const DIRECT_ALL_LIMIT = 80000;     // 허용 문서 전체가 이 글자 수 이하이면 선택 단계 없이 전부 전달
 const DIRECT_PICK_MAX = 10;         // 선택 단계에서 고를 수 있는 문서 수
+const DIRECT_PICK_MAX_CMP = 24;     // 모델끼리 비교하는 질문일 때 고를 수 있는 문서 수 (모델마다 1~2개씩 고르므로 더 많이)
 const DIRECT_CTX_MAX = 300000;      // 답변 단계에 넣는 문서 본문 최대 글자 수
 const isDirectUser = () => !!currentUser && currentUser.role !== 'admin' && groups.some(g => g.memberIds.includes(currentUser.id) && g.directChat);
 const isDirectScope = () => !!selModel && selModel.id === DIRECT_ID;
@@ -2607,9 +2608,10 @@ function directChips(items, onPick, o){
   card.appendChild(foot);
   bub.appendChild(card); body.scrollTop = body.scrollHeight;
 }
-function directScopeOf(items){
+function directScopeOf(items, o){
   const models = [...new Set(items.map(e => e.m.name))];
-  return {direct: true, items, head: '현재 범위: 사용자가 열람할 수 있는 여러 제품군·모델의 문서(질문과 관련 있는 문서만 아래에 제공됨)',
+  const cmpNote = o && o.compare ? ' [모델 비교 질문] 아래에는 비교할 모델 ' + models.length + '개의 문서가 제공됨' + (o.skipped ? ' (분량 때문에 문서 ' + o.skipped + '건은 빠짐 — 일부 모델은 비교에서 빠졌을 수 있다고 알릴 것)' : '') + '.' : '';
+  return {direct: true, items, head: '현재 범위: 사용자가 열람할 수 있는 여러 제품군·모델의 문서(질문과 관련 있는 문서만 아래에 제공됨)' + cmpNote,
           ctxTitle: '[검색된 문서 내용]', cat: '전체 검색', model: models.slice(0, 3).join(', ') + (models.length > 3 ? ' 외' : '')};
 }
 /* 안전장치: AI가 모델마다 다른 질문인데도 한 모델의 문서만 골라 바로 답하려 할 때 막는다.
@@ -2631,8 +2633,9 @@ async function directRoute(text){
   if(ents.reduce((a, e) => a + (e.d.content || '').length, 0) <= DIRECT_ALL_LIMIT) return {kind: 'select', scope: directScopeOf(ents)};
   const index = ents.map(e => e.n + ' | ' + e.p.name + ' > ' + e.m.name + ' | ' + (e.d.cat || '') + ' | ' + e.d.title).join('\n');
   const sys = `당신은 문서 검색 도우미입니다. 아래 [문서 목록]에서 사용자의 마지막 질문(이전 대화 포함)에 답하는 데 필요한 문서를 고르세요. 반드시 JSON 한 개만 출력하세요.
-출력 형식: {"action":"select|ask_model|ask|unknown","docs":[문서번호,...],"question":"","product":"","options":[]}
+출력 형식: {"action":"select|ask_model|ask|unknown","docs":[문서번호,...],"compare":false,"question":"","product":"","options":[]}
 - select: 답에 필요한 문서 번호를 가능성 높은 순서로 최대 ${DIRECT_PICK_MAX}개. 사용자가 제품·모델을 말했으면 그 모델의 문서만 고르세요. 모델과 상관없이 답할 수 있는 질문이면 select 하세요. 방법·절차·분해·조립·교체·설치·위치·화면·유로도처럼 사진이 도움이 되는 질문이면, 고른 모델에 제목에 "이미지"·"사진"·"그림"이 들어간 문서(사진을 모아 둔 문서)가 있을 때 그것도 함께 고르세요(최대 개수 안에서).
+- 비교 질문("모델별로 뭐가 달라?", "차이점", "비교", "각 모델 특징", "어떤 게 더 좋아?"처럼 여러 모델을 견주는 질문)은 되묻지 말고 반드시 select 하고 "compare":true 로 쓰세요. 비교할 모델마다 그 모델의 특징이 드러나는 문서(사양·사용설명서·제품 소개·기능 설명 등)를 1~2개씩 골라, 최대 ${DIRECT_PICK_MAX_CMP}개까지 고르세요. 사용자가 제품군을 말했으면 그 제품군의 모든 모델을 빠짐없이 포함하고, 제품군을 말하지 않았으면 제품군마다 모델이 골고루 들어가도록 고르세요. 이때는 ask_model 하지 마세요.
 - ask_model: 에러코드, 사양, 부품·소모품, 점검·교체·설치 방법, 사용설명서, 유로도처럼 **제품(모델)마다 내용이 달라지는 질문**인데 사용자가 제품명·모델명을 말하지 않았고 이전 대화에서도 정해지지 않았으며, 목록에서 그 주제의 문서가 둘 이상의 모델에 있을 때. "에러 04번"처럼 모든 모델에 같은 번호가 있고 뜻이 비슷해 보여도 모델마다 원인·조치가 다르므로, 추측해서 select 하지 말고 반드시 ask_model 하세요. 제품군·모델을 묻는 되묻기는 ask가 아니라 항상 ask_model로 하세요(제품군·모델 선택지는 화면이 목록 전체를 자동으로 보여 줍니다). question에는 "어느 제품·모델인가요?"처럼 짧게 쓰고, 사용자가 제품군(예: 정수기)은 이미 말했지만 모델은 말하지 않았다면 product에 [문서 목록]에 있는 그 제품군 이름을 그대로 쓰세요(모르면 빈 문자열). 제품군 이름(예: 정수기)만 말한 것은 모델을 말한 것이 아닙니다. "냉수 출수 방법"처럼 여러 모델에 같은 주제의 문서가 있는데 사용자가 어느 모델인지 말하지 않았다면, 그중 한 모델의 문서만 골라서 답하지 말고 ask_model 하세요. 사용자가 모델명을 이미 말했거나(이전 대화 포함) 직접 모델을 고른 뒤라면 ask_model 하지 말고 select 하세요. 행정·업무 절차처럼 모델과 무관한 질문도 select 하세요.
 - ask: 모델 외의 이유로 질문이 모호할 때(주제가 여러 가지로 해석되는 등)만 사용. question에 한국어로 짧게 되묻는 말, options에 목록에 실제 있는 제품군·모델·주제 이름으로 선택지 2~6개. 이전 대화에서 이미 되물었고 사용자가 대답했다면 다시 되묻지 말고 select 하세요.
 - unknown: 목록의 어떤 문서와도 관련이 없거나, 질문을 알아들을 수 없을 때.
@@ -2661,13 +2664,15 @@ ${index}`;
     return {kind: 'ask', text: String(j.question), options: opts};
   }
   if(j.action === 'select'){
-    const nums = [...new Set((Array.isArray(j.docs) ? j.docs : []).map(Number))].filter(n => n >= 1 && n <= ents.length).slice(0, DIRECT_PICK_MAX);
+    const cmp = j.compare === true;                         // 모델끼리 비교하는 질문이면 더 많은 문서를 고를 수 있고, 모델을 되묻지 않는다
+    const nums = [...new Set((Array.isArray(j.docs) ? j.docs : []).map(Number))].filter(n => n >= 1 && n <= ents.length).slice(0, cmp ? DIRECT_PICK_MAX_CMP : DIRECT_PICK_MAX);
     const picked = []; let total = 0;
-    for(const n of nums){ const e = ents[n - 1], len = (e.d.content || '').length; if(picked.length && total + len > DIRECT_CTX_MAX) continue; picked.push(e); total += len; }
+    let skipped = 0;
+    for(const n of nums){ const e = ents[n - 1], len = (e.d.content || '').length; if(picked.length && total + len > DIRECT_CTX_MAX){ skipped++; continue; } picked.push(e); total += len; }
     if(picked.length){
-      const gp = directNeedsModel(picked);                  // 한 모델 문서만 골랐는데 사용자가 모델을 말한 적이 없으면 → 모델부터 물어본다
+      const gp = cmp ? null : directNeedsModel(picked);     // 한 모델 문서만 골랐는데 사용자가 모델을 말한 적이 없으면 → 모델부터 물어본다 (비교 질문은 제외)
       if(gp) return {kind: 'pick', text: '', product: gp};
-      return {kind: 'select', scope: directScopeOf(picked)};
+      return {kind: 'select', scope: directScopeOf(picked, cmp ? {compare: true, skipped} : null)};
     }
   }
   return {kind: 'fallback'};
@@ -2783,7 +2788,7 @@ ${scope.head}
 5. 에러코드, 점검 항목, 사양은 항목별로 명확히 정리하세요.
 6. 안전 관련 내용은 반드시 강조하세요.
 7. 답변은 간결하고 현장에서 바로 활용 가능하게 작성하세요.
-${scope.direct?'8. 문서 머리의 [제품군 > 모델]이 서로 다른 여러 문서가 섞여 있습니다. 답변에서 어느 모델의 내용인지 밝히고, 에러코드·사양·부품·점검 방법처럼 모델마다 내용이 다른 질문인데 질문과 이전 대화에서 모델을 알 수 없으면, 비슷한 내용을 뭉뚱그려 답하지 말고 어느 제품·모델인지 먼저 되물으세요.':'8. 다른 모델에 대한 질문이면 해당 모델 선택을 안내하세요.'}
+${scope.direct?'8. 문서 머리의 [제품군 > 모델]이 서로 다른 여러 문서가 섞여 있습니다. 답변에서 어느 모델의 내용인지 밝히고, 모델끼리 차이를 묻는 질문이면 제공된 문서를 근거로 모델별 차이점을 표나 목록으로 한눈에 정리하고(문서에 없는 항목은 "문서에 없음"으로 쓰고 지어내지 마세요) 비교에 쓴 모델 이름을 밝히며 문서가 제공되지 않은 모델이 있을 수 있으면 그렇게 알리세요. 그리고 에러코드·사양·부품·점검 방법처럼 모델마다 내용이 다른 질문인데 질문과 이전 대화에서 모델을 알 수 없으면, 비슷한 내용을 뭉뚱그려 답하지 말고 어느 제품·모델인지 먼저 되물으세요.':'8. 다른 모델에 대한 질문이면 해당 모델 선택을 안내하세요.'}
 9. 답변의 맨 마지막 줄에, 답변을 작성하면서 내용을 참고한 문서를 하나도 빠뜨리지 말고 전부 번호로 아래 형식에 출력하세요(대표 문서 1개만 쓰지 말 것). 질문과 무관한 문서는 넣지 마세요. 근거로 쓴 문서가 없으면 [[참조: 없음]]으로 쓰세요. 이 줄은 시스템이 처리하므로 다른 설명을 덧붙이지 마세요.
    형식: [[참조: 1, 3]]   (문서 번호는 "=== 문서 N/전체 ===" 의 N)
 10. 문서 내용에 [[그림:파일명|설명]] 표시가 있으면 그 자리에 화면 캡처 사진이 들어 있다는 뜻입니다(사진 자체는 볼 수 없으니 설명 글을 근거로 판단하세요). 답변에서 어떤 단계나 화면을 설명할 때 그와 관련된 사진이 있으면, 그 설명 바로 다음 줄에 [[그림:파일명]] 만 그대로 출력하세요. 파일명은 한 글자도 바꾸지 말고, 설명은 덧붙이지 마세요. 질문과 관계없는 사진은 넣지 말고, 사진은 한 번의 답변에 최대 20장까지만 넣으세요. 사진 표시는 답변 본문에만 쓰고 [[참조: ...]] 줄에는 쓰지 마세요.

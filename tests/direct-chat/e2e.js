@@ -166,6 +166,22 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   u.reqs.length = 0; u.route_reply = () => JSON.stringify({ action: 'select', docs: [1] }); u.answer = '행정 답변입니다.\n[[참조: 1]]';
   await ask(u, '퇴직 처리 절차');
   ok(u.reqs.filter(x => !x.isRoute).length === 1 && /행정 답변입니다/.test(await u.textContent('#chat-body')), '모델이 하나뿐인 제품군(행정)은 되묻지 않고 바로 답한다');
+  // 2-5) 모델끼리 비교하는 질문("모델별로 어떤 차이점이 있어?")은 모델을 되묻지 않고 여러 모델 문서로 바로 답한다
+  await u.evaluate(() => { chatHistory.length = 0; const p = products.find(x => x.id === 'p2'); for (let i = 1; i <= 14; i++) p.models.push({ id: 'mc' + i, name: 'CP-C' + String(i).padStart(2, '0'), docs: [{ id: 'dc' + i, title: 'C' + i + ' 사양', cat: '사용설명서', content: 'C본문 ' + i, enabled: true }] }); });
+  const nDocs = sys => (sys.match(/=== 문서 \d+/g) || []).length;
+  u.reqs.length = 0; u.route_reply = () => JSON.stringify({ action: 'select', compare: true, docs: Array.from({ length: 18 }, (_, i) => i + 1) }); u.answer = '모델별 차이는 다음과 같습니다.\n[[참조: 1]]';
+  await ask(u, '정수기 모델별로 어떤 차이점이 있어?');
+  const rq = u.reqs.filter(x => x.isRoute), aq = u.reqs.filter(x => !x.isRoute);
+  ok(rq.length === 1 && /"compare":false/.test(rq[0].sys) && /비교 질문/.test(rq[0].sys) && /이때는 ask_model 하지 마세요/.test(rq[0].sys), '문서 고르기 지침에 "모델 비교 질문은 되묻지 말고 모델마다 문서를 골라라"가 들어 있다');
+  ok(aq.length === 1 && nDocs(aq[0].sys) === 18 && /\[모델 비교 질문\]/.test(aq[0].sys) && /모델별 차이점을 표나 목록/.test(aq[0].sys), '비교 질문은 모델을 되묻지 않고 선택된 18개 문서(10개 제한 없이)로 바로 답한다 (문서 ' + (aq[0] && nDocs(aq[0].sys)) + '개)');
+  ok(/모델별 차이는 다음과 같습니다/.test(await u.textContent('#chat-body')) && (await u.locator('.msg.bot:last-child .dc-card').count()) === 0, '답변이 나오고 모델 선택 카드는 나오지 않는다');
+  u.reqs.length = 0; u.route_reply = () => JSON.stringify({ action: 'select', docs: Array.from({ length: 18 }, (_, i) => i + 1) });
+  await ask(u, '정수기 설명서들 보여줘');
+  ok(nDocs(u.reqs.filter(x => !x.isRoute)[0].sys) === 10, '비교가 아닌 질문은 기존처럼 최대 10개 문서까지만 쓴다');
+  u.reqs.length = 0; u.route_reply = () => JSON.stringify({ action: 'select', compare: true, docs: [2] }); u.answer = '한 모델만 골라도 비교 질문이면 되묻지 않습니다.\n[[참조: 1]]';
+  await ask(u, '정수기 모델별 차이점 알려줘');
+  ok(u.reqs.filter(x => !x.isRoute).length === 1 && (await u.locator('.msg.bot:last-child .dc-card').count()) === 0, '비교 질문은 한 모델 문서만 골라져도 "어느 모델인가요?" 안전장치가 작동하지 않는다');
+  await u.evaluate(() => { const p = products.find(x => x.id === 'p2'); p.models = p.models.filter(m => !m.id.startsWith('mc')); chatHistory.length = 0; });
   // 3) 못 찾음(unknown) → 제품군/모델 고르기
   u.reqs.length = 0; u.route_reply = () => '{"action":"unknown"}';
   await ask(u, '아무말 대잔치');

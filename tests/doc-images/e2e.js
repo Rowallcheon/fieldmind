@@ -261,6 +261,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   const sys = geminiReq.system_instruction.parts[0].text;
   ok(sys.includes('[[그림:' + name + '|결재 메뉴 위치 (화면 상단 가운데)]]'), 'AI에게 보내는 문서에 사진 자리표와 설명이 들어간다');
   ok(/\[\[그림:파일명\]\] 만 그대로 출력/.test(sys), '사진 표시 규칙이 AI 지시문에 들어간다');
+  ok(/묻지 않아도 처음 답변부터 함께 보여 주는 것이 기본/.test(sys) && /다시 물을 때까지 기다리는 것은 잘못/.test(sys) && /이미지 모음/.test(sys) && /억지로 만들지 말고/.test(sys), '사진은 사용자가 묻지 않아도 첫 답변부터 함께 보여 주고(다른 문서에 모여 있어도), 관련 사진이 없으면 억지로 만들지 말라는 규칙이 AI 지시문에 들어간다');
   ok(JSON.stringify(geminiReq).length < 6000, 'AI 요청에 사진 데이터는 없다 (글만: ' + JSON.stringify(geminiReq).length + ' bytes)');
   const imgs = await page.$$eval('.msg.bot .chat-img', l => l.map(i => i.getAttribute('src')));
   ok(imgs.length === 1 && imgs[0].includes('/__img/' + name + '?sig=ok'), '답변에 사진이 한 장, 서버가 준 임시 주소(서명 포함)로 표시된다 (형식이 틀린 파일명은 무시)');
@@ -277,6 +278,17 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(!/그림|webp/.test(ttsText), '읽기(음성)에서 사진 파일명을 읽지 않는다');
   await page.click('.msg.bot .chat-img');
   ok(await page.$eval('#img-lb', e => e.classList.contains('open')) && (await page.$eval('#img-lb-img', i => i.getAttribute('src'))).includes('/__img/' + name), '사진을 누르면 크게 보기가 열린다');
+  { // 크게 보기: 사진이 화면 가운데에 놓인다 (맨 위에 붙지 않음)
+    await page.waitForFunction(() => { const i = document.getElementById('img-lb-img'); return i.complete && i.naturalWidth > 0; }, null, { timeout: 5000 });
+    const geo = async () => page.evaluate(() => { const i = document.getElementById('img-lb-img').getBoundingClientRect(), lb = document.getElementById('img-lb'); return { top: i.top, bottom: innerHeight - i.bottom, left: i.left, right: innerWidth - i.right, h: i.height, sh: lb.scrollHeight, ch: lb.clientHeight }; });
+    const g1 = await geo();
+    ok(g1.h < g1.ch - 120 && Math.abs(g1.top - g1.bottom) <= 2 && Math.abs(g1.left - g1.right) <= 2 && g1.top > 56, '크게 보기에서 사진이 화면 한가운데에 놓인다 (위 ' + Math.round(g1.top) + 'px · 아래 ' + Math.round(g1.bottom) + 'px · 왼쪽 ' + Math.round(g1.left) + 'px · 오른쪽 ' + Math.round(g1.right) + 'px)');
+    await page.setViewportSize({ width: 1100, height: 400 }); await page.waitForTimeout(150);
+    const g2 = await geo();
+    ok(g2.h > g2.ch && Math.abs(g2.top) <= 2 && g2.sh > g2.ch, '화면보다 큰 사진은 잘리지 않고 위에서부터 보이며 스크롤로 끝까지 볼 수 있다 (위 ' + Math.round(g2.top) + 'px, 스크롤 높이 ' + g2.sh + ' > ' + g2.ch + ')');
+    await page.setViewportSize({ width: 1100, height: 900 }); await page.waitForTimeout(100);
+    await page.screenshot({ path: path.join(OUT, 'lightbox-center.png') });
+  }
   await page.keyboard.press('Escape');
   ok(!(await page.$eval('#img-lb', e => e.classList.contains('open'))), '닫으면 크게 보기가 닫힌다');
   // 사진이 20장을 넘으면 20장까지만

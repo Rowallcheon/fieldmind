@@ -318,6 +318,17 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(/\[\[그림:파일명\]\] 만 그대로 출력/.test(sys), '사진 표시 규칙이 AI 지시문에 들어간다');
   ok(/묻지 않아도 처음 답변부터 함께 보여 주는 것이 기본/.test(sys) && /다시 물을 때까지 기다리는 것은 잘못/.test(sys) && /이미지 모음/.test(sys) && /억지로 만들지 말고/.test(sys), '사진은 사용자가 묻지 않아도 첫 답변부터 함께 보여 주고(다른 문서에 모여 있어도), 관련 사진이 없으면 억지로 만들지 말라는 규칙이 AI 지시문에 들어간다');
   ok(JSON.stringify(geminiReq).length < 6000, 'AI 요청에 사진 데이터는 없다 (글만: ' + JSON.stringify(geminiReq).length + ' bytes)');
+  // 답변 속 인터넷 주소(구글 드라이브 등)는 눌러서 열리는 링크가 된다
+  const lk = await page.evaluate(() => {
+    appendMsg('bot', '사진 모음: https://drive.google.com/drive/folders/AbC-123?usp=sharing 입니다.\n[교본 1권](https://drive.google.com/file/d/XYZ/view)\n나쁜 링크 javascript:alert(1) 와 ftp://x.y/z');
+    const m = document.querySelector('#chat-body .msg.bot:last-child .msg-bubble');
+    const a = Array.from(m.querySelectorAll('a')).map(x => ({ href: x.getAttribute('href'), target: x.target, rel: x.rel, text: x.textContent }));
+    return { a, imgs: m.querySelectorAll('img').length, tts: m.querySelector('.tts-speak-btn').dataset.text };
+  });
+  ok(lk.a.length === 2 && lk.a[0].href === 'https://drive.google.com/drive/folders/AbC-123?usp=sharing' && lk.a[0].target === '_blank' && /noopener/.test(lk.a[0].rel), '답변 속 구글 드라이브 주소가 새 탭에서 열리는 링크가 된다 (문장 끝 마침표는 링크에서 제외)');
+  ok(lk.a[1].href === 'https://drive.google.com/file/d/XYZ/view' && lk.a[1].text === '교본 1권', '[글자](주소) 형식도 글자만 보이는 링크가 된다');
+  ok(!lk.a.some(x => /^(javascript|ftp):/i.test(x.href)), 'http/https 가 아닌 주소(javascript: 등)는 링크로 만들어지지 않는다');
+  ok(!/https?:\/\//.test(lk.tts) && /링크/.test(lk.tts), '소리 내어 읽기에는 인터넷 주소 대신 "링크"라고만 들어간다');
   const imgs = await page.$$eval('.msg.bot .chat-img', l => l.map(i => i.getAttribute('src')));
   ok(imgs.length === 1 && imgs[0].includes('/__img/' + name + '?sig=ok'), '답변에 사진이 한 장, 서버가 준 임시 주소(서명 포함)로 표시된다 (형식이 틀린 파일명은 무시)');
   const lastUrlReq = apiLog.filter(a => a.u === '/api/doc-image-url').pop();

@@ -473,6 +473,8 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 .msg-line{display:flex;align-items:flex-end;gap:5px;min-width:0;}
 .msg.user{justify-content:flex-end;}
 .msg-time{font-size:10px;color:#45607a;white-space:nowrap;padding-bottom:1px;flex:none;}
+.msg-bubble a.chat-link{color:var(--accent);text-decoration:underline;text-underline-offset:2px;word-break:break-all;cursor:pointer;}
+.msg-bubble a.chat-link:hover{color:#1d4570;}
 .msg-bubble{max-width:100%;min-width:0;padding:9px 12px;border-radius:16px;font-size:14px;line-height:1.65;word-break:keep-all;overflow-wrap:anywhere;}
 .msg.bot .msg-bubble{background:#fff;border:none;border-top-left-radius:4px;box-shadow:0 1px 2px rgba(22,39,58,.08),0 2px 10px rgba(60,90,150,.10);color:#16273a;}
 .msg.user .msg-bubble{background:#ffd54a;color:#2a2300;font-weight:500;border-top-right-radius:4px;}
@@ -1871,6 +1873,8 @@ function speakText(text){
   stopTTS();
   // 마크다운 기호 제거 + 읽기 자연스럽게 보정
   const clean=stripImgMarkers(text)
+    .replace(/\[([^\]\n]+)\]\(https?:\/\/[^\s)]+\)/g,'$1')   // [글자](주소) → 글자만
+    .replace(/https?:\/\/\S+/g,'링크')               // 인터넷 주소는 읽지 않고 "링크"라고만
     .replace(/\*\*(.+?)\*\*/g,'$1')   // **볼드** → 텍스트만
     .replace(/\*(.+?)\*/g,'$1')          // *이탤릭* → 텍스트만
     .replace(/^#{1,3}\s+/gm,'')           // # 헤더 제거
@@ -3265,8 +3269,20 @@ document.addEventListener('drop',function(e){
 window.addEventListener('dragend',function(){ _dropDepth=0; dropHint(false); });
 
 /* ── 마크다운 → HTML 변환 (** 볼드, * 리스트, # 헤더 처리) ── */
+/* 답변 속 인터넷 주소를 누를 수 있는 링크로 바꾼다 (구글 드라이브 등). http/https 주소만, 새 탭에서 열린다.
+   [글자](주소) 형식과 그냥 적힌 주소를 모두 처리. 주소 끝의 . , ) 같은 문장부호는 링크에서 뺀다. */
+function chatLinkHtml(url,label){
+  const safe=String(url).replace(/&/g,'&amp;').replace(/"/g,'%22').replace(/</g,'%3C').replace(/>/g,'%3E');
+  const txt=String(label==null?url:label).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return '<a class="chat-link" href="'+safe+'" target="_blank" rel="noopener noreferrer">'+txt+'</a>';
+}
 function mdToHtml(text){
   let imgCount=0;
+  const links=[];
+  const hold=function(url,label){ links.push(chatLinkHtml(url,label)); return '§§L'+(links.length-1)+'§§'; };   // 다른 변환에 망가지지 않게 자리표로 잠시 빼 둔다
+  text=String(text||'')
+    .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g,function(m,t,u){ return hold(u,t); })
+    .replace(/https?:\/\/[^\s<>"'`\[\]]+/g,function(m){ const t=m.match(/[.,;:!?)）』」'"”’…]+$/); const url=t?m.slice(0,m.length-t[0].length):m; return url.length>8?hold(url)+(t?t[0]:''):m; });
   return text
     // 문서 사진 표시 [[그림:ID]] → 사진 (답변당 최대 20장, 형식이 맞는 것만)
     .replace(DOC_IMG_RE, function(m,id,cap){
@@ -3292,7 +3308,9 @@ function mdToHtml(text){
     // 사진 앞뒤의 빈 줄은 없앰 (사진 자체가 줄을 차지함)
     .replace(/(<img [^>]*>)\n+/g,'$1')
     // 줄바꿈
-    .replace(/\n/g,'<br>');
+    .replace(/\n/g,'<br>')
+    // 잠시 빼 둔 링크 되돌리기
+    .replace(/§§L(\d+)§§/g,function(m,i){ return links[Number(i)]||''; });
 }
 
 function starIcon(){ return '<svg viewBox="0 0 64 64" width="72%" height="72%" aria-hidden="true"><path d="M29 12C31 27 37 32 52 35C37 38 31 43 29 57C27 43 21 38 8 35C21 32 27 27 29 12z" fill="#fff"/><path d="M50 8C51 14 53 16 58 17C53 18 51 20 50 26C49 20 47 18 42 17C47 16 49 14 50 8z" fill="#ffd54a"/></svg>'; }
@@ -3309,7 +3327,7 @@ function appendMsg(role,text,srcDocs){
     src='<div class="msg-src"><div class="msg-src-title">참조 문서</div>'+srcDocs.map(d=>'<div class="msg-src-item">📄 ['+d.cat+'] '+d.title+'</div>').join('')+'</div>';
   let speakBtn='';
   // TTS용 텍스트는 마크다운 기호 제거한 순수 텍스트
-  const plainText=stripImgMarkers(text).replace(/[#*`>_~\[\]]/g,'').replace(/\n+/g,' ');
+  const plainText=stripImgMarkers(text).replace(/\[([^\]\n]+)\]\(https?:\/\/[^\s)]+\)/g,'$1').replace(/https?:\/\/\S+/g,'링크').replace(/[#*`>_~\[\]]/g,'').replace(/\n+/g,' ');
   if(role==='bot') speakBtn='<button class="tts-speak-btn" onclick="speakText(this.dataset.text)" data-text="'+plainText.replace(/"/g,'&quot;')+'">🔊 읽기</button>';
   const rendered = role==='bot' ? mdToHtml(text) : text.replace(/\n/g,'<br>');
   const time='<span class="msg-time">'+new Date().toLocaleTimeString('ko-KR',{hour:'numeric',minute:'2-digit'})+'</span>';

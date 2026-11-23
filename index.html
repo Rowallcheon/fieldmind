@@ -70,6 +70,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .modal-overlay.open{display:flex;}
 .modal{background:#ffffff;border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.12);padding:24px;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;}
 .modal-title{font-size:16px;font-weight:700;margin-bottom:6px;}
+/* 긴 창에서도 위쪽 닫기 버튼이 항상 보이게: 스크롤해도 제목 줄이 위에 붙어 있다 */
+.modal-topbar{position:sticky;top:-24px;z-index:5;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:#fff;margin:-24px -24px 8px;padding:18px 24px 8px;border-radius:14px 14px 0 0;}
+.modal-topbar .modal-title{min-width:0;overflow-wrap:anywhere;}
+.modal-topbar .modal-x{flex-shrink:0;white-space:nowrap;}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
 .prog-wrap{background:var(--bg3);border-radius:4px;height:6px;overflow:hidden;}
 .prog-bar{height:100%;background:var(--accent);border-radius:4px;transition:width .25s;}
@@ -407,6 +411,10 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 .add-row .form-group{flex:1;min-width:130px;margin-bottom:0;}
 
 /* 문서 카드 */
+.doc-find{display:flex;gap:6px;align-items:center;margin-bottom:8px;}
+.doc-find .form-input{padding:8px 12px;font-size:13px;}
+.doc-find .btn{flex-shrink:0;white-space:nowrap;}
+.doc-find .form-input{min-width:0;flex:1;}
 .doc-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;}
 .doc-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
 .doc-card-title{font-size:13px;font-weight:700;color:var(--text);}
@@ -1207,7 +1215,10 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
 <!-- 모달: 문서 내용 입력 -->
 <div class="modal-overlay" id="modal-doc-input">
   <div class="modal" style="max-width:680px;">
-    <div class="modal-title" id="modal-doc-input-title">📝 문서 내용 입력</div>
+    <div class="modal-topbar">
+      <div class="modal-title" id="modal-doc-input-title">📝 문서 내용 입력</div>
+      <button type="button" class="btn btn-ghost btn-sm modal-x" id="doc-input-x" onclick="closeModal('modal-doc-input')" aria-label="닫기">✕ 닫기</button>
+    </div>
     <div class="doc-input-guide">
       <strong>사용 방법:</strong> PDF나 매뉴얼을 열어서 내용을 <strong>복사(Ctrl+A → Ctrl+C)</strong> 후 아래에 붙여넣기 하세요.<br>
       붙여넣은 내용을 AI가 학습해서 현장 인력의 질문에 답변합니다.<br>
@@ -1259,6 +1270,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
     <!-- 기존 문서 목록 -->
     <div id="existing-docs-section" style="margin-top:4px;">
       <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text2);display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>등록된 문서 <span id="existing-doc-count" style="color:var(--accent);">0</span>건</span><button class="sort-mode-btn doc-sort-btn" type="button" onclick="toggleDocSort()" title="문서 목록을 최신순/오래된순으로 바꿉니다">↓ 최신순</button></div>
+      <div class="doc-find"><input type="search" id="existing-doc-q" class="form-input" placeholder="🔍 찾기 — 제목이나 내용에 들어 있는 글자를 입력하세요" autocomplete="off" oninput="renderExistingDocs()" aria-label="등록된 문서 찾기"><button type="button" class="btn btn-ghost btn-sm" id="existing-doc-q-clear" onclick="clearDocFind()" style="display:none">지우기</button></div>
       <div id="existing-docs-list"></div>
     </div>
 
@@ -4159,7 +4171,8 @@ function openDocInputModal(pi,mi){
   // 저장 버튼 초기화
   const saveBtn=document.querySelector('#modal-doc-input .modal-actions .btn-primary');
   if(saveBtn){saveBtn.textContent='📝 저장';saveBtn.onclick=saveDocContent;}
-  // 기존 문서 렌더
+  // 기존 문서 렌더 (찾기 칸은 비운다)
+  const fq=document.getElementById('existing-doc-q'); if(fq) fq.value='';
   renderExistingDocs();
   document.getElementById('modal-doc-input').classList.add('open');
 }
@@ -4197,13 +4210,22 @@ function toggleDocSort(){
   renderDocTree(); if(modalDocRef) renderExistingDocs();
   window.scrollTo(0, sy);
 }
+function clearDocFind(){ const f=document.getElementById('existing-doc-q'); if(f){ f.value=''; f.focus(); } renderExistingDocs(); }
 function renderExistingDocs(){
   if(!modalDocRef)return;
   const docs=products[modalDocRef.pi].models[modalDocRef.mi].docs;
-  document.getElementById('existing-doc-count').textContent=docs.length;
+  /* 찾기: 입력한 글자가 제목·내용(사진 자리표 제외)·분류에 들어 있는 문서만 보인다. 대소문자·띄어쓰기 개수는 구분하지 않는다. */
+  const qEl=document.getElementById('existing-doc-q');
+  const q=((qEl&&qEl.value)||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const hit=function(d){ return !q || (String(d.title||'')+'\n'+String(d.cat||'')+'\n'+String(d.content||'').replace(DOC_IMG_RE,function(m,id,cap){ return ' '+(cap||'')+' '; })).toLowerCase().replace(/\s+/g,' ').indexOf(q)>=0; };
+  const shown=docsOrdered(docs).filter(function(o){ return hit(o.d); });
+  const clr=document.getElementById('existing-doc-q-clear'); if(clr) clr.style.display=q?'':'none';
+  document.getElementById('existing-doc-count').textContent=q?(shown.length+' / 전체 '+docs.length):docs.length;
   document.getElementById('existing-docs-list').innerHTML=docs.length===0
     ?'<div style="font-size:12px;color:var(--text3);padding:8px 0;">아직 등록된 문서가 없습니다.</div>'
-    :docsOrdered(docs).map(({d,i})=>`
+    :shown.length===0
+    ?'<div style="font-size:12px;color:var(--text3);padding:8px 0;">찾는 글자가 들어 있는 문서가 없습니다.</div>'
+    :shown.map(({d,i})=>`
       <div class="doc-card${d.enabled===false?' off':''}">
         <div class="doc-card-head">
           <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">

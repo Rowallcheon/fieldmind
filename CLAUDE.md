@@ -10,6 +10,7 @@
 - 문서 사진(챗봇 답변에 사진 표시)은 `docs/문서사진_설계.md` 기준. 변경 후 `node --test tests/doc-images/api.test.js` 와 `node tests/doc-images/e2e.js` 실행. 사진은 비공개 저장소 + 서버가 주는 임시 주소로만 보여준다.
 - 그룹의 "바로 채팅"(제품군·모델 선택 없이 전체 문서 검색 챗봇)은 `docs/바로채팅_설계.md` 기준. 변경 후 `node tests/direct-chat/e2e.js` 실행.
 - 문서 관리의 모델 이동·복사, 문서 이동은 `docs/문서관리_이동.md` 기준. 변경 후 `node tests/doc-move/e2e.js` 와 `node tests/doc-enabled/e2e.js` 실행. ("폴더"라는 말은 원본 자료실이 아니라 문서 관리의 제품군/모델을 뜻할 수 있으니, 불분명하면 먼저 물어본다.)
+- 회원 일괄 등록(CSV/엑셀)·그룹 배정·1000건 넘는 표 읽기(`dbQAll`)는 변경 후 `node tests/user-bulk/e2e.js` 실행. (서버는 한 번에 1000줄까지만 돌려주므로, 회원·그룹 회원·대화 로그처럼 늘어나는 표는 `dbQ`가 아니라 `dbQAll`로 읽는다.)
 
 ## 구조 메모
 

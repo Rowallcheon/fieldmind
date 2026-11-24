@@ -1541,7 +1541,7 @@ body.db-loading #busy-pill,body.db-loading #busy-bar{display:none !important;}  
   <div class="modal" style="max-width:480px;">
     <div class="modal-title" style="margin-bottom:14px;">👥 그룹 회원 추가 — <span id="modal-grp-name"></span></div>
     <div style="margin-bottom:10px;">
-      <input class="form-input" id="grp-member-search" placeholder="이름 또는 아이디 검색" oninput="renderGrpMemberList()">
+      <input class="form-input" id="grp-member-search" placeholder="이름·아이디·소속 검색" oninput="renderGrpMemberList()">
     </div>
     <div id="grp-member-list" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
     <div class="modal-actions">
@@ -1622,6 +1622,18 @@ async function dbQ(table, sel) {
   const res = await withBusy(function(){ return sb.from(table).select(sel); });
   if (res.error) { console.error(table, res.error); return []; }
   return res.data || [];
+}
+/* 한 번에 1000줄까지만 돌려주는 서버 제한 때문에, 1000줄이 넘는 표(회원·그룹 회원·대화 로그)는 나눠서 끝까지 읽는다. 정렬 기준이 있어야 빠짐·중복이 없다. */
+async function dbQAll(table, orderCols) {
+  const PAGE = 1000, out = [];
+  for (let from = 0; ; from += PAGE) {
+    const res = await withBusy(function(){ let q = sb.from(table).select('*'); orderCols.forEach(function(c){ q = q.order(c); }); return q.range(from, from + PAGE - 1); });
+    if (res.error) { console.error(table, res.error); return out; }
+    const rows = res.data || [];
+    for (let i = 0; i < rows.length; i++) out.push(rows[i]);
+    if (rows.length < PAGE) break;
+  }
+  return out;
 }
 async function dbIns(table, row) {
   const res = await withBusy(function(){ return sb.from(table).insert(row); });
@@ -1718,7 +1730,7 @@ setTimeout(function(){ document.body.classList.add('app-ready'); if (window.Logi
 async function loadAllData() {
   showLoadingOverlay(true);
   try {
-    users = await dbQ('users');
+    users = await dbQAll('users', ['id']);
     var nRows = await dbQ('notices');
     notices = nRows.map(function(n) {
       return { id: n.id, title: n.title, body: n.body, date: (n.created_at||'').slice(0,10) };
@@ -1763,7 +1775,7 @@ async function loadAllData() {
 
     // chat_logs DB에서 로드 (최근 500건)
     try {
-      var clRows = await dbQ('chat_logs');
+      var clRows = await dbQAll('chat_logs', ['id']);
       chatLogs = clRows.map(function(l){
         return {
           ts: l.ts,
@@ -1784,7 +1796,7 @@ async function loadAllData() {
     // 그룹 로드 (테이블 없어도 오류 없이 진행)
     try {
       var gRows  = await dbQ('groups');
-      var gmRows = await dbQ('group_members');
+      var gmRows = await dbQAll('group_members', ['group_id','user_id']);
       var gpRows = await dbQ('group_products');
       groups = gRows.map(function(g){
         return {
@@ -2452,7 +2464,7 @@ async function showPanel(n){
   // 로그 패널 열 때 DB에서 최신 데이터 재로드
   if(n==='logs'){
     try {
-      var clRows = await dbQ('chat_logs');
+      var clRows = await dbQAll('chat_logs', ['id']);
       chatLogs = clRows.map(function(l){
         return {
           ts: l.ts,
@@ -4414,6 +4426,7 @@ async function createGroup(){
 }
 
 /* ── 그룹 목록 렌더링 (DOM 방식) ── */
+const GRP_CHIP_MAX=60, GRP_MEMBER_LIST_MAX=150;   // 회원이 수천 명이어도 화면이 멈추지 않도록 한 번에 보여 주는 수를 제한
 function renderGroupList(){
   const el = document.getElementById('group-list');
   if(!el) return;
@@ -4424,7 +4437,8 @@ function renderGroupList(){
   }
   groups.forEach(function(g){
     const cats    = products.filter(function(p){ return g.catIds.includes(p.id); });
-    const members = users.filter(function(u){ return g.memberIds.includes(u.id); });
+    const memSet = new Set(g.memberIds);
+    const members = users.filter(function(u){ return memSet.has(u.id); });
 
     const card = document.createElement('div');
     card.className = 'group-card';
@@ -4470,7 +4484,7 @@ function renderGroupList(){
     // 회원 칩
     const memDiv = document.createElement('div'); memDiv.className='group-members';
     if(members.length){
-      members.forEach(function(u){
+      members.slice(0,GRP_CHIP_MAX).forEach(function(u){
         const chip = document.createElement('span'); chip.className='member-chip';
         chip.appendChild(document.createTextNode(u.name));
         const xBtn = document.createElement('button'); xBtn.textContent='×'; xBtn.title='제거';
@@ -4478,6 +4492,7 @@ function renderGroupList(){
         chip.appendChild(xBtn);
         memDiv.appendChild(chip);
       });
+      if(members.length>GRP_CHIP_MAX){ const more=document.createElement('span'); more.style.cssText='font-size:12px;color:var(--text3);align-self:center;'; more.textContent='외 '+(members.length-GRP_CHIP_MAX)+'명 — "+ 회원 추가"에서 이름·아이디로 찾아 보고 관리하세요'; memDiv.appendChild(more); }
     } else {
       memDiv.innerHTML='<span style="font-size:12px;color:var(--text3);">배정된 회원 없음</span>';
     }
@@ -4557,12 +4572,19 @@ function renderGrpMemberList(){
   const g = groups.find(x=>x.id===modalGrpId);
   if(!g) return;
   const q = (document.getElementById('grp-member-search').value||'').toLowerCase();
-  const filtered = users.filter(u=>u.role!=='admin'&&(u.name.toLowerCase().includes(q)||u.id.toLowerCase().includes(q)));
+  const memSet = new Set(g.memberIds);
+  const all = users.filter(u=>u.role!=='admin'&&(u.name.toLowerCase().includes(q)||u.id.toLowerCase().includes(q)||String(u.dept||'').toLowerCase().includes(q)));
+  all.sort((a,b)=>(memSet.has(b.id)?1:0)-(memSet.has(a.id)?1:0));          // 이 그룹 회원을 먼저
+  const filtered = all.slice(0,GRP_MEMBER_LIST_MAX);
   const el = document.getElementById('grp-member-list');
   if(!filtered.length){ el.innerHTML='<div style="text-align:center;color:var(--text3);padding:16px;font-size:13px;">검색 결과 없음</div>'; return; }
   el.innerHTML = '';
+  const inCnt = all.filter(u=>memSet.has(u.id)).length;
+  const note = document.createElement('div'); note.style.cssText='font-size:11px;color:var(--text3);padding:2px 2px 6px;';
+  note.textContent = '검색 결과 '+all.length+'명 (이 그룹 '+inCnt+'명)'+(all.length>filtered.length?' · 앞의 '+filtered.length+'명만 표시 — 이름·아이디·소속으로 검색해 좁혀 주세요':'');
+  el.appendChild(note);
   filtered.forEach(function(u){
-    const inGroup = g.memberIds.includes(u.id);
+    const inGroup = memSet.has(u.id);
     const row = document.createElement('div');
     row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg3);border-radius:var(--radius-sm);';
     const info = document.createElement('div');
@@ -4688,6 +4710,50 @@ function csvDropHandler(e){
 }
 
 /* ── 파일 선택/파싱 ── */
+/* 엑셀에서 "CSV(쉼표로 분리)"로 저장하면 한글 윈도우에서는 UTF-8이 아니라 EUC-KR(CP949)로 저장된다. 먼저 UTF-8로 읽어 보고, 깨지면 EUC-KR로 다시 읽는다. */
+function csvDecode(buf){
+  let t;
+  try{ t=new TextDecoder('utf-8',{fatal:true}).decode(buf); }
+  catch(e){ try{ t=new TextDecoder('euc-kr').decode(buf); }catch(e2){ t=new TextDecoder('utf-8').decode(buf); } }
+  return t.replace(/^﻿/,'');
+}
+function csvRowsFromCells(cells){               // 표(2차원 배열) → 회원 목록. 첫 줄이 제목(아이디, 이름 …)이면 건너뜀
+  const first=(cells[0]||[]).map(c=>String(c==null?'':c).trim().toLowerCase()).join(',');
+  const startIdx=(/(^|,)(id|아이디)(,|$)/.test(first)||first.includes('아이디'))?1:0;
+  return cells.slice(startIdx).map(cs=>{
+    const c=cs.map(x=>String(x==null?'':x).trim());
+    return { id:c[0]||'', name:c[1]||'', dept:c[2]||'', pw:c[3]||'1234', role:(c[4]||'user').toLowerCase()==='admin'?'admin':'user', groupName:(c[5]||'').trim() };
+  }).filter(r=>r.id&&r.name);
+}
+function csvParseText(text){
+  const lines=text.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+  if(!lines.length) return [];
+  return csvRowsFromCells(lines.map(l=>l.split(',')));
+}
+const csvGroupKey=s=>String(s||'').normalize('NFC').toLowerCase().replace(/[\s_\-]+/g,'');   // 띄어쓰기·밑줄·대소문자 차이는 같은 그룹으로 본다
+function csvFindGroup(name){
+  if(!name) return null;
+  return groups.find(g=>g.name===name)||groups.find(g=>csvGroupKey(g.name)===csvGroupKey(name))||null;
+}
+function csvEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* 등록 전에 미리 알려 주는 요약: 새 계정 / 이미 있는 계정 / 그룹을 못 찾는 이름 */
+function csvSummary(rows){
+  const have=new Set(users.map(u=>u.id)), seen=new Set();
+  let fresh=0, exist=0, dup=0; const noGroup=new Map();
+  rows.forEach(r=>{
+    if(seen.has(r.id)){ dup++; return; } seen.add(r.id);
+    if(have.has(r.id)) exist++; else fresh++;
+    if(r.groupName&&!csvFindGroup(r.groupName)) noGroup.set(r.groupName,(noGroup.get(r.groupName)||0)+1);
+  });
+  return {fresh,exist,dup,noGroup,withGroup:rows.filter(r=>r.groupName).length};
+}
+function csvSummaryHtml(s){
+  let h='<div style="font-size:12px;line-height:1.7;margin-bottom:10px;">'
+    +'<div><b>새로 등록 '+s.fresh+'명</b>'+(s.exist?' · 이미 있는 계정 '+s.exist+'명 <span style="color:var(--text3);">(새로 만들지 않고, 파일에 그룹이 적혀 있으면 그 그룹에만 추가합니다. 이름·비밀번호는 바뀌지 않습니다)</span>':'')+(s.dup?' · 파일 안 중복 '+s.dup+'건 제외':'')+'</div>';
+  if(!s.withGroup) h+='<div style="color:var(--text3);">파일에 그룹명이 없습니다. 그룹 배정 없이 계정만 등록됩니다. (그룹 열은 6번째 칸입니다)</div>';
+  if(s.noGroup.size) h+='<div style="color:var(--danger);font-weight:600;">⚠ 그룹을 찾지 못한 이름: '+Array.from(s.noGroup.entries()).slice(0,8).map(([n,c])=>csvEsc(n)+' ('+c+'명)').join(', ')+(s.noGroup.size>8?' 외 '+(s.noGroup.size-8)+'개':'')+'<br><span style="font-weight:400;color:var(--text2);">현재 그룹: '+(groups.map(g=>csvEsc(g.name)).join(', ')||'없음')+' — 이름이 다르면 파일을 고치거나 그룹을 먼저 만들어 주세요. 이대로 등록하면 이 사람들은 그룹 없이 등록됩니다.</span></div>';
+  return h+'</div>';
+}
 function csvFileSelected(file){
   if(!file) return;
   const ext = file.name.split('.').pop().toLowerCase();
@@ -4699,29 +4765,22 @@ function csvFileSelected(file){
   prog.style.display='block'; bar.style.width='0%';
   document.getElementById('csv-preview').style.display='none';
   document.getElementById('csv-submit-area').style.display='none';
+  const resEl=document.getElementById('csv-result'); if(resEl) resEl.style.display='none';
 
   const reader = new FileReader();
-  reader.onload = function(e){
+  reader.onload = async function(e){
     try {
       let rows = [];
       if(ext==='csv'){
-        // CSV 파싱
-        const text = e.target.result;
-        const lines = text.replace(/\r/g,'').split('\n').filter(l=>l.trim());
-        // 첫 줄이 헤더인지 확인 (id, name, 아이디, 이름 등)
-        const firstLine = lines[0].toLowerCase();
-        const startIdx = (firstLine.includes('id')||firstLine.includes('아이디')) ? 1 : 0;
-        rows = lines.slice(startIdx).map(line=>{
-          const cols = line.split(',').map(c=>c.trim());
-          return { id:cols[0]||'', name:cols[1]||'', dept:cols[2]||'', pw:cols[3]||'1234', role:(cols[4]||'user').toLowerCase()==='admin'?'admin':'user', groupName:(cols[5]||'').trim() };
-        }).filter(r=>r.id&&r.name);
+        rows = csvParseText(csvDecode(e.target.result));
       } else {
-        // XLSX는 SheetJS 없이 처리 불가 → 안내
-        showToast('XLSX는 준비 중입니다. CSV로 저장 후 업로드해 주세요.','error');
-        prog.style.display='none'; return;
+        await docLoadLib(LIB_XLSX,function(){ return !!window.XLSX; });
+        const wb = XLSX.read(e.target.result,{type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        rows = csvRowsFromCells(XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}));
       }
 
-      if(!rows.length){ showToast('유효한 데이터가 없습니다.','error'); prog.style.display='none'; return; }
+      if(!rows.length){ showToast('유효한 데이터가 없습니다. (첫 칸 아이디, 둘째 칸 이름이 있어야 합니다)','error'); prog.style.display='none'; return; }
 
       csvPendingList = rows;
       bar.style.width='100%';
@@ -4729,60 +4788,94 @@ function csvFileSelected(file){
         prog.style.display='none';
         document.getElementById('csv-preview').style.display='block';
         document.getElementById('csv-submit-area').style.display='flex';
-        document.getElementById('csv-preview-rows').innerHTML =
+        document.getElementById('csv-preview-rows').innerHTML = csvSummaryHtml(csvSummary(csvPendingList)) +
           csvPendingList.slice(0,5).map(u=>
             '<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap;">'
-            +'<span class="badge badge-gray">'+u.id+'</span>'
-            +'<span style="color:var(--text);">'+u.name+'</span>'
-            +'<span style="color:var(--text3);">'+u.dept+'</span>'
+            +'<span class="badge badge-gray">'+csvEsc(u.id)+'</span>'
+            +'<span style="color:var(--text);">'+csvEsc(u.name)+'</span>'
+            +'<span style="color:var(--text3);">'+csvEsc(u.dept)+'</span>'
             +(u.role==='admin'?'<span class="badge badge-gold" style="font-size:10px;">관리자</span>':'')
-            +(u.groupName?'<span class="badge" style="background:#eef2ff;color:#4c6ef5;font-size:10px;border:1px solid #c5d0e6;">'+u.groupName+'</span>':'')
+            +(u.groupName?'<span class="badge" style="background:#eef2ff;color:#4c6ef5;font-size:10px;border:1px solid #c5d0e6;">'+csvEsc(u.groupName)+'</span>':'')
             +'</div>'
           ).join('')
           +(csvPendingList.length>5?'<div style="font-size:11px;color:var(--text3);padding-top:6px;">외 '+(csvPendingList.length-5)+'명...</div>':'');
         document.getElementById('csv-submit-btn').textContent = csvPendingList.length+'명 일괄 등록';
+        document.getElementById('csv-submit-btn').disabled = false;
       },300);
     } catch(err){
       prog.style.display='none';
       showToast('파일 파싱 오류: '+err.message,'error');
     }
   };
-  if(ext==='csv') reader.readAsText(file, 'UTF-8');
-  else reader.readAsArrayBuffer(file);
+  reader.readAsArrayBuffer(file);
 }
 
+/* 여러 줄을 한 번에 저장한다. 한 번에 실패하면 한 줄씩 다시 시도해 어느 줄이 문제인지 가려낸다. 반환: 저장된 줄 배열 */
+async function dbInsBatch(table, rows, onStep){
+  const done=[]; const CH=300;
+  for(let i=0;i<rows.length;i+=CH){
+    const part=rows.slice(i,i+CH);
+    const res=await withBusy(function(){ return sb.from(table).insert(part); });
+    if(!res.error) done.push(...part);
+    else { console.error('insert',table,res.error); for(const r of part){ if(await dbIns(table,r)) done.push(r); } }
+    if(onStep) onStep(Math.min(i+CH,rows.length),rows.length);
+  }
+  return done;
+}
 async function submitCsv(){
   if(!csvPendingList.length){ showToast('등록할 데이터가 없습니다.','error'); return; }
-  let added=0, skip=0, grpAdded=0;
-  for(const u of csvPendingList){
-    if(users.find(x=>x.id===u.id)){ skip++; continue; }
-    const ok = await dbIns('users',{id:u.id,pw:u.pw,name:u.name,dept:u.dept,role:u.role,status:'active'});
-    if(ok){
-      users.push({...u,status:'active'});
-      added++;
-      // 그룹명 있으면 자동 배정
-      if(u.groupName){
-        const g = groups.find(x=>x.name===u.groupName);
-        if(g && !g.memberIds.includes(u.id)){
-          const gok = await dbIns('group_members',{group_id:g.id, user_id:u.id});
-          if(gok){ g.memberIds.push(u.id); grpAdded++; }
-        }
-      }
-    }
+  const btn=document.getElementById('csv-submit-btn'); if(btn.disabled) return; btn.disabled=true;
+  const prog=document.getElementById('csv-prog-area'), bar=document.getElementById('csv-prog-bar'), pn=document.getElementById('csv-prog-name');
+  prog.style.display='block'; bar.style.width='0%';
+  const step=function(label){ return function(i,n){ pn.textContent=label+' '+i+' / '+n; bar.style.width=Math.round(i/n*100)+'%'; }; };
+  try{
+    const have=new Set(users.map(u=>u.id)), seen=new Set(); const fresh=[], rowsOnce=[];
+    csvPendingList.forEach(u=>{ if(seen.has(u.id)) return; seen.add(u.id); rowsOnce.push(u); if(!have.has(u.id)) fresh.push(u); });
+    // 1) 새 계정 저장
+    const saved=await dbInsBatch('users',fresh.map(u=>({id:u.id,pw:u.pw,name:u.name,dept:u.dept,role:u.role,status:'active'})),step('계정 등록 중'));
+    const savedIds=new Set(saved.map(r=>r.id));
+    fresh.forEach(u=>{ if(savedIds.has(u.id)) users.push({id:u.id,pw:u.pw,name:u.name,dept:u.dept,role:u.role,status:'active'}); });
+    const failed=fresh.length-saved.length;
+    // 2) 그룹 배정 — 새 계정은 물론, 이미 있던 계정도 파일에 그룹이 적혀 있으면 배정한다
+    const known=new Set(users.map(u=>u.id)), memberSet=new Map(groups.map(g=>[g.id,new Set(g.memberIds)]));
+    const toAdd=[], noGroup=new Map(); let alreadyIn=0;
+    rowsOnce.forEach(u=>{
+      if(!u.groupName||!known.has(u.id)) return;
+      const g=csvFindGroup(u.groupName);
+      if(!g){ noGroup.set(u.groupName,(noGroup.get(u.groupName)||0)+1); return; }
+      const set=memberSet.get(g.id);
+      if(set.has(u.id)){ alreadyIn++; return; }
+      set.add(u.id); toAdd.push({group_id:g.id,user_id:u.id});
+    });
+    const gSaved=await dbInsBatch('group_members',toAdd,step('그룹 배정 중'));
+    gSaved.forEach(r=>{ const g=groups.find(x=>x.id===r.group_id); if(g&&!g.memberIds.includes(r.user_id)) g.memberIds.push(r.user_id); });
+    const gFail=toAdd.length-gSaved.length;
+    // 3) 결과 안내 (화면에 남겨 둔다)
+    const existed=rowsOnce.length-fresh.length;
+    let h='<div style="font-weight:700;margin-bottom:4px;">✅ 일괄 등록 결과</div>'
+      +'<div>새 계정 <b>'+saved.length+'명</b> 등록'+(failed?' · <span style="color:var(--danger);">저장 실패 '+failed+'명</span>':'')+(existed?' · 이미 있던 계정 '+existed+'명':'')+'</div>'
+      +'<div>그룹 배정 <b>'+gSaved.length+'명</b>'+(alreadyIn?' · 이미 그 그룹에 있음 '+alreadyIn+'명':'')+(gFail?' · <span style="color:var(--danger);">배정 실패 '+gFail+'명</span>':'')+'</div>';
+    if(noGroup.size) h+='<div style="color:var(--danger);">⚠ 그룹을 찾지 못해 배정하지 못한 이름: '+Array.from(noGroup.entries()).slice(0,8).map(([n,c])=>csvEsc(n)+' ('+c+'명)').join(', ')+'<br><span style="color:var(--text2);">그룹 이름을 확인한 뒤 같은 파일을 다시 올리면 이미 있는 계정은 건너뛰고 그룹만 추가됩니다.</span></div>';
+    let resEl=document.getElementById('csv-result');
+    if(!resEl){ resEl=document.createElement('div'); resEl.id='csv-result'; resEl.style.cssText='margin-top:12px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg3);font-size:12px;line-height:1.7;'; document.getElementById('csv-submit-area').after(resEl); }
+    resEl.innerHTML=h; resEl.style.display='block';
+    csvPendingList=[];
+    document.getElementById('csv-preview').style.display='none';
+    document.getElementById('csv-submit-area').style.display='none';
+    document.getElementById('csv-file-input').value='';
+    renderUsers(); renderDash();
+    if(document.getElementById('utab-group-body').style.display!=='none') renderGroupList();
+    showToast('✅ '+saved.length+'명 등록 · 그룹 배정 '+gSaved.length+'명'+(failed||gFail||noGroup.size?' (아래 결과를 확인하세요)':''), failed||gFail?'error':'success');
+  } finally {
+    prog.style.display='none'; btn.disabled=false;
   }
-  csvPendingList=[];
-  document.getElementById('csv-preview').style.display='none';
-  document.getElementById('csv-submit-area').style.display='none';
-  document.getElementById('csv-file-input').value='';
-  renderUsers(); renderDash();
-  const grpMsg = grpAdded>0 ? ' · 그룹 배정 '+grpAdded+'명' : '';
-  showToast('✅ '+added+'명 등록'+grpMsg+(skip>0?' ('+skip+'명 중복 제외)':''), 'success');
 }
 function resetCsv(){
   csvPendingList=[];
   document.getElementById('csv-preview').style.display='none';
   document.getElementById('csv-submit-area').style.display='none';
   document.getElementById('csv-prog-area').style.display='none';
+  const resEl=document.getElementById('csv-result'); if(resEl) resEl.style.display='none';
   document.getElementById('csv-file-input').value='';
 }
 

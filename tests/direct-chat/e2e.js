@@ -112,7 +112,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   u.reqs.length = 0;
   u.route_reply = () => JSON.stringify({ action: 'ask', question: '어느 모델의 사용설명서인가요?', options: ['CP-X501', 'CP-PS'] });
   await ask(u, '사용설명서 알려줘');
-  ok(/어느 모델의 사용설명서인가요/.test(await u.textContent('.msg.bot:last-child')) && (await u.$$eval('.msg.bot:last-child .dc-opt b', l => l.map(b => b.textContent))).join() === 'CP-X501,CP-PS', '모호하면 되묻고 선택 버튼(보기)을 보여 준다');
+  ok(/어느 모델의 사용설명서인가요/.test(await u.textContent('.msg.bot:last-child')) && (await u.$$eval('.msg.bot:last-child .dc-opt:not(.dc-other) b', l => l.map(b => b.textContent))).join() === 'CP-X501,CP-PS', '모호하면 되묻고 선택 버튼(보기)을 보여 준다');
+  ok(await u.locator('.msg.bot:last-child .dc-opt.dc-other').count() === 1, '선택 버튼 끝에 "기타 (직접 입력)"도 있다');
   u.route_reply = sys => JSON.stringify({ action: 'select', docs: [numOf(sys, '정수기 > CP-X501 | 사용설명서 | CP-X501 사용설명서')] });
   u.answer = 'X501 설명입니다.\n[[참조: 1]]';
   u.reqs.length = 0;

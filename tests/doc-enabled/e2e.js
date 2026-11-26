@@ -225,6 +225,20 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await u.waitForFunction(() => Array.from(document.querySelectorAll('.msg.user .msg-bubble')).pop().textContent.trim() === '연차 계산법', null, { timeout: 8000 });
   ok(true, '입력한 글자(앞뒤 빈칸 제외)가 내 질문으로 전송된다');
 
+  console.log('[AI가 목록으로 되물어도 선택 버튼으로 바꾸기 + 본문의 문서 번호 지우기]');
+  u.gem.reply = '어떤 수수료에 대해 문의하시나요? 예를 들어, 렌탈 수수료, 멤버십 수수료, 또는 다른 종류의 수수료인지 알려주시면 더 정확한 정보를 찾아드릴 수 있습니다.\n\n혹시 다음과 같은 내용에 대해 궁금하신가요?\n\n* **렌탈 수수료 관련:** [[문서 24/107]], [[문서 39/107]], [[문서 69/107]]\n* **멤버십 수수료 관련:** [[문서 2/107]], [[문서 7/107]]\n* **책임이행보증금 (수수료와 관련될 수 있음):** [[문서 18/107]], [[문서 45/107]]\n\n어떤 수수료에 대한 정보가 필요하신지 구체적으로 알려주시면 감사하겠습니다.';
+  await u.evaluate(() => { document.getElementById('chat-inp').value = '수수료'; sendMsg(); });
+  await u.waitForFunction(() => document.querySelectorAll('.msg.bot .dc-card').length >= 3, null, { timeout: 8000 });
+  const guessTxt = await u.evaluate(() => Array.from(document.querySelectorAll('.msg.bot .msg-bubble')).slice(-1)[0].textContent);
+  ok(!/\[\[|문서 \d+\/\d+/.test(guessTxt) && /렌탈 수수료 관련/.test(guessTxt), '본문에 잘못 적힌 [[문서 N/전체]] 표시는 지워지고 나머지 글은 그대로 보인다');
+  const gOpts = await u.evaluate(() => Array.from(Array.from(document.querySelectorAll('.msg.bot .dc-card')).pop().querySelectorAll('.dc-opt:not(.dc-other) b')).map(e => e.textContent));
+  ok(JSON.stringify(gOpts) === JSON.stringify(['렌탈 수수료', '멤버십 수수료', '책임이행보증금']), '목록으로 되물은 항목이 눌러서 고르는 버튼으로 나온다: ' + gOpts.join(' | '));
+  u.gem.reply = '프린트 방법은 문서 3에 있습니다.\n\n* **첫째 단계:** 전원을 켭니다.\n* **둘째 단계:** 용지를 넣습니다.\n[[참조: 1]]';
+  await u.evaluate(() => { document.getElementById('chat-inp').value = '프린트'; sendMsg(); });
+  await u.waitForFunction(() => document.querySelectorAll('.msg.bot').length >= 8, null, { timeout: 8000 }).catch(() => {});
+  await u.waitForTimeout(600);
+  ok(await u.evaluate(() => document.querySelectorAll('.msg.bot .dc-card').length) === 3, '질문하는 말이 없는 일반 답변(굵은 글머리 목록)에는 선택 버튼이 붙지 않는다');
+
   console.log('[새로고침해도 로그인 유지]');
   const r1 = await mkPage(); await login(r1, 'u1'); await r1.waitForSelector('#screen-chat.active', { timeout: 8000 });
   const ssv = await r1.evaluate(() => sessionStorage.getItem('pg_session'));

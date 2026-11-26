@@ -195,7 +195,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(u.errs.length === 0, '사용자 화면 페이지 오류 없음' + (u.errs.length ? JSON.stringify(u.errs) : ''));
 
   console.log('[되묻기: 눌러서 고르는 선택지 + 기타 직접 입력]');
-  await u.evaluate(() => { products[0].models[0].docs.forEach(d => { if (d.id !== 'd3') d.enabled = true; }); selModel = products[0].models[0]; selProduct = products[0]; document.getElementById('chat-body').innerHTML = ''; chatHistory.length = 0; });
+  await u.evaluate(() => { products[0].models[0].docs.forEach(d => { d.enabled = true; }); selModel = products[0].models[0]; selProduct = products[0]; document.getElementById('chat-body').innerHTML = ''; chatHistory.length = 0; });
   u.gem.reply = '어떤 종류의 신청에 대해 문의하시나요?\n[[선택지: 휴가 신청 | 출장 신청 | 기타 | 휴가 신청 | 결재 방법]]';
   await u.evaluate(() => { document.getElementById('chat-inp').value = '신청'; sendMsg(); });
   await u.waitForSelector('.msg.bot .dc-card', { timeout: 8000 });
@@ -212,7 +212,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await u.waitForFunction(() => document.querySelectorAll('.msg.bot').length >= 2 && document.querySelectorAll('.msg.user').length >= 2, null, { timeout: 8000 });
   ok(await u.evaluate(() => Array.from(document.querySelectorAll('.msg.user .msg-bubble')).pop().textContent.trim()) === '휴가 신청', '버튼을 누르면 그 항목이 내 질문으로 전송된다');
   ok(await u.evaluate(() => document.querySelector('.dc-card').classList.contains('done')), '고른 뒤에는 선택지가 비활성(완료) 표시가 된다');
-  u.gem.reply = '무엇이든 도와드릴게요.\n[[선택지: 가 | 나]]';
+  u.gem.reply = '무엇이든 도와드릴게요.\n[[선택지: 휴가 신청 | 결재 방법]]';
   await u.evaluate(() => { document.getElementById('chat-inp').value = '다른 질문'; sendMsg(); });
   await u.waitForFunction(() => document.querySelectorAll('.msg.bot .dc-card').length >= 2, null, { timeout: 8000 });
   u.gem.reply = '확인했습니다.';
@@ -224,6 +224,46 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await card2.locator('.dc-otherbox input').press('Enter');
   await u.waitForFunction(() => Array.from(document.querySelectorAll('.msg.user .msg-bubble')).pop().textContent.trim() === '연차 계산법', null, { timeout: 8000 });
   ok(true, '입력한 글자(앞뒤 빈칸 제외)가 내 질문으로 전송된다');
+
+  console.log('[AI가 목록으로 되물어도 선택 버튼으로 바꾸기 + 본문의 문서 번호 지우기]');
+  await u.evaluate(() => { products[0].models[0].docs.push({ id: 'dz', title: '수수료 안내', cat: '기타', content: '렌탈수수료, 멤버십 수수료, 책임이행보증금 기준을 안내합니다.', enabled: true }); });
+  u.gem.reply = '어떤 수수료에 대해 문의하시나요? 예를 들어, 렌탈 수수료, 멤버십 수수료, 또는 다른 종류의 수수료인지 알려주시면 더 정확한 정보를 찾아드릴 수 있습니다.\n\n혹시 다음과 같은 내용에 대해 궁금하신가요?\n\n* **렌탈 수수료 관련:** [[문서 24/107]], [[문서 39/107]], [[문서 69/107]]\n* **멤버십 수수료 관련:** [[문서 2/107]], [[문서 7/107]]\n* **책임이행보증금 (수수료와 관련될 수 있음):** [[문서 18/107]], [[문서 45/107]]\n\n어떤 수수료에 대한 정보가 필요하신지 구체적으로 알려주시면 감사하겠습니다.';
+  await u.evaluate(() => { document.getElementById('chat-inp').value = '수수료'; sendMsg(); });
+  await u.waitForFunction(() => document.querySelectorAll('.msg.bot .dc-card').length >= 3, null, { timeout: 8000 });
+  const guessTxt = await u.evaluate(() => Array.from(document.querySelectorAll('.msg.bot .msg-bubble')).slice(-1)[0].textContent);
+  ok(!/\[\[|문서 \d+\/\d+/.test(guessTxt) && /렌탈 수수료 관련/.test(guessTxt), '본문에 잘못 적힌 [[문서 N/전체]] 표시는 지워지고 나머지 글은 그대로 보인다');
+  const gOpts = await u.evaluate(() => Array.from(Array.from(document.querySelectorAll('.msg.bot .dc-card')).pop().querySelectorAll('.dc-opt:not(.dc-other) b')).map(e => e.textContent));
+  ok(JSON.stringify(gOpts) === JSON.stringify(['렌탈 수수료', '멤버십 수수료', '책임이행보증금']), '목록으로 되물은 항목이 눌러서 고르는 버튼으로 나온다: ' + gOpts.join(' | '));
+  await u.evaluate(() => { const z = products[0].models[0].docs.find(d => d.id === 'dz'); z.title = '정산 안내'; z.content = '멤버십수수료는 월 단위로 정산합니다. 책임이행보증금 환급 기준도 안내합니다.'; });
+  await u.evaluate(() => { document.getElementById('chat-inp').value = '수수료 알려줘'; sendMsg(); });
+  await u.waitForFunction(() => document.querySelectorAll('.msg.bot .dc-card').length >= 4, null, { timeout: 8000 });
+  const fOpts = await u.evaluate(() => Array.from(Array.from(document.querySelectorAll('.msg.bot .dc-card')).pop().querySelectorAll('.dc-opt:not(.dc-other) b')).map(e => e.textContent));
+  ok(JSON.stringify(fOpts) === JSON.stringify(['멤버십 수수료', '책임이행보증금']), '문서에 없는 항목(렌탈 수수료)은 선택 버튼에서 빠지고, 문서에 있는 항목만 남는다 (띄어쓰기 달라도 인식): ' + fOpts.join(' | '));
+  await u.evaluate(() => { const i = products[0].models[0].docs.findIndex(d => d.id === 'dz'); products[0].models[0].docs.splice(i, 1); });
+  await u.evaluate(() => { document.getElementById('chat-inp').value = '수수료'; sendMsg(); });
+  await u.waitForTimeout(1500);
+  ok(await u.evaluate(() => document.querySelectorAll('.msg.bot .dc-card').length) === 4, '문서에서 찾은 항목이 2개 미만이면 선택 버튼 없이 글로만 되묻는다');
+  console.log('[고른 뒤에도 되물으면 실제 문서 제목으로 다시 선택 버튼]');
+  await u.evaluate(() => { const d = products[0].models[0].docs; d.push({ id: 'dy1', title: '렌탈수수료 지급 기준', cat: '기타', content: '렌탈수수료는 월말에 지급합니다.', enabled: true }, { id: 'dy2', title: '렌탈수수료 정산 방법', cat: '기타', content: '정산은 다음 달 5일.', enabled: true }, { id: 'dy3', title: '휴가 규정', cat: '기타', content: '연차는 15일입니다.', enabled: true }); });
+  u.gem.reply = '렌탈수수료 관련하여 어떤 정보가 필요하신가요? 예를 들어, 지급, 정산 등에 대해 문의하실 수 있습니다.';
+  const nBefore = await u.evaluate(() => document.querySelectorAll('.msg.bot .dc-card').length);
+  await u.evaluate(() => { document.getElementById('chat-inp').value = '렌탈수수료의 지급'; sendMsg(); });
+  await u.waitForFunction(n => document.querySelectorAll('.msg.bot .dc-card').length > n, nBefore, { timeout: 8000 });
+  const tOpts = await u.evaluate(() => Array.from(Array.from(document.querySelectorAll('.msg.bot .dc-card')).pop().querySelectorAll('.dc-opt:not(.dc-other) b')).map(e => e.textContent));
+  ok(JSON.stringify(tOpts) === JSON.stringify(['렌탈수수료 지급 기준', '렌탈수수료 정산 방법']) || (tOpts.length >= 2 && tOpts.every(t => /렌탈수수료/.test(t))), 'AI가 선택지 없이 되물어도, 질문과 맞는 실제 문서 제목이 선택 버튼으로 나온다 (관련 없는 "휴가 규정"은 제외): ' + tOpts.join(' | '));
+  ok(/관련 문서를 골라 주세요/.test(await u.evaluate(() => Array.from(document.querySelectorAll('.msg.bot .dc-card')).pop().querySelector('.dc-head').textContent)), '머리글이 "관련 문서를 골라 주세요"로 나온다');
+  u.gem.reply = '렌탈수수료는 월말에 지급합니다. 어떤 것이 더 궁금하신가요?\n[[참조: 5]]';
+  const n2 = await u.evaluate(() => document.querySelectorAll('.msg.bot .dc-card').length);
+  await u.evaluate(() => { document.getElementById('chat-inp').value = '렌탈수수료 지급'; sendMsg(); });
+  await u.waitForTimeout(1500);
+  ok(await u.evaluate(() => document.querySelectorAll('.msg.bot .dc-card').length) === n2, '참조 문서가 있는 정상 답변에는 선택 버튼이 붙지 않는다');
+  await u.evaluate(() => { const d = products[0].models[0].docs; ['dy1', 'dy2', 'dy3'].forEach(id => d.splice(d.findIndex(x => x.id === id), 1)); });
+  const n3 = n2;
+  u.gem.reply = '프린트 방법은 문서 3에 있습니다.\n\n* **첫째 단계:** 전원을 켭니다.\n* **둘째 단계:** 용지를 넣습니다.\n[[참조: 1]]';
+  await u.evaluate(() => { document.getElementById('chat-inp').value = '프린트'; sendMsg(); });
+  await u.waitForFunction(() => document.querySelectorAll('.msg.bot').length >= 8, null, { timeout: 8000 }).catch(() => {});
+  await u.waitForTimeout(600);
+  ok(await u.evaluate(() => document.querySelectorAll('.msg.bot .dc-card').length) === n3, '질문하는 말이 없는 일반 답변(굵은 글머리 목록)에는 선택 버튼이 붙지 않는다');
 
   console.log('[새로고침해도 로그인 유지]');
   const r1 = await mkPage(); await login(r1, 'u1'); await r1.waitForSelector('#screen-chat.active', { timeout: 8000 });

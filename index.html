@@ -2843,6 +2843,54 @@ async function directError(e,tid,text){
   if(handsfreeMode) setTimeout(()=>startListeningHF(),1000);
 }
 
+// AI가 본문에 잘못 적은 문서 번호 표시([[문서 24/107]] 등)를 지운다 (문서 번호는 [[참조: …]] 줄에서만 쓰는 규칙)
+function chatStripDocTokens(t){
+  return t.replace(/\[\[\s*문서[^\]]*\]\]/g,'').replace(/\[\[\s*문서[^\]]*$/,'')
+    .split('\n').map(l=>l.replace(/(?:[\s,，、]*)$/,'')).join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+// 선택 버튼 이름이 실제로 문서(제목·본문)에 나오는 것만 남긴다 (AI가 문서에 없는 항목을 지어내는 것을 막음, 띄어쓰기는 무시)
+const CHAT_NZ=new WeakMap();   // 문서마다 띄어쓰기 뺀 글자를 한 번만 만들어 둔다
+function chatNz(t){ return String(t||'').replace(/\s+/g,'').toLowerCase(); }
+function chatDocNz(d){ let v=CHAT_NZ.get(d); if(!v||v.st!==d.title||v.sc!==d.content){ v={st:d.title,sc:d.content,t:chatNz(d.title),c:chatNz(d.content)}; CHAT_NZ.set(d,v); } return v; }   // 문서를 고치면 다시 만든다
+function chatKeepDocChoices(choices,docs){
+  const keep=choices.filter(c=>{
+    const k=chatNz(c); if(!k) return false;
+    return docs.some(d=>{ const v=chatDocNz(d); return v.t.includes(k)||v.c.includes(k); });
+  });
+  return keep.length>=2?keep:[];
+}
+// 되묻는 말투인지 (선택지 없이 "어떤 …인가요?" 하고 되물을 때)
+function chatAskCue(reply){
+  return /(알려\s*주시면|골라|선택|어떤[^.\n]{0,30}(인가요|신가요|까요|세요)|어느[^.\n]{0,30}(인가요|신가요|까요|세요)|구체적으로|말씀해\s*주)/.test(reply||'');
+}
+// 되묻는데 AI가 선택지를 안 줬을 때: 방금 한 질문과 맞는 "실제 문서 제목"을 선택지로 보여 준다 (문서에 있는 것만이라 지어낸 항목이 없다)
+function chatTitleChoices(text,docs){
+  const toks=[...new Set(String(text||'').split(/\s+/).map(w=>w.replace(/(에서|으로|은|는|이|가|을|를|의|에|로|와|과|도|만)$/,'')).map(chatNz).filter(w=>w.length>=2))];
+  if(!toks.length) return [];
+  // 점수: 제목에 단어가 있으면 3점, 본문에만 있으면 1점. 제목에 걸린 문서가 있으면 높은 것부터, 없으면 본문에 단어가 모두 있는 문서만
+  const scored=docs.map(d=>{ const v=chatDocNz(d); let sc=0,all=true; toks.forEach(t=>{ if(v.t.includes(t)) sc+=3; else if(v.c.includes(t)) sc+=1; else all=false; }); return {d,sc,all}; }).filter(x=>x.sc>0);
+  scored.sort((a,b)=>b.sc-a.sc);
+  const top=scored.length?scored[0].sc:0;
+  const pick=(top>=3?scored.filter(x=>x.sc>=Math.max(3,Math.floor(top/3))):scored.filter(x=>x.all)).map(x=>x.d);
+  const seen=new Set(), out=[];
+  for(const d of pick){ const t=String(d.title||'').trim().slice(0,40); if(t&&!seen.has(t)){ seen.add(t); out.push(t); } if(out.length>=8) break; }
+  return out.length>=2?out:[];
+}
+// AI가 [[선택지]] 대신 "**렌탈 수수료 관련:**" 같은 글머리 목록으로 되물었을 때, 그 항목들로 선택 버튼을 만든다
+// (짧은 되묻기 답변일 때만: 질문하는 말투 + 굵은 글머리 항목 2~8개)
+function chatGuessChoices(reply){
+  if(!reply||reply.length>800||/\[\[\s*그림/.test(reply)) return [];
+  if(!chatAskCue(reply)) return [];
+  const labels=[];
+  reply.split('\n').forEach(l=>{
+    const m=l.match(/^\s*(?:[-*•·]\s*)\*\*(.+?)\*\*/); if(!m) return;
+    const t=m[1].replace(/\([^)]*\)|（[^）]*）/g,'').replace(/[:：]\s*$/,'').replace(/\s*관련\s*$/,'').trim();
+    if(t&&t.length<=40) labels.push(t);
+  });
+  const u=[...new Set(labels)];
+  return u.length>=2&&u.length<=8?u:[];
+}
+
 async function runAnswer(text,tid,scope){
   // 실제 문서 텍스트를 컨텍스트로 구성 (넘겨받은 문서 전부 포함)
   let docCtx = '';
@@ -2877,11 +2925,14 @@ ${scope.head}
 ${scope.direct?'8. 문서 머리의 [제품군 > 모델]이 서로 다른 여러 문서가 섞여 있습니다. 답변에서 어느 모델의 내용인지 밝히고, 모델끼리 차이를 묻는 질문이면 제공된 문서를 근거로 모델별 차이점을 표나 목록으로 한눈에 정리하고(문서에 없는 항목은 "문서에 없음"으로 쓰고 지어내지 마세요) 비교에 쓴 모델 이름을 밝히며 문서가 제공되지 않은 모델이 있을 수 있으면 그렇게 알리세요. 그리고 에러코드·사양·부품·점검 방법처럼 모델마다 내용이 다른 질문인데 질문과 이전 대화에서 모델을 알 수 없으면, 비슷한 내용을 뭉뚱그려 답하지 말고 어느 제품·모델인지 먼저 되물으세요.':'8. 다른 모델에 대한 질문이면 해당 모델 선택을 안내하세요.'}
 9. 답변의 맨 마지막 줄에, 답변을 작성하면서 내용을 참고한 문서를 하나도 빠뜨리지 말고 전부 번호로 아래 형식에 출력하세요(대표 문서 1개만 쓰지 말 것). 질문과 무관한 문서는 넣지 마세요. 근거로 쓴 문서가 없으면 [[참조: 없음]]으로 쓰세요. 이 줄은 시스템이 처리하므로 다른 설명을 덧붙이지 마세요.
    형식: [[참조: 1, 3]]   (문서 번호는 "=== 문서 N/전체 ===" 의 N)
+   ★ 답변 본문에는 문서 번호를 절대 쓰지 마세요("[[문서 24/107]]", "문서 3번" 같은 표시 금지). 문서 번호는 이 [[참조: …]] 줄에서만 씁니다.
 10. 문서 내용에 [[그림:파일명|설명]] 표시가 있으면 그 자리에 화면 캡처 사진이 들어 있다는 뜻입니다(사진 자체는 볼 수 없으니 설명 글을 근거로 판단하세요). 답변에서 어떤 단계나 화면을 설명할 때 그와 관련된 사진이 있으면, 그 설명 바로 다음 줄에 [[그림:파일명]] 만 그대로 출력하세요. 파일명은 한 글자도 바꾸지 말고, 설명은 덧붙이지 마세요. 질문과 관계없는 사진은 넣지 말고, 사진은 한 번의 답변에 최대 20장까지만 넣으세요. 사진 표시는 답변 본문에만 쓰고 [[참조: ...]] 줄에는 쓰지 마세요.
    ★ 사진은 사용자가 "사진 있어?", "이미지 보여줘"라고 묻지 않아도 처음 답변부터 함께 보여 주는 것이 기본입니다. 방법·절차·분해·조립·교체·설치·위치·연결·화면·유로도·구성도처럼 눈으로 보면 이해가 쉬운 질문이면, 문서에 있는 관련 사진을 첫 답변에 같은 글 속에 넣으세요. 사진 설명이 그 단계·부품·화면과 맞으면 그 사진이 "이미지 모음" 같은 다른 문서에 따로 모여 있어도 포함하세요. 관련 사진이 여러 장이면 해당 단계 설명 바로 다음 줄에 각각 넣고, 어느 단계에 붙일지 애매한 사진은 답변 맨 끝(참조 줄 바로 앞)에 "관련 사진"이라고 쓰고 이어서 넣으세요. 관련 사진이 문서에 있는데도 넣지 않고 "사진이 있습니다"라고만 말하거나, 사용자가 다시 물을 때까지 기다리는 것은 잘못입니다. 문서에 관련 사진이 없으면 사진 표시를 억지로 만들지 말고 글로만 답하세요.
 11. 질문이 넓은 범위를 가리키는데(예: "유로도 알려줘", "에러코드 알려줘") 문서에 해당하는 항목이 여러 개 있으면, 그중 하나만 골라 답하지 마세요. 해당하는 항목을 문서에서 하나도 빠뜨리지 말고 전부 찾아 이름과 한 줄 설명으로 모두 보여 주세요. 일부만 보여 주고 나머지를 생략하거나 "더 있습니다"로 끝내지 마세요. 각 항목에 사진이 있으면 그 항목 설명 바로 다음 줄에 넣으세요. 모든 항목을 다 보여 준 뒤에 필요하면 "이 중 어떤 것을 자세히 볼까요?"처럼 짧게 물어보세요. 질문이 이미 구체적이어서 답이 하나로 정해지면 되묻지 말고 바로 답하세요.
 12. 질문이 너무 짧거나 모호해서 서로 전혀 다른 여러 답이 가능하고(예: "증명서"처럼 종류가 여럿인데 어떤 것인지 알 수 없음) 문서에서도 갈릴 때만, 추측해서 길게 답하지 말고 한두 문장으로 무엇을 알고 싶은지 되물으세요. 이때 답변의 마지막 줄(참조 줄 바로 앞)에 사용자가 눌러서 고를 항목을 아래 형식으로 출력하세요. 항목은 문서에 실제 있는 것으로 2~8개, 한 항목은 짧게(20자 안팎). "기타"는 화면이 자동으로 붙이니 쓰지 마세요. 문서에서 답을 찾을 수 있거나 이전 대화로 의도를 알 수 있으면 되묻지 말고 바로 답하세요.
    형식: [[선택지: 재직증명서 | 원천징수영수증 | 근로소득원천징수부]]
+   ★ 사용자가 선택지를 고른 뒤에도 아직 구체적이지 않아 한 번 더 되물어야 하면, 말로만 "어떤 정보가 필요하신가요?" 하고 끝내지 말고 이번에도 문서에 실제 있는 항목으로 [[선택지: …]]를 다시 붙여 더 좁혀 가세요. 답할 수 있게 되면 되묻지 말고 바로 답하세요.
+   ★ 되묻는 경우 고를 항목은 본문에 글머리 목록으로 늘어놓지 말고 반드시 이 [[선택지: …]] 줄로만 쓰세요(본문은 "어떤 수수료에 대해 문의하시나요?" 같은 한두 문장). 선택지 이름은 반드시 [문서 목록]이나 문서 본문에 실제로 나오는 단어여야 하며, 문서에서 찾지 못한 항목은 절대 지어내지 마세요(위 형식의 재직증명서 등은 모양을 보여 주는 예시일 뿐 그대로 쓰지 마세요). 문서에서 실제로 찾은 항목이 2개 미만이면 선택지를 쓰지 말고 "문서에서 찾을 수 없습니다"라고 하세요.
 
 ${scope.ctxTitle}
 ${docCtx}`;
@@ -2909,19 +2960,23 @@ ${docCtx}`;
     const refMatch=rawReply.match(/\[\[\s*참조\s*[:：]\s*([^\]]*)\]\]/);
     // AI가 되물으면서 붙인 [[선택지: 가 | 나 | 다]] 를 떼어 눌러서 고르는 버튼으로 만든다 (최대 8개, "기타"는 화면이 따로 붙임)
     const chMatch=rawReply.match(/\[\[\s*선택지\s*[:：]\s*([^\]]*)\]\]/);
-    const choices=chMatch?[...new Set(chMatch[1].split('|').map(x=>x.trim().slice(0,40)).filter(x=>x&&!/^기타/.test(x)))].slice(0,8):[];
-    const reply=rawReply.replace(/\s*\[\[\s*참조[^\]]*\]\]\s*/g,'').replace(/\s*\[\[\s*참조[^\]]*$/,'').replace(/\s*\[\[\s*선택지[^\]]*\]\]\s*/g,'').replace(/\s*\[\[\s*선택지[^\]]*$/,'').trim()||'답변을 불러올 수 없습니다.';
+    let choices=chMatch?[...new Set(chMatch[1].split('|').map(x=>x.trim().slice(0,40)).filter(x=>x&&!/^기타/.test(x)))].slice(0,8):[];
+    const reply=chatStripDocTokens(rawReply.replace(/\s*\[\[\s*참조[^\]]*\]\]\s*/g,'').replace(/\s*\[\[\s*참조[^\]]*$/,'').replace(/\s*\[\[\s*선택지[^\]]*\]\]\s*/g,'').replace(/\s*\[\[\s*선택지[^\]]*$/,'').trim())||'답변을 불러올 수 없습니다.';
+    if(choices.length<2) choices=chatGuessChoices(reply);
+    choices=chatKeepDocChoices(choices,useDocs);
     let refDocs=null;
     if(refMatch){
       const picked=[...new Set((refMatch[1].match(/\d+/g)||[]).map(Number))]
         .filter(n=>n>=1&&n<=useDocs.length).map(n=>useDocs[n-1]);
       if(picked.length>0) refDocs=picked;
     }
+    let chipHead='알고 싶은 것을 골라 주세요';
+    if(choices.length<2&&!refDocs&&chatAskCue(reply)&&!/찾을 수 없/.test(reply)){ choices=chatTitleChoices(text,useDocs); if(choices.length>=2) chipHead='관련 문서를 골라 주세요'; }
     if(scope.direct&&!refDocs&&/해당 정보를 찾을 수 없습니다/.test(reply)){ removeTyping(tid); await directLogFail(text); showDirectFallback(text); return; }   // 없는 내용 → 제품군/모델 고르기
     const refTitles=refDocs?refDocs.map(d=>d.title).join(', '):'—';
     removeTyping(tid);
     appendMsg('bot',reply,refDocs);
-    if(choices.length>=2) directChips(choices.map(o=>({label:o})), it=>{ document.getElementById('chat-inp').value=it.label; sendMsg(); }, {head:'알고 싶은 것을 골라 주세요', other:true, noCount:true});
+    if(choices.length>=2) directChips(choices.map(o=>({label:o})), it=>{ document.getElementById('chat-inp').value=it.label; sendMsg(); }, {head:chipHead, other:true, noCount:true});
     chatHistory.push({role:'assistant',content:reply,time:Date.now()});
     if(ttsEnabled) speakText(reply);
     // 로그 기록

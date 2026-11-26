@@ -243,11 +243,27 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await u.evaluate(() => { document.getElementById('chat-inp').value = '수수료'; sendMsg(); });
   await u.waitForTimeout(1500);
   ok(await u.evaluate(() => document.querySelectorAll('.msg.bot .dc-card').length) === 4, '문서에서 찾은 항목이 2개 미만이면 선택 버튼 없이 글로만 되묻는다');
+  console.log('[고른 뒤에도 되물으면 실제 문서 제목으로 다시 선택 버튼]');
+  await u.evaluate(() => { const d = products[0].models[0].docs; d.push({ id: 'dy1', title: '렌탈수수료 지급 기준', cat: '기타', content: '렌탈수수료는 월말에 지급합니다.', enabled: true }, { id: 'dy2', title: '렌탈수수료 정산 방법', cat: '기타', content: '정산은 다음 달 5일.', enabled: true }, { id: 'dy3', title: '휴가 규정', cat: '기타', content: '연차는 15일입니다.', enabled: true }); });
+  u.gem.reply = '렌탈수수료 관련하여 어떤 정보가 필요하신가요? 예를 들어, 지급, 정산 등에 대해 문의하실 수 있습니다.';
+  const nBefore = await u.evaluate(() => document.querySelectorAll('.msg.bot .dc-card').length);
+  await u.evaluate(() => { document.getElementById('chat-inp').value = '렌탈수수료의 지급'; sendMsg(); });
+  await u.waitForFunction(n => document.querySelectorAll('.msg.bot .dc-card').length > n, nBefore, { timeout: 8000 });
+  const tOpts = await u.evaluate(() => Array.from(Array.from(document.querySelectorAll('.msg.bot .dc-card')).pop().querySelectorAll('.dc-opt:not(.dc-other) b')).map(e => e.textContent));
+  ok(JSON.stringify(tOpts) === JSON.stringify(['렌탈수수료 지급 기준', '렌탈수수료 정산 방법']) || (tOpts.length >= 2 && tOpts.every(t => /렌탈수수료/.test(t))), 'AI가 선택지 없이 되물어도, 질문과 맞는 실제 문서 제목이 선택 버튼으로 나온다 (관련 없는 "휴가 규정"은 제외): ' + tOpts.join(' | '));
+  ok(/관련 문서를 골라 주세요/.test(await u.evaluate(() => Array.from(document.querySelectorAll('.msg.bot .dc-card')).pop().querySelector('.dc-head').textContent)), '머리글이 "관련 문서를 골라 주세요"로 나온다');
+  u.gem.reply = '렌탈수수료는 월말에 지급합니다. 어떤 것이 더 궁금하신가요?\n[[참조: 5]]';
+  const n2 = await u.evaluate(() => document.querySelectorAll('.msg.bot .dc-card').length);
+  await u.evaluate(() => { document.getElementById('chat-inp').value = '렌탈수수료 지급'; sendMsg(); });
+  await u.waitForTimeout(1500);
+  ok(await u.evaluate(() => document.querySelectorAll('.msg.bot .dc-card').length) === n2, '참조 문서가 있는 정상 답변에는 선택 버튼이 붙지 않는다');
+  await u.evaluate(() => { const d = products[0].models[0].docs; ['dy1', 'dy2', 'dy3'].forEach(id => d.splice(d.findIndex(x => x.id === id), 1)); });
+  const n3 = n2;
   u.gem.reply = '프린트 방법은 문서 3에 있습니다.\n\n* **첫째 단계:** 전원을 켭니다.\n* **둘째 단계:** 용지를 넣습니다.\n[[참조: 1]]';
   await u.evaluate(() => { document.getElementById('chat-inp').value = '프린트'; sendMsg(); });
   await u.waitForFunction(() => document.querySelectorAll('.msg.bot').length >= 8, null, { timeout: 8000 }).catch(() => {});
   await u.waitForTimeout(600);
-  ok(await u.evaluate(() => document.querySelectorAll('.msg.bot .dc-card').length) === 4, '질문하는 말이 없는 일반 답변(굵은 글머리 목록)에는 선택 버튼이 붙지 않는다');
+  ok(await u.evaluate(() => document.querySelectorAll('.msg.bot .dc-card').length) === n3, '질문하는 말이 없는 일반 답변(굵은 글머리 목록)에는 선택 버튼이 붙지 않는다');
 
   console.log('[새로고침해도 로그인 유지]');
   const r1 = await mkPage(); await login(r1, 'u1'); await r1.waitForSelector('#screen-chat.active', { timeout: 8000 });

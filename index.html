@@ -131,6 +131,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dc-otherbox button{flex:none;padding:9px 14px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;}
 .dc-otherbox button:disabled{opacity:.45;cursor:default;}
 .dc-empty{grid-column:1/-1;padding:14px;text-align:center;font-size:12px;color:var(--text3);}
+/* 선택지가 적고(6개 이하) 이름이 짧으면(14자 이하) 칩(알약) 버튼으로 한 줄씩 나열 */
+.dc-card.chips{border:0;background:transparent;border-radius:0;overflow:visible;margin-top:10px;}
+.dc-card.chips .dc-head{border:0;padding:0 0 8px;font-size:11px;font-weight:600;color:var(--text3);}
+.dc-card.chips .dc-list{display:flex;flex-wrap:wrap;gap:8px;padding:0;max-height:none;overflow:visible;}
+.dc-card.chips .dc-opt{border-radius:999px;padding:8px 16px;border-color:var(--accent);background:var(--bg);color:var(--accent);font-weight:600;}
+.dc-card.chips .dc-opt:hover{background:var(--accent-dim);}
+.dc-card.chips .dc-num{display:none;}
+.dc-card.chips .dc-txt{flex:none;}
+.dc-card.chips .dc-txt b{font-weight:600;white-space:normal;}
+.dc-card.chips .dc-opt.picked{background:var(--accent);border-color:var(--accent);color:#fff;}
+.dc-card.chips .dc-other{border-style:dashed;border-color:var(--text3);color:var(--text2);}
+.dc-card.chips .dc-otherbox{flex:1 1 100%;}
+.dc-card.chips .dc-foot{display:none;}
 body .msg-bubble{font-family:var(--font-chat);}   /* 챗봇 질문·답변은 기존 글씨체(Noto Sans KR) 유지, 나머지 화면은 Pretendard */
 /* ── 움직임 효과: 짧은 페이드·떠오름만 사용. 기기의 "움직임 줄이기" 설정이 켜져 있으면 전부 꺼짐 ── */
 /* 로그인 배경: 물방울·파도·반짝임 (정수기 이미지). 처음 로딩이 끝난 뒤(body.app-ready)에 시작 */
@@ -2655,6 +2668,7 @@ function directChips(items, onPick, o){
   const body = document.getElementById('chat-body'), bub = body.querySelector('.msg.bot:last-child .msg-bubble');
   if(!bub) return;
   const card = document.createElement('div'); card.className = 'dc-card';
+  if(o.other && !o.back && items.length <= 6 && items.every(it => !it.sub && String(it.label).length <= 14)) card.classList.add('chips');   // 적고 짧으면 칩 모양
   const head = document.createElement('div'); head.className = 'dc-head';
   const ht = document.createElement('span'); ht.textContent = (o.head || '선택해 주세요') + (o.noCount ? '' : ' · ' + items.length + '개'); head.appendChild(ht);
   const list = document.createElement('div'); list.className = 'dc-list';

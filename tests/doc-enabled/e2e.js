@@ -205,6 +205,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   ok(JSON.stringify(opts) === JSON.stringify(['휴가 신청', '출장 신청', '결재 방법']), '선택지가 눌러서 고르는 버튼으로 나온다 (중복·AI가 쓴 "기타"는 빠짐): ' + opts.join(' | '));
   ok(await u.locator('.msg.bot .dc-card .dc-other').count() === 1 && /기타/.test(await u.textContent('.msg.bot .dc-card .dc-other')), '맨 끝에 "기타 (직접 입력)" 버튼이 하나 있다');
   ok(!/개/.test(await u.textContent('.msg.bot .dc-head')), '머리글에는 "N개" 같은 개수 표시가 없다');
+  ok(await u.locator('.msg.bot .dc-card.chips').count() === 1 && await u.$eval('.msg.bot .dc-card.chips .dc-opt:not(.dc-other)', e => parseFloat(getComputedStyle(e).borderTopLeftRadius) >= 20) && await u.$eval('.msg.bot .dc-card.chips .dc-num', e => getComputedStyle(e).display === 'none'), '선택지가 적고 짧으면 번호 없는 칩(알약) 버튼으로 나온다');
   ok(await u.evaluate(() => chatHistory.filter(h => h.role === 'assistant').every(h => !/선택지/.test(h.content))), '대화 기록에도 선택지 표시는 남지 않는다');
   await u.waitForTimeout(1200); await u.screenshot({ path: path.join(OUT, 'choices.png') });
   u.gem.reply = '휴가 신청은 이렇게 합니다.\n[[참조: 2]]';
@@ -264,6 +265,15 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fai
   await u.waitForFunction(() => document.querySelectorAll('.msg.bot').length >= 8, null, { timeout: 8000 }).catch(() => {});
   await u.waitForTimeout(600);
   ok(await u.evaluate(() => document.querySelectorAll('.msg.bot .dc-card').length) === n3, '질문하는 말이 없는 일반 답변(굵은 글머리 목록)에는 선택 버튼이 붙지 않는다');
+
+  console.log('[선택지가 길거나 많으면 목록 카드]');
+  await u.evaluate(() => { const d = products[0].models[0].docs; d.push({ id: 'dl1', title: '아주 긴 제목의 문서 안내 자료입니다', cat: '기타', content: 'x', enabled: true }, { id: 'dl2', title: '또 다른 긴 제목의 문서 안내 자료입니다', cat: '기타', content: 'y', enabled: true }); });
+  u.gem.reply = '어떤 문서를 볼까요?\n[[선택지: 아주 긴 제목의 문서 안내 자료입니다 | 또 다른 긴 제목의 문서 안내 자료입니다]]';
+  const nl = await u.evaluate(() => document.querySelectorAll('.msg.bot .dc-card').length);
+  await u.evaluate(() => { document.getElementById('chat-inp').value = '문서'; sendMsg(); });
+  await u.waitForFunction(n => document.querySelectorAll('.msg.bot .dc-card').length > n, nl, { timeout: 8000 });
+  ok(await u.evaluate(() => { const c = Array.from(document.querySelectorAll('.msg.bot .dc-card')).pop(); return !c.classList.contains('chips') && !!c.querySelector('.dc-num'); }), '이름이 길면(14자 초과) 칩이 아니라 번호 붙은 목록 카드로 나온다');
+  await u.evaluate(() => { const d = products[0].models[0].docs; ['dl1', 'dl2'].forEach(id => d.splice(d.findIndex(x => x.id === id), 1)); });
 
   console.log('[새로고침해도 로그인 유지]');
   const r1 = await mkPage(); await login(r1, 'u1'); await r1.waitForSelector('#screen-chat.active', { timeout: 8000 });
